@@ -22,6 +22,9 @@ android {
         targetSdk = 35
         versionCode = buildNumber
         versionName = "0.1.$buildNumber"
+        // Για τον έλεγχο νέας έκδοσης: από ποιο repo χτίστηκε (public: κατεβάζει μόνη της· private: ανοίγει τη σελίδα).
+        buildConfigField("String", "BUILD_REPO", "\"" + (System.getenv("GITHUB_REPOSITORY") ?: "") + "\"")
+        buildConfigField("long", "BUILD_TIME", System.currentTimeMillis().toString() + "L")
     }
 
     // Κλειδί υπογραφής: από env vars (GitHub Secrets) ή από app/keystore.properties + app/release.keystore.
@@ -76,6 +79,7 @@ android {
     buildFeatures {
         compose = true
         aidl = true
+        buildConfig = true
     }
     lint {
         abortOnError = false

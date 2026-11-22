@@ -13,6 +13,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -81,4 +83,44 @@ fun RecordingControls(session: NavSession?) {
         style = MotoType.label,
         color = c.base.textMuted,
     )
+}
+
+/** Τέλος οδήγησης: «Αποθήκευση διαδρομής;» με όνομα. Την ξαναβρίσκεις στην αναζήτηση → Αποθηκευμένες διαδρομές. */
+@Composable
+fun SaveRoutePrompt(session: NavSession, modifier: Modifier = Modifier) {
+    val p = session.savePrompt ?: return
+    val c = LocalAppColors.current
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var name by androidx.compose.runtime.remember(p) { androidx.compose.runtime.mutableStateOf(p.suggested) }
+    Surface(
+        shape = RoundedCornerShape(Radius.lg),
+        color = c.base.surface,
+        border = BorderStroke(1.dp, c.accent),
+        modifier = modifier,
+    ) {
+        androidx.compose.foundation.layout.Column(
+            Modifier.padding(Space.md),
+            verticalArrangement = Arrangement.spacedBy(Space.sm),
+        ) {
+            Text(
+                "Αποθήκευση της διαδρομής που έκανες; (" + String.format(java.util.Locale("el", "GR"), "%.1f km", p.lengthM / 1000) + ")",
+                style = MotoType.body,
+                color = c.base.text,
+            )
+            androidx.compose.material3.OutlinedTextField(
+                value = name,
+                onValueChange = { name = it.take(40) },
+                singleLine = true,
+                shape = RoundedCornerShape(Radius.md),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(Space.sm), modifier = Modifier.fillMaxWidth()) {
+                TextChoice("Αποθήκευση", selected = true, onClick = {
+                    app.motonav.trips.SavedRoutes.saveFromGpx(context, p.gpx, name, p.lengthM)
+                    session.savePrompt = null
+                }, modifier = Modifier.weight(1f))
+                TextChoice("Όχι", selected = false, onClick = { session.savePrompt = null }, modifier = Modifier.weight(1f))
+            }
+        }
+    }
 }

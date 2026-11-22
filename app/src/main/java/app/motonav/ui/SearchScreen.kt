@@ -116,6 +116,9 @@ fun SearchScreen(
     /** Οι τελευταίες διαδρομές που ξεκίνησες: πάτημα = ίδια διαδρομή ξανά. */
     history: List<app.motonav.nav.NavSession.HistoryEntry> = emptyList(),
     onReplay: (app.motonav.nav.NavSession.HistoryEntry) -> Unit = {},
+    /** Διαδρομές που κράτησες με όνομα: πάτημα = «Ακολούθησε» ακριβώς την ίδια. */
+    savedRoutes: List<app.motonav.trips.SavedRoute> = emptyList(),
+    onFollowSaved: (app.motonav.trips.SavedRoute) -> Unit = {},
 ) {
     val c = LocalAppColors.current
     val search = remember(tomtomKey) { PlaceSearch(tomtomKey) }
@@ -315,6 +318,16 @@ fun SearchScreen(
                         item {
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(Space.xs), contentPadding = PaddingValues(vertical = Space.xs)) {
                                 items(Category.entries) { cat -> Chip(cat.label, selected = category == cat, onClick = { query = ""; category = cat }) }
+                            }
+                        }
+                        if (!stopMode && savedRoutes.isNotEmpty()) {
+                            item { Section("Αποθηκευμένες διαδρομές") }
+                            items(savedRoutes, key = { "saved|${it.id}" }) { r ->
+                                PlaceRow(
+                                    Place(r.name, String.format(java.util.Locale("el", "GR"), "%.1f km · ακολουθείς την ίδια", r.lengthM / 1000), 0.0, 0.0),
+                                    null,
+                                    icon = ImageVector.vectorResource(R.drawable.ic_history),
+                                ) { onFollowSaved(r) }
                             }
                         }
                         if (!stopMode && history.isNotEmpty()) {

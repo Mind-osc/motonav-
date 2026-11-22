@@ -990,6 +990,9 @@ fun MapScreen(
             val s = style ?: return@LaunchedEffect
             HazardLayer.set(s, hazards, density)
         }
+        LaunchedEffect(Unit) { app.motonav.trips.SavedRoutes.load(context) }
+        // Νέα έκδοση της εφαρμογής; (το πολύ κάθε 6 ώρες)
+        LaunchedEffect(Unit) { runCatching { app.motonav.update.Updater.check(context) } }
         // Οι offline χάρτες ενημερώνονται μόνοι τους μία φορά τον μήνα, με Wi‑Fi (όταν είναι έτοιμος ο χάρτης).
         LaunchedEffect(style != null) {
             if (style != null) runCatching { app.motonav.map.OfflineMaps.autoUpdate(context) }
@@ -1354,7 +1357,13 @@ fun MapScreen(
             Box(
                 Modifier.fillMaxSize().safeDrawingPadding().padding(top = 64.dp),
                 contentAlignment = Alignment.TopCenter,
-            ) { RecPill(session) }
+            ) {
+                androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Space.sm)) {
+                    RecPill(session)
+                    if (!session.navigating) SaveRoutePrompt(session, Modifier.widthIn(max = 420.dp).padding(horizontal = Space.md))
+                    if (!session.navigating) UpdatePill()
+                }
+            }
         }
         if (reportOpen && !pip) ReportSheet(onPick = report, onClose = { reportOpen = false }, onCamera = { markCamera(); reportOpen = false })
         BackHandler(enabled = reportOpen) { reportOpen = false }
@@ -1381,6 +1390,12 @@ fun MapScreen(
                 onLoop = { hours ->
                     showSearch = false
                     session.planLoop(hours)
+                },
+                savedRoutes = app.motonav.trips.SavedRoutes.list,
+                onFollowSaved = { r ->
+                    showSearch = false
+                    val pts = app.motonav.trips.SavedRoutes.points(context, r.id)
+                    if (pts.size >= 2) session.followTrack(pts, r.name)
                 },
                 history = session.history,
                 onReplay = { h ->

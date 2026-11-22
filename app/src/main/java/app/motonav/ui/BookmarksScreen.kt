@@ -53,6 +53,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
+@Composable
+private fun LaunchedEffectLoad() {
+    val context = LocalContext.current
+    androidx.compose.runtime.LaunchedEffect(Unit) { app.motonav.trips.SavedRoutes.load(context) }
+}
+
 /** Χρώματα για λίστες σελιδοδεικτών (ίδια σειρά: η νέα λίστα παίρνει το επόμενο). */
 val BOOKMARK_COLORS = listOf(
     0xFFFF3B30.toInt(), 0xFFFF9500.toInt(), 0xFFFFCC00.toInt(), 0xFF34C759.toInt(),
@@ -64,7 +70,7 @@ val BOOKMARK_COLORS = listOf(
  * εισαγωγή από GPX/KML, κοινοποίηση λίστας ως GPX, πάτημα σε μέρος = διαδρομή εκεί.
  */
 @Composable
-fun BookmarksScreen(onGo: (Place) -> Unit, onBack: () -> Unit) {
+fun BookmarksScreen(onGo: (Place) -> Unit, onBack: () -> Unit, onFollowRoute: (app.motonav.trips.SavedRoute) -> Unit = {}) {
     val c = LocalAppColors.current
     val context = LocalContext.current
     val repo = remember { SettingsRepo(context.applicationContext) }
@@ -139,7 +145,46 @@ fun BookmarksScreen(onGo: (Place) -> Unit, onBack: () -> Unit) {
                         color = c.base.textMuted,
                     )
                 }
+                LaunchedEffectLoad()
+                val routes = app.motonav.trips.SavedRoutes.list
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(Space.sm)) {
+                    if (routes.isNotEmpty()) {
+                        item { Text("Αποθηκευμένες διαδρομές", style = MotoType.label, color = c.base.textMuted) }
+                        items(routes, key = { "route|${it.id}" }) { r ->
+                            var renameTo by remember(r.id) { mutableStateOf<String?>(null) }
+                            Column(verticalArrangement = Arrangement.spacedBy(Space.xs)) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+                                    Surface(
+                                        shape = RoundedCornerShape(Radius.md),
+                                        color = c.base.surface,
+                                        border = BorderStroke(1.dp, c.outline),
+                                        onClick = { onFollowRoute(r) },
+                                        modifier = Modifier.weight(1f).heightIn(min = 56.dp),
+                                    ) {
+                                        Column(Modifier.padding(horizontal = Space.md, vertical = Space.sm)) {
+                                            Text(r.name, style = MotoType.body, color = c.base.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            Text(String.format(java.util.Locale("el", "GR"), "%.1f km · πάτα για «Ακολούθησε»", r.lengthM / 1000), style = MotoType.label, color = c.base.textMuted)
+                                        }
+                                    }
+                                    TextChoice("✎", selected = renameTo != null, onClick = { renameTo = if (renameTo == null) r.name else null })
+                                    TextChoice("✕", selected = false, onClick = { app.motonav.trips.SavedRoutes.delete(context, r.id) })
+                                }
+                                renameTo?.let { rn ->
+                                    Row(horizontalArrangement = Arrangement.spacedBy(Space.sm), verticalAlignment = Alignment.CenterVertically) {
+                                        OutlinedTextField(
+                                            value = rn,
+                                            onValueChange = { renameTo = it.take(40) },
+                                            singleLine = true,
+                                            shape = RoundedCornerShape(Radius.md),
+                                            modifier = Modifier.weight(1f),
+                                        )
+                                        TextChoice("OK", selected = true, onClick = { app.motonav.trips.SavedRoutes.rename(context, r.id, rn); renameTo = null })
+                                    }
+                                }
+                            }
+                        }
+                        item { Text("Λίστες μερών", style = MotoType.label, color = c.base.textMuted) }
+                    }
                     items(lists.keys.toList(), key = { it }) { name ->
                         val ps = lists.getValue(name)
                         val col = ps.firstOrNull { it.color != 0 }?.color ?: 0

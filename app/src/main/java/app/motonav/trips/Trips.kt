@@ -97,6 +97,8 @@ class TripStats {
         points++
     }
 
+    val distanceM: Double get() = dist
+
     /** Κενό (παύση): το επόμενο σημείο δεν ενώνεται με το προηγούμενο. */
     fun gap() {
         last = null

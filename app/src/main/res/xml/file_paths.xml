@@ -3,4 +3,5 @@
     <external-files-path name="trips" path="trips/" />
     <files-path name="trips_internal" path="trips/" />
     <cache-path name="share" path="share/" />
+    <cache-path name="update" path="update/" />
 </paths>

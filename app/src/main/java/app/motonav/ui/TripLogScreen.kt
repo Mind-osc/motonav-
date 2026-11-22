@@ -330,6 +330,18 @@ private fun TripDetail(
             },
             modifier = Modifier.fillMaxWidth(),
         )
+        var savedRoute by remember(t.id) { mutableStateOf(false) }
+        TextChoice(
+            if (savedRoute) "Αποθηκεύτηκε · στην αναζήτηση → Αποθηκευμένες διαδρομές" else "Αποθήκευση ως διαδρομή (για να την ξανακάνεις)",
+            selected = savedRoute,
+            onClick = {
+                if (!savedRoute) {
+                    val name = "Βόλτα " + SimpleDateFormat("d/M HH:mm", Locale("el", "GR")).format(Date(t.startMs))
+                    savedRoute = app.motonav.trips.SavedRoutes.saveFromGpx(ctx, repo.file(t.id), name, t.distanceM) != null
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+        )
         Text("Αρχείο GPX: Android/data/app.motonav/files/trips/${t.id}.gpx", style = MotoType.label, color = c.base.textMuted)
     }
 }

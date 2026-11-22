@@ -70,6 +70,8 @@ class TripRecorder(context: Context) {
     /** Κλίση από τα όργανα (για τα μέγιστα αριστερά/δεξιά). */
     fun lean(deg: Float) = stats.lean(deg.toDouble())
 
+    val distanceM: Double get() = stats.distanceM
+
     fun finish() {
         runCatching {
             writer?.run {

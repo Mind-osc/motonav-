@@ -440,10 +440,24 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
         state = null
         engine = null
         rerouting = false
-        recorder?.finish()
+        val rec = recorder
+        rec?.finish()
         recorder = null
         recordingPaused = false
+        if (!followingTrack) offerSave(rec, destinationName)
         voice.silence()
+    }
+
+    /** Στο τέλος μιας οδήγησης: «Αποθήκευση διαδρομής;» (όλο το ίχνος από την αρχή). */
+    data class SavePrompt(val gpx: java.io.File, val suggested: String, val lengthM: Double)
+    var savePrompt by mutableStateOf<SavePrompt?>(null)
+
+    private fun offerSave(r: TripRecorder?, name: String?) {
+        val f = r?.file ?: return
+        val len = r.distanceM
+        if (len < 500.0 || !f.exists()) return
+        val date = java.text.SimpleDateFormat("d/M", java.util.Locale.US).format(java.util.Date())
+        savePrompt = SavePrompt(f, name?.let { "Προς $it" } ?: "Βόλτα $date", len)
     }
 
     /** Μέτρα που έκανες σε προηγούμενες διαδρομές του ίδιου ταξιδιού (πριν από κάθε «νέα διαδρομή»). */
@@ -476,7 +490,9 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
     fun stopRecording() {
         if (navigating) { stop(); return }
         if (!recordingFree) return
-        recorder?.finish()
+        val rec = recorder
+        rec?.finish()
+        offerSave(rec, null)
         recorder = null
         recordingFree = false
         recordingPaused = false

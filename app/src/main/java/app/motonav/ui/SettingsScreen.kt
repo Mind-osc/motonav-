@@ -29,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.TextButton
@@ -252,7 +253,7 @@ fun SettingsScreen(
                     Group {
                         LinkRow("Παρέα", "Βλέπετε ο ένας τον άλλον στον χάρτη · walkie-talkie", onOpenGroup)
                         LinkRow("Ημερολόγιο διαδρομών", "Καταγραφή με παύση, χιλιόμετρα, κλίσεις, GPX", onOpenTrips)
-                        LinkRow("Σελιδοδείκτες", "Λίστες με χρώματα, εισαγωγή GPX/KML, κοινοποίηση", onOpenBookmarks)
+                        LinkRow("Σελιδοδείκτες και διαδρομές", "Λίστες μερών με χρώματα, αποθηκευμένες διαδρομές, GPX/KML", onOpenBookmarks)
                     }
                     Group {
                         LinkRow("Αντίγραφο ασφαλείας", "Όλα σε ένα αρχείο, επαναφορά με ένα πάτημα", { onPage("backup") })
@@ -264,6 +265,33 @@ fun SettingsScreen(
             }
 
             Text("Moto Nav $version · δωρεάν, open source", style = MotoType.label, color = c.base.textMuted)
+            if (page == "main") {
+                val updScope = androidx.compose.runtime.rememberCoroutineScope()
+                var checking by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+                val avail = app.motonav.update.Updater.available
+                if (avail != null) {
+                    TextChoice(
+                        app.motonav.update.Updater.downloading ?: "Νέα έκδοση ${avail.tag} · Εγκατάσταση",
+                        selected = true,
+                        onClick = { updScope.launch { app.motonav.update.Updater.install(context) } },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    app.motonav.update.Updater.error?.let { Text(it, style = MotoType.label, color = c.base.warning) }
+                } else {
+                    TextChoice(
+                        checking ?: "Έλεγχος για νέα έκδοση",
+                        selected = false,
+                        onClick = {
+                            checking = "Ελέγχω…"
+                            updScope.launch {
+                                val has = app.motonav.update.Updater.check(context, force = true)
+                                checking = if (has) null else "Έχεις την τελευταία έκδοση"
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
             Spacer(Modifier.heightIn(min = Space.xxl))
         }
     }

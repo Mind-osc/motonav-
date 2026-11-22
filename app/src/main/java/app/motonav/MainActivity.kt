@@ -178,6 +178,12 @@ class MainActivity : ComponentActivity() {
                                 showSettings = false
                             },
                             onBack = { showBookmarks = false },
+                            onFollowRoute = { r ->
+                                val pts = app.motonav.trips.SavedRoutes.points(applicationContext, r.id)
+                                if (pts.size >= 2) app.motonav.car.CarBridge.phoneSession?.followTrack(pts, r.name)
+                                showBookmarks = false
+                                showSettings = false
+                            },
                         )
                     }
                     if (showOffline && !inPip) {
