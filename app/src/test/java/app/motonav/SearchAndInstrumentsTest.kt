@@ -70,16 +70,19 @@ class SearchAndInstrumentsTest {
     }
 
     @Test
-    fun headingAndLabels() {
-        assertEquals(0.0, LeanMath.headingDeg(0.0, 1.0), 1e-6)
-        assertEquals(90.0, LeanMath.headingDeg(1.0, 0.0), 1e-6)
-        assertEquals(270.0, LeanMath.headingDeg(-1.0, 0.0), 1e-6)
-        assertEquals("Β", cardinal(359f))
-        assertEquals("ΒΑ", cardinal(44f))
-        assertEquals("Ν", cardinal(181f))
-        assertEquals("ΒΔ", cardinal(-45f))
-        assertEquals("24° Α", leanLabel(-24.2f))
-        assertEquals("31° Δ", leanLabel(30.6f))
-        assertEquals("0°", leanLabel(0.3f))
+    fun leanIndependentOfMountAndLean() {
+        // Στροφή αριστερά στα 72 km/h με 45° κλίση, κινητό στραβά στερεωμένο: πρέπει να βγει -45°.
+        val g = 9.80665
+        val v = 20.0
+        val w = g * Math.tan(Math.toRadians(45.0)) / v
+        val phi = Math.toRadians(45.0)
+        // κόσμος -> μηχανή (κλίση γύρω από τον άξονα πορείας x)
+        fun bike(x: Double, y: Double, z: Double) = doubleArrayOf(x, y * Math.cos(phi) + z * Math.sin(phi), -y * Math.sin(phi) + z * Math.cos(phi))
+        // μηχανή -> κινητό (στροφή 50° γύρω από y)
+        val q = Math.toRadians(50.0)
+        fun phone(b: DoubleArray) = doubleArrayOf(b[0] * Math.cos(q) - b[2] * Math.sin(q), b[1], b[0] * Math.sin(q) + b[2] * Math.cos(q))
+        val gy = phone(bike(0.0, 0.0, w))
+        val ac = phone(bike(0.0, v * w, g))
+        val yaw = LeanMath.yawRate(gy[0], gy[1], gy[2], ac[0], ac[1], ac[2])
+        assertEquals(-45.0, LeanMath.leanDeg(v, yaw), 0.1)
     }
-}

@@ -39,6 +39,16 @@ object LeanMath {
     }
 
     /**
+     * Ρυθμός στροφής γύρω από τον πραγματικό κατακόρυφο, χωρίς να ξέρουμε πώς είναι στερεωμένο το κινητό
+     * ούτε πόσο γέρνει η μηχανή: (γυροσκόπιο · επιτάχυνση) / g.
+     * Σε στροφή, η επιτάχυνση που «νιώθει» το κινητό έχει πάντα κατακόρυφο κομμάτι g, και η περιστροφή
+     * είναι γύρω από τον κατακόρυφο, άρα το εσωτερικό γινόμενο βγάζει ω·g, όσο κι αν γέρνει η μηχανή.
+     * (Με τον «κατακόρυφο» της σύντηξης αισθητήρων, σε σταθερή στροφή 45° έβγαινε ~35°.)
+     */
+    fun yawRate(gx: Double, gy: Double, gz: Double, ax: Double, ay: Double, az: Double): Double =
+        (gx * ax + gy * ay + gz * az) / G
+
+    /**
      * Κλίση δρόμου από δείγματα (απόσταση που διένυσες, υψόμετρο): το τελευταίο μείον το πρώτο
      * σε παράθυρο τουλάχιστον minDist μέτρων. null αν δεν έχεις κινηθεί αρκετά.
      */
@@ -67,6 +77,7 @@ class InstrumentEngine(context: Context, private val onChange: (Instruments) -> 
     private val gameRot = sm?.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR)
     private val magRot = sm?.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
     private val gyro = sm?.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
+    private val accel = sm?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
     private val pressure = sm?.getDefaultSensor(Sensor.TYPE_PRESSURE)
     private var baroAlt: Double? = null
     private val gradeSamples = ArrayDeque<Pair<Double, Double>>()
@@ -79,6 +90,9 @@ class InstrumentEngine(context: Context, private val onChange: (Instruments) -> 
     private var hasGame = false
     private var hasMag = false
     private var yawRate = 0.0
+    /** Επιτάχυνση με φίλτρο (~0,5″), για να σβήνουν οι κραδασμοί. */
+    private val acc = DoubleArray(3)
+    private var hasAcc = false
     private var lean = 0.0
     private var compass: Double? = null
 
@@ -89,13 +103,14 @@ class InstrumentEngine(context: Context, private val onChange: (Instruments) -> 
     private var maxRight = 0f
     private var lastEmit = 0L
 
-    private val available = gyro != null && (gameRot != null || magRot != null)
+    private val available = gyro != null && (accel != null || gameRot != null || magRot != null)
 
     fun start() {
         val s = sm ?: return
         gameRot?.let { s.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) }
         magRot?.let { s.registerListener(this, it, SensorManager.SENSOR_DELAY_UI) }
         gyro?.let { s.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) }
+        accel?.let { s.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) }
         pressure?.let { s.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL) }
         emit(force = true)
     }
@@ -152,14 +167,30 @@ class InstrumentEngine(context: Context, private val onChange: (Instruments) -> 
                 baroAlt = baroAlt?.let { it + 0.1 * (a - it) } ?: a
                 return
             }
-            Sensor.TYPE_GYROSCOPE -> {
-                val r = when {
-                    hasGame -> rGame
-                    hasMag -> rMag
-                    else -> return
+            Sensor.TYPE_ACCELEROMETER -> {
+                if (!hasAcc) {
+                    for (i in 0..2) acc[i] = e.values[i].toDouble()
+                    hasAcc = true
+                } else {
+                    for (i in 0..2) acc[i] += 0.04 * (e.values[i] - acc[i])
                 }
-                // Τρίτη γραμμή του πίνακα = κατακόρυφος άξονας του κόσμου.
-                val wz = r[6] * e.values[0] + r[7] * e.values[1] + r[8] * e.values[2]
+                return
+            }
+            Sensor.TYPE_GYROSCOPE -> {
+                val wz = if (hasAcc) {
+                    LeanMath.yawRate(
+                        e.values[0].toDouble(), e.values[1].toDouble(), e.values[2].toDouble(),
+                        acc[0], acc[1], acc[2],
+                    )
+                } else {
+                    // Χωρίς επιταχυνσιόμετρο: κατακόρυφος από τη σύντηξη (υποεκτιμά σε μεγάλες κλίσεις).
+                    val r = when {
+                        hasGame -> rGame
+                        hasMag -> rMag
+                        else -> return
+                    }
+                    r[6] * e.values[0] + r[7] * e.values[1] + r[8] * e.values[2].toDouble()
+                }
                 yawRate += 0.08 * (wz - yawRate)
                 val target = LeanMath.leanDeg(speedMps, yawRate)
                 lean += 0.25 * (target - lean)
