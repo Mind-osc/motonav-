@@ -102,6 +102,21 @@ fun GroupScreen(onScan: () -> Unit, onBack: () -> Unit) {
                 )
                 return@Column
             }
+            if (!GroupLink.enabled) {
+                Text(
+                    "Βλέπετε ο ένας τον άλλον στον χάρτη και μιλάτε σαν walkie-talkie, με 2–5 φίλους.",
+                    style = MotoType.body,
+                    color = c.base.text,
+                )
+                Text(
+                    "Είναι κλειστή: η εφαρμογή δεν συνδέεται πουθενά για την Παρέα. Αν την ανοίξεις, θέση, όνομα και φωνή " +
+                        "κρυπτογραφούνται στο κινητό σου και τα βλέπουν μόνο όσοι έχουν τον κωδικό της παρέας σας. Την κλείνεις ξανά όποτε θες.",
+                    style = MotoType.label,
+                    color = c.base.textMuted,
+                )
+                TextChoice("Άνοιγμα Παρέας", selected = true, onClick = { GroupLink.enable() }, modifier = Modifier.fillMaxWidth())
+                return@Column
+            }
             Text(
                 "Βλέπετε ο ένας τον άλλον στον χάρτη και μιλάτε σαν walkie-talkie. Τη θέση σου τη βλέπουν μόνο όσοι είναι στην ίδια παρέα.",
                 style = MotoType.label,
@@ -223,6 +238,14 @@ fun GroupScreen(onScan: () -> Unit, onBack: () -> Unit) {
                 )
             }
             GroupLink.error?.let { Text(it, style = MotoType.label, color = c.base.warning) }
+            Spacer(Modifier.height(Space.lg))
+            TextChoice(
+                "Κλείσιμο Παρέας",
+                selected = false,
+                onClick = { GroupLink.disable(); confirmLeave = false },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text("Βγαίνεις από την παρέα και η εφαρμογή δεν συνδέεται πια για την Παρέα.", style = MotoType.label, color = c.base.textMuted)
         }
     }
 }

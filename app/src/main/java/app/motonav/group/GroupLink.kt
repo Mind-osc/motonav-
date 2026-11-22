@@ -87,6 +87,9 @@ object GroupCodes {
 object GroupLink {
     var available by mutableStateOf(false)
         private set
+    /** Η Παρέα είναι κλειστή ώσπου να την ανοίξεις μία φορά (καμία σύνδεση με Firebase μέχρι τότε). */
+    var enabled by mutableStateOf(false)
+        private set
     var code by mutableStateOf<String?>(null)
         private set
     var members by mutableStateOf<List<Member>>(emptyList())
@@ -176,8 +179,10 @@ object GroupLink {
         sharing = prefs.getBoolean("sharing", true)
         voxMode = prefs.getBoolean("vox", true)
         voxSensitivity = prefs.getInt("vox_sens", 3)
+        // Όσοι είχαν ήδη παρέα πριν από αυτή την έκδοση: μένει ανοιχτή.
+        enabled = prefs.getBoolean("enabled", prefs.getString("code", null) != null)
         available = runCatching { FirebaseApp.initializeApp(appContext) != null || FirebaseApp.getApps(appContext).isNotEmpty() }.getOrDefault(false)
-        if (!available) return
+        if (!available || !enabled) return
         player = VoicePlayer(appContext)
         // Σύνδεση με τη βάση ΜΟΝΟ όσο είσαι σε παρέα (όριο Spark: 100 ταυτόχρονες συνδέσεις για όλους τους χρήστες).
         runCatching { FirebaseDatabase.getInstance().goOffline() }
@@ -202,11 +207,28 @@ object GroupLink {
         lastRouteKey = null
     }
 
+    /** Πρώτο άνοιγμα της Παρέας. */
+    fun enable() {
+        if (enabled) return
+        enabled = true
+        prefs.edit().putBoolean("enabled", true).apply()
+        if (available && player == null) player = VoicePlayer(appContext)
+    }
+
+    /** Κλείνει την Παρέα: έξοδος από την παρέα και καμία σύνδεση με Firebase. */
+    fun disable() {
+        if (code != null) leave()
+        enabled = false
+        prefs.edit().putBoolean("enabled", false).apply()
+        runCatching { FirebaseDatabase.getInstance().goOffline() }
+    }
+
     fun create() = join(GroupCodes.newCode())
 
     /** Επιστρέφει false αν ο κωδικός δεν είναι έγκυρος. */
     fun join(input: String): Boolean {
         val c = GroupCodes.normalize(input) ?: return false
+        enable() // από QR ή link: θες να μπεις, άρα ανοίγει
         if (c == code) return true
         leave()
         prefs.edit().putString("code", c).apply()
