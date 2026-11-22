@@ -2026,7 +2026,7 @@ private fun DestinationCard(
 
             // Τύπος διαδρομής: μικρά κουμπιά με εικονίδιο, και δεξιά οι αποφυγές.
             if (session.followingTrack) {
-                Text("Ακολουθείς έτοιμη διαδρομή όπως είναι. Ξεκίνα κοντά στην αρχή της· αν βγεις, δεν αλλάζει.", style = MotoType.label, color = c.base.textMuted)
+                Text("Ακολουθείς έτοιμη διαδρομή. Αν είσαι μακριά, σε πάει πρώτα στο πιο κοντινό σημείο της· αν βγεις, σε ξαναφέρνει πάνω της.", style = MotoType.label, color = c.base.textMuted)
             } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(Space.xs), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     RouteTypeButton(R.drawable.ic_route_fast, "Γρήγορη", session.routeType == RouteType.FASTEST) { session.chooseRouteType(RouteType.FASTEST) }

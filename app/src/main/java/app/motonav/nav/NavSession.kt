@@ -220,22 +220,90 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
         }
     }
 
+    /** Η αποθηκευμένη διαδρομή που ακολουθείς (ολόκληρη), για να μπαίνεις/ξαναμπαίνεις σε αυτήν. */
+    private var trackPoints: List<LatLon>? = null
+
+    /**
+     * Ακολουθείς έτοιμη διαδρομή (αποθηκευμένη ή GPX). Από όπου κι αν είσαι: σε πάει στο πιο κοντινό σημείο της
+     * (προς τα μπροστά) και μετά ακριβώς πάνω της. Αν βγεις, σε ξαναφέρνει πάνω της (όχι από άλλο δρόμο ως το τέλος).
+     */
     fun followTrack(points: List<LatLon>, name: String = "Διαδρομή GPX") {
         if (navigating) return
-        val r = app.motonav.routing.TrackRoute.build(points) ?: return
+        val full = app.motonav.routing.TrackRoute.build(points) ?: return
         planJob?.cancel()
-        planning = false
         error = null
         followingTrack = true
-        destination = r.points.last()
+        trackPoints = full.points
+        destination = full.points.last()
         destinationName = name
         stops = emptyList()
         addingStop = false
         arrived = false
         resetTraffic()
-        route = r
-        refreshWeather(force = true)
+        clearAlternatives()
+        val fix = lastFix
+        if (fix == null) {
+            route = full
+            planning = false
+            refreshWeather(force = true)
+            return
+        }
+        route = null
+        planning = true
+        planJob = scope.launch {
+            try {
+                route = joinTrack(fix, 0) ?: full
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                route = full
+            } finally {
+                planning = false
+            }
+            refreshWeather(force = true)
+        }
     }
+
+    /** Διαδρομή ως το σημείο εισόδου (BRouter, offline) + το υπόλοιπο της έτοιμης διαδρομής. */
+    private suspend fun joinTrack(from: Location, minIndex: Int): Route? {
+        val track = trackPoints ?: return null
+        val here = LatLon(from.latitude, from.longitude)
+        val i = app.motonav.routing.TrackJoin.joinIndex(track, here, minIndex)
+        val rest = track.subList(i, track.size)
+        val far = app.motonav.geo.Geo.distance(here, track[i]) >= 60.0
+        val approach = if (!far) null else runCatching {
+            router.route(listOf(here, track[i]), if (from.hasBearing()) from.bearing else null, avoidMotorways, RouteType.FASTEST, avoidTolls)
+        }.getOrNull()
+        return app.motonav.routing.TrackJoin.combine(approach, rest)
+    }
+
+    /** Βγήκες από την έτοιμη διαδρομή: πίσω πάνω της, από το κοντινότερο σημείο μπροστά από εκεί που ήσουν. */
+    private fun rejoinTrack(loc: Location) {
+        val track = trackPoints ?: return
+        rerouting = true
+        lastRerouteAt = SystemClock.elapsedRealtime()
+        voice.say("Βγήκες από τη διαδρομή. Σε ξαναφέρνω σε αυτήν.", interrupt = false)
+        val last = state?.snapped ?: LatLon(loc.latitude, loc.longitude)
+        val minIndex = track.indices.minByOrNull { app.motonav.geo.Geo.distance(track[it], last) } ?: 0
+        scope.launch {
+            try {
+                val r = joinTrack(loc, minIndex)
+                if (navigating && r != null) {
+                    tripDoneM += state?.progressM ?: 0.0
+                    route = r
+                    engine = NavigationEngine(r)
+                    announcer.reset()
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // κρατάμε ό,τι είχαμε· ξαναδοκιμάζει σε λίγα δευτερόλεπτα
+            } finally {
+                rerouting = false
+            }
+        }
+    }
+
 
     /** true όσο ψάχνει κυκλική βόλτα (παίρνει περισσότερο από μια απλή διαδρομή). */
     var loopPlanning by mutableStateOf(false)
@@ -599,13 +667,8 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
         if (!rerouting) announcer.onState(s, loc.speed)
         val now = SystemClock.elapsedRealtime()
         if (followingTrack) {
-            // Σε ίχνος GPX δεν αλλάζουμε διαδρομή: μόνο ειδοποίηση, μία φορά κάθε φορά που βγαίνεις.
-            if (s.offRoute && !offTrackSaid) {
-                offTrackSaid = true
-                voice.say("Βγήκες από τη διαδρομή.", interrupt = false)
-            } else if (s.onRoute) {
-                offTrackSaid = false
-            }
+            // Έτοιμη διαδρομή: δεν βγάζουμε άλλη ως το τέλος, σε ξαναφέρνουμε πάνω της.
+            if (s.offRoute && !rerouting && now - lastRerouteAt > 8_000) rejoinTrack(loc)
         } else if (s.offRoute && !rerouting && now - lastRerouteAt > 5_000) reroute(loc)
     }
 

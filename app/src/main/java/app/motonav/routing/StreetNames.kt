@@ -134,3 +134,54 @@ object TrackRoute {
         return Route(pts, pts.map { null }, cum, maneuvers, bare.durationS, source = "GPX")
     }
 }
+
+/**
+ * Μπαίνεις σε αποθηκευμένη διαδρομή από όπου είσαι: διαδρομή ως το πιο κοντινό σημείο της (προς τα μπροστά)
+ * και μετά ακριβώς πάνω της ως το τέλος.
+ */
+object TrackJoin {
+    /**
+     * Πού μπαίνεις: το πιο κοντινό σημείο, αλλά ανάμεσα σε όσα είναι σχεδόν το ίδιο κοντά (≤ 30% + 100 m)
+     * διαλέγει το πιο «μπροστά», για να μη σε γυρίσει πίσω. Όχι πριν από το minIndex (όσα έχεις ήδη κάνει).
+     */
+    fun joinIndex(track: List<LatLon>, from: LatLon, minIndex: Int = 0): Int {
+        if (track.isEmpty()) return 0
+        val start = minIndex.coerceIn(0, track.lastIndex)
+        val step = maxOf(1, (track.size - start) / 2000)
+        val ds = ArrayList<Pair<Int, Double>>()
+        var i = start
+        while (i < track.size) { ds += i to Geo.distance(from, track[i]); i += step }
+        if (ds.last().first != track.lastIndex) ds += track.lastIndex to Geo.distance(from, track.last())
+        val best = ds.minOf { it.second }
+        val limit = best * 1.3 + 100.0
+        // Το τέλος της διαδρομής μόνο αν δεν υπάρχει κάτι άλλο κοντά.
+        return ds.filter { it.second <= limit && it.first < track.lastIndex }.maxOfOrNull { it.first }
+            ?: ds.minByOrNull { it.second }!!.first
+    }
+
+    /** Ενώνει «προσέγγιση» (κανονική διαδρομή ως το σημείο εισόδου) με το υπόλοιπο της αποθηκευμένης. */
+    fun combine(approach: Route?, rest: List<LatLon>): Route? {
+        val tail = TrackRoute.build(rest) ?: return null
+        if (approach == null || approach.points.size < 2) return tail
+        val all = ArrayList<LatLon>(approach.points)
+        for (p in tail.points.drop(1)) all += p
+        // Ίδια γεωμετρία με τις «έτοιμες» διαδρομές (χωρίς σημεία < 4 m), και στροφές από αυτήν μετά την είσοδο.
+        val built = TrackRoute.build(all) ?: return tail
+        val pts = built.points
+        val cum = built.cumulative
+        val joinAt = approach.lengthM
+        fun idxAt(m: Double) = cum.indexOfFirst { it >= m }.let { if (it < 0) cum.lastIndex else it }
+        val mans = approach.maneuvers.filter { it.turn != Turn.ARRIVE && it.atMeters < joinAt - 25.0 }.map { it.copy(pointIndex = idxAt(it.atMeters)) } +
+            built.maneuvers.filter { it.atMeters >= joinAt - 25.0 }
+        return Route(
+            points = pts,
+            elevations = pts.map { null },
+            cumulative = cum,
+            maneuvers = mans.sortedBy { it.atMeters },
+            durationS = approach.durationS + tail.durationS,
+            source = "GPX",
+            speedLimits = approach.speedLimits,
+            roadKinds = approach.roadKinds + (cum.last() to RoadKind.OTHER),
+        )
+    }
+}

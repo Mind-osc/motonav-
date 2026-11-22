@@ -105,6 +105,22 @@ class RoutingTest {
     }
 
     @Test
+    fun joinsSavedRouteNearestAhead() {
+        // ευθεία 2 km ανατολικά· είσαι 300 m βόρεια από τη μέση της → μπαίνεις κοντά στη μέση, όχι στην αρχή
+        val track = (0..200).map { LatLon(38.0, 23.0 + it * 0.000114) }
+        val i = app.motonav.routing.TrackJoin.joinIndex(track, LatLon(38.0027, 23.0114))
+        assertTrue("join $i", i in 90..140)
+        // ήδη μετά τη μέση: ποτέ πίσω από το minIndex
+        assertTrue(app.motonav.routing.TrackJoin.joinIndex(track, LatLon(38.0, 23.0), minIndex = 150) >= 150)
+        // προσέγγιση + υπόλοιπο: συνεχής γραμμή που τελειώνει στο τέλος της διαδρομής
+        val approach = app.motonav.routing.TrackRoute.build(listOf(LatLon(38.0027, 23.0114), LatLon(38.0, 23.0114)))!!
+        val r = app.motonav.routing.TrackJoin.combine(approach, track.subList(100, track.size))!!
+        assertEquals(track.last().lon, r.points.last().lon, 1e-9)
+        assertTrue("len ${r.lengthM}", r.lengthM > approach.lengthM + 900)
+        assertEquals(app.motonav.routing.Turn.ARRIVE, r.maneuvers.last().turn)
+    }
+
+    @Test
     fun navZoomBySpeedAndTurn() {
         assertEquals(17.5, app.motonav.ui.navZoomFor(20f, null), 0.01)
         assertEquals(15.0, app.motonav.ui.navZoomFor(130f, 2000.0), 0.01)
