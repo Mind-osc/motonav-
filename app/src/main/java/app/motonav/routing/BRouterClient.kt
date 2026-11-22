@@ -70,8 +70,11 @@ class BRouterClient(context: Context) {
         val lengthM = targetS * LoopPlanner.AVG_KMH / 3.6
         val results = ArrayList<Triple<Route, List<LatLon>, Int>>()
         var firstError: RoutingException? = null
-        for (dir in LoopPlanner.DIRECTIONS) {
-            val via = LoopPlanner.loop(start, lengthM, dir)
+        // Κάθε φορά άλλη βόλτα: οι 4 κατευθύνσεις στρίβουν τυχαία (0–89°), και το σχήμα του κύκλου αλλάζει λίγο.
+        val turn = kotlin.random.Random.nextInt(0, 90)
+        for (dir0 in LoopPlanner.DIRECTIONS) {
+            val dir = (dir0 + turn) % 360
+            val via = LoopPlanner.loop(start, lengthM * kotlin.random.Random.nextDouble(0.9, 1.1), dir)
             try {
                 results += Triple(call(service, listOf(start) + via + start, null, extra, alternative = 0), via, dir)
             } catch (e: RoutingException) {
@@ -97,8 +100,11 @@ class BRouterClient(context: Context) {
      * (ώστε να μη «κερδίζουν» οι γρήγοροι ευθείς δρόμοι). Ζητάμε έως 4 εναλλακτικές
      * και κρατάμε αυτή με τις περισσότερες στροφές ανά χιλιόμετρο, αν δεν είναι πολύ πιο αργή.
      */
+    /** Ρυθμίσεις → Χάρτης → «Πολλές στροφές»: πιο αργή ταχύτητα-στόχος και δέχεται πιο μεγάλη παράκαμψη. */
+    var moreCurves = false
+
     private suspend fun twisty(service: IBRouterService, waypoints: List<LatLon>, headingDeg: Float?, avoidTolls: Boolean): Route {
-        val extra = listOf("vmax=80", "avoid_motorways=1", "consider_town=1") +
+        val extra = listOf(if (moreCurves) "vmax=60" else "vmax=80", "avoid_motorways=1", "consider_town=1") +
             (if (avoidTolls) listOf("avoid_toll=1") else emptyList())
         val candidates = ArrayList<Route>()
         for (alt in 0..3) {
@@ -109,7 +115,8 @@ class BRouterClient(context: Context) {
                 break // λιγότερες εναλλακτικές από 4: εντάξει
             }
         }
-        return TwistyPicker.pick(candidates).also { chosen -> lastTwisty = candidates.filter { it !== chosen } }
+        return TwistyPicker.pick(candidates, if (moreCurves) TwistyPicker.MAX_SLOWDOWN_MORE else TwistyPicker.MAX_SLOWDOWN)
+            .also { chosen -> lastTwisty = candidates.filter { it !== chosen } }
     }
 
     /** Χωματόδρομοι: το προφίλ moto-dirt.brf (από το car-vario) στέλνεται ολόκληρο στο BRouter. */
@@ -159,6 +166,7 @@ class BRouterClient(context: Context) {
             putString("timode", "2")
             putString("maxRunningTime", "90")
             putString("alternativeidx", alternative.toString())
+            NoGoAreas.brouterParam()?.let { putString("nogos", it) }
             if (avoidTolls) putString("extraParams", "avoid_toll=1")
             headingDeg?.let { putString("heading", it.roundToInt().toString()) }
         }
@@ -194,6 +202,7 @@ class BRouterClient(context: Context) {
                 putString("maxRunningTime", "60")
                 putString("alternativeidx", alternative.toString())
                 putString("extraParams", extra.joinToString("&"))
+                NoGoAreas.brouterParam()?.let { putString("nogos", it) }
                 headingDeg?.let { putString("heading", it.roundToInt().toString()) }
             }
             val result = withContext(Dispatchers.IO) {
@@ -320,12 +329,13 @@ object LoopPlanner {
 
 object TwistyPicker {
     const val MAX_SLOWDOWN = 1.6
+    const val MAX_SLOWDOWN_MORE = 2.2
 
-    fun pick(candidates: List<Route>): Route {
+    fun pick(candidates: List<Route>, maxSlowdown: Double = MAX_SLOWDOWN): Route {
         require(candidates.isNotEmpty())
         val fastest = candidates.minOf { it.durationS }
         return candidates
-            .filter { it.durationS <= fastest * MAX_SLOWDOWN }
+            .filter { it.durationS <= fastest * maxSlowdown }
             .maxBy { it.twistinessDegPerKm }
     }
 }

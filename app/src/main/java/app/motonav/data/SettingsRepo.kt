@@ -40,6 +40,10 @@ data class DisplayPrefs(
     val showSpots: Boolean = true,
     /** Εναλλακτικές διαδρομές με τη διαφορά χρόνου, στην προεπισκόπηση. */
     val showAlternatives: Boolean = true,
+    /** «Στροφές» με ακόμα περισσότερες στροφές (δέχεται μεγαλύτερη παράκαμψη). */
+    val moreCurves: Boolean = false,
+    /** Κουμπιά χειριστηρίου τιμονιού: ενέργεια → keyCode (κείμενο «zoom_in=19,zoom_out=20,…»). */
+    val keyMap: String = "",
     /** Δική μας ώρα/μπαταρία/δορυφόροι πάνω πάνω, αντί για τη γραμμή του κινητού. */
     val customStatus: Boolean = true,
     /** Μέγεθος όλων των κουμπιών και κειμένων (1 = κανονικό). */
@@ -95,6 +99,8 @@ class SettingsRepo(private val context: Context) {
     private val dirtKey = booleanPreferencesKey("show_dirt")
     private val spotsKey = booleanPreferencesKey("show_spots")
     private val altKey = booleanPreferencesKey("show_alternatives")
+    private val curvesKey = booleanPreferencesKey("more_curves")
+    private val keyMapKey = stringPreferencesKey("key_map")
     private val statusKey = booleanPreferencesKey("custom_status")
     private val scaleKey = floatPreferencesKey("ui_scale")
     private val roadColorsKey = booleanPreferencesKey("road_colors")
@@ -118,6 +124,8 @@ class SettingsRepo(private val context: Context) {
             showDirt = p[dirtKey] ?: true,
             showSpots = p[spotsKey] ?: true,
             showAlternatives = p[altKey] ?: true,
+            moreCurves = p[curvesKey] ?: false,
+            keyMap = p[keyMapKey] ?: "",
             customStatus = p[statusKey] ?: true,
             uiScale = p[scaleKey] ?: 1f,
             roadColors = p[roadColorsKey] ?: true,
@@ -181,6 +189,8 @@ class SettingsRepo(private val context: Context) {
             p[dirtKey] = d.showDirt
             p[spotsKey] = d.showSpots
             p[altKey] = d.showAlternatives
+            p[curvesKey] = d.moreCurves
+            p[keyMapKey] = d.keyMap
             p[statusKey] = d.customStatus
             p[scaleKey] = d.uiScale
             p[roadColorsKey] = d.roadColors
@@ -189,6 +199,10 @@ class SettingsRepo(private val context: Context) {
             p[fuelKey] = d.showFuel
             p[flagKey] = d.flagOver120
         }
+    }
+
+    suspend fun saveKeyMap(text: String) {
+        context.settingsStore.edit { p -> p[keyMapKey] = text }
     }
 
     // ---- Πρόσφατα μέρη (τα 10 τελευταία που διάλεξες στην αναζήτηση)

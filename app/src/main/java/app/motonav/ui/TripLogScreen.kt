@@ -87,11 +87,11 @@ fun TripLogScreen(onShowOnMap: (List<LatLon>) -> Unit, onBack: () -> Unit) {
             val pts = withContext(Dispatchers.IO) {
                 runCatching {
                     context.contentResolver.openInputStream(uri)?.use { it.bufferedReader().readText() }
-                        ?.let { app.motonav.trips.Gpx.parse(it).map { p -> p.position } }
+                        ?.let { app.motonav.trips.RouteFiles.parse(it) }
                 }.getOrNull()
             }
             if (pts != null && pts.size >= 2) onShowOnMap(pts)
-            else openError = "Δεν βρήκα διαδρομή μέσα στο αρχείο (θέλει GPX με trkpt ή rtept)."
+            else openError = "Δεν βρήκα διαδρομή μέσα στο αρχείο (GPX, KML, GeoJSON ή ITN)."
         }
     }
 
@@ -113,7 +113,7 @@ fun TripLogScreen(onShowOnMap: (List<LatLon>) -> Unit, onBack: () -> Unit) {
             ) {
                 Header("Ημερολόγιο διαδρομών", onBack)
                 RecordingControls(app.motonav.car.CarBridge.phoneSession)
-                TextChoice("Άνοιγμα αρχείου GPX", selected = false, onClick = { openError = null; openGpx.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth())
+                TextChoice("Άνοιγμα διαδρομής (GPX, KML, GeoJSON, ITN)", selected = false, onClick = { openError = null; openGpx.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth())
                 openError?.let { Text(it, style = MotoType.label, color = c.base.warning) }
                 val list = trips
                 when {

@@ -51,6 +51,21 @@ object BookmarkFiles {
             val name = nameTag.find(pm)?.groupValues?.get(1)?.let(::unesc).orEmpty()
             out += Place(name.ifBlank { String.format(Locale.US, "%.4f, %.4f", lat, lon) }, "", lat, lon, "saved")
         }
+        // GeoJSON: σημεία (Point) με properties.name
+        if (text.trimStart().startsWith("{")) runCatching {
+            val o = org.json.JSONObject(text)
+            val feats = o.optJSONArray("features") ?: org.json.JSONArray().put(o)
+            for (i in 0 until feats.length()) {
+                val f = feats.optJSONObject(i) ?: continue
+                val g = f.optJSONObject("geometry") ?: continue
+                if (g.optString("type") != "Point") continue
+                val c = g.optJSONArray("coordinates") ?: continue
+                val lat = c.optDouble(1)
+                val lon = c.optDouble(0)
+                val name = f.optJSONObject("properties")?.optString("name").orEmpty()
+                out += Place(name.ifBlank { String.format(Locale.US, "%.4f, %.4f", lat, lon) }, "", lat, lon, "saved")
+            }
+        }
         return out.filter { it.lat in -90.0..90.0 && it.lon in -180.0..180.0 }
     }
 

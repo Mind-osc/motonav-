@@ -137,7 +137,7 @@ fun BookmarksScreen(onGo: (Place) -> Unit, onBack: () -> Unit, onFollowRoute: (a
 
             val current = open
             if (current == null) {
-                TextChoice("Εισαγωγή από GPX / KML", selected = false, onClick = { message = null; importFile.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth())
+                TextChoice("Εισαγωγή από GPX / KML / GeoJSON", selected = false, onClick = { message = null; importFile.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth())
                 if (lists.isEmpty()) {
                     Text(
                         "Δεν έχεις ακόμα σελιδοδείκτες. Σε έναν προορισμό πάτα ★ → «Σε λίστα…» για να τον βάλεις σε λίστα, π.χ. «Βόλτες Πήλιο».",

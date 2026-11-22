@@ -157,11 +157,18 @@ class PlaceSearch(private val tomtomKey: String = "") {
             radiusM, near.lat, near.lon, cat.filter,
         )
         // Η κλήση τρέχει χωριστά: αν αργήσει, σταματάμε να περιμένουμε (η σύνδεση κλείνει μόνη της στο timeout της).
-        @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
-        val call = kotlinx.coroutines.GlobalScope.async(Dispatchers.IO) { app.motonav.net.Overpass.query(query, 15_000) }
-        val json = kotlinx.coroutines.withTimeoutOrNull(40_000) { call.await() }
-            ?: throw java.net.SocketTimeoutException("Overpass")
-        PlaceParsers.overpass(json, near, cat.fallbackName)
+        try {
+            @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
+            val call = kotlinx.coroutines.GlobalScope.async(Dispatchers.IO) { app.motonav.net.Overpass.query(query, 15_000) }
+            val json = kotlinx.coroutines.withTimeoutOrNull(40_000) { call.await() }
+                ?: throw java.net.SocketTimeoutException("Overpass")
+            PlaceParsers.overpass(json, near, cat.fallbackName)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Χωρίς internet (ή server που δεν απαντά): από τη λίστα μέσα στην εφαρμογή.
+            OfflineGazetteer.category(cat, near, radiusM * 3).ifEmpty { throw e }
+        }
     }
 
     /** Όνομα για σημείο στον χάρτη (δρόμος / χωριό), από το Photon. null αν δεν βρεθεί ή δεν υπάρχει internet. */

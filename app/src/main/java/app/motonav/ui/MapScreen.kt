@@ -420,6 +420,8 @@ fun MapScreen(
     var hazardAlert by remember { mutableStateOf<Pair<Hazard, Double>?>(null) }
     val announcedHazards = remember { mutableSetOf<String>() }
     var hazardToDelete by remember { mutableStateOf<String?>(null) }
+    var noGoToDelete by remember { mutableStateOf<app.motonav.routing.NoGo?>(null) }
+    val recenterRef = remember { mutableStateOf<(() -> Unit)?>(null) }
 
     // Το μικρόφωνο της παρέας μόνο όταν είσαι σε παρέα με κάποιον ακόμα (ή αν είναι ήδη ανοιχτό, για να το κλείσεις).
     val groupActive = GroupLink.code != null && (GroupLink.micOn || GroupLink.members.any { it.uid != GroupLink.myUid })
@@ -479,6 +481,13 @@ fun MapScreen(
                                     session.pick(spot.latLon, spot.name)
                                     return@addOnMapClickListener true
                                 }
+                            }
+                            // Πάτημα σε περιοχή αποφυγής: ρωτάει αν να σβηστεί.
+                            val ng = m.queryRenderedFeatures(pt, NoGoLayer.LAYER).firstOrNull()
+                            if (ng != null && !session.navigating) {
+                                val idx = ng.getNumberProperty("i")?.toInt()
+                                noGoToDelete = idx?.let { app.motonav.routing.NoGoAreas.list.getOrNull(it) }
+                                if (noGoToDelete != null) return@addOnMapClickListener true
                             }
                             // Πάτημα σε σελιδοδείκτη: διαδρομή εκεί.
                             val bm = m.queryRenderedFeatures(
@@ -615,6 +624,7 @@ fun MapScreen(
             }
         }
         LaunchedEffect(display.showAlternatives) { session.showAlternatives = display.showAlternatives }
+        LaunchedEffect(display.moreCurves) { session.router.moreCurves = display.moreCurves }
         LaunchedEffect(style, session.alternatives, session.route, session.navigating) {
             val s = style ?: return@LaunchedEffect
             val alts = if (session.navigating) emptyList() else session.alternatives
@@ -905,6 +915,13 @@ fun MapScreen(
                 fuelLoading = false
                 return@LaunchedEffect
             }
+            // Πρώτα από τη λίστα μέσα στην εφαρμογή (δουλεύει και χωρίς internet), μετά από OpenStreetMap/TomTom.
+            val offlineFuel = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                app.motonav.search.OfflineGazetteer.fuelNear(r.points, FuelOnRoute.MAX_OFF_M).map { (n, p) ->
+                    app.motonav.fuel.FuelStation("off-${p.lat},${p.lon}", n.ifBlank { "Βενζινάδικο" }, p.lat, p.lon)
+                }
+            }
+            fuelRaw = (fuelRaw + offlineFuel.filter { o -> fuelRaw.none { Geo.distance(it.position, o.position) < 80 } }).takeLast(3_000)
             fuelOnRoute = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { FuelOnRoute.along(r, fuelRaw) }
             kotlinx.coroutines.delay(1_500) // αν αλλάξει πάλι η διαδρομή (εναλλακτικές, νέος υπολογισμός), δεν ρωτάμε άδικα
             fuelLoading = true
@@ -936,7 +953,9 @@ fun MapScreen(
                             val osmList = a.getOrDefault(emptyList())
                             osmList + b.getOrDefault(emptyList()).filter { t -> osmList.none { Geo.distance(it.position, t.position) < 80 } }
                         }
-                        fuelRaw = (fuelRaw + found).distinctBy { it.id }.takeLast(3_000)
+                        // Τα «offline» που υπάρχουν και στα online φεύγουν (κρατάμε τα online, έχουν ώρες κ.λπ.).
+                        fuelRaw = (fuelRaw.filterNot { o -> o.id.startsWith("off-") && found.any { Geo.distance(it.position, o.position) < 80 } } + found)
+                            .distinctBy { it.id }.takeLast(3_000)
                         fuelOnRoute = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { FuelOnRoute.along(r, fuelRaw) }
                         fuelFailed = false
                         app.motonav.fuel.FuelDiag.result(fuelOnRoute.size, r.lengthM / 1000.0)
@@ -996,6 +1015,10 @@ fun MapScreen(
         // Οι offline χάρτες ενημερώνονται μόνοι τους μία φορά τον μήνα, με Wi‑Fi (όταν είναι έτοιμος ο χάρτης).
         LaunchedEffect(style != null) {
             if (style != null) runCatching { app.motonav.map.OfflineMaps.autoUpdate(context) }
+        }
+        LaunchedEffect(style, app.motonav.routing.NoGoAreas.list) {
+            val s = style ?: return@LaunchedEffect
+            NoGoLayer.set(s, app.motonav.routing.NoGoAreas.list)
         }
         val accentArgb = LocalAppColors.current.accent.toArgb()
         LaunchedEffect(style, favorites, accentArgb) {
@@ -1113,6 +1136,21 @@ fun MapScreen(
             friend?.let { if (!session.navigating) session.pick(it.position, it.name) }
             selectedFriend = null
         }
+        // Χειριστήριο τιμονιού (Ρυθμίσεις → Χειριστήριο τιμονιού).
+        LaunchedEffect(showSearch, reportOpen, pip) { app.motonav.nav.KeyBus.mapActive = !showSearch && !reportOpen && !pip }
+        DisposableEffect(Unit) { onDispose { app.motonav.nav.KeyBus.mapActive = false } }
+        LaunchedEffect(Unit) {
+            app.motonav.nav.KeyBus.events.collect { a ->
+                when (a) {
+                    app.motonav.nav.KeyBus.Action.ZOOM_IN -> map?.animateCamera(CameraUpdateFactory.zoomBy(1.0), 300)
+                    app.motonav.nav.KeyBus.Action.ZOOM_OUT -> map?.animateCamera(CameraUpdateFactory.zoomBy(-1.0), 300)
+                    app.motonav.nav.KeyBus.Action.CENTER -> recenterRef.value?.invoke()
+                    app.motonav.nav.KeyBus.Action.MUTE -> session.toggleMute()
+                    app.motonav.nav.KeyBus.Action.REPORT -> reportOpen = true
+                    app.motonav.nav.KeyBus.Action.SEARCH -> if (!session.navigating) showSearch = true
+                }
+            }
+        }
         val toggleNorth: () -> Unit = {
             fpsBoostKey++
             CameraPrefs.northUp = !CameraPrefs.northUp
@@ -1122,9 +1160,26 @@ fun MapScreen(
             fpsBoostKey++
             val m = map
             if (m != null && hasLocation && m.locationComponent.isLocationComponentActivated) {
-                centerOnMe(m, session.navigating)
+                val lc = m.locationComponent
+                val r = session.route
+                val st = session.state
+                if (session.navigating && lc.cameraMode != CameraMode.NONE && r != null && st != null) {
+                    // Πάτημα στην πυξίδα ενώ σε ακολουθεί: όλη η διαδρομή που μένει (για ~12″), μετά ξανά σε σένα.
+                    val rest = r.points.drop(st.segIndex.coerceAtMost(r.points.size - 2))
+                    if (rest.size >= 2) {
+                        lc.cameraMode = CameraMode.NONE
+                        trackingDismissedAt = SystemClock.elapsedRealtime() + 5_000
+                        val b = LatLngBounds.Builder()
+                        rest.forEach { b.include(LatLng(it.lat, it.lon)) }
+                        val pad = (80 * density).toInt()
+                        runCatching { m.animateCamera(CameraUpdateFactory.newLatLngBounds(b.build(), pad, pad * 3, pad, pad * 2), 900) }
+                    } else centerOnMe(m, true)
+                } else {
+                    centerOnMe(m, session.navigating)
+                }
             }
         }
+        recenterRef.value = recenter
 
         // Κάτω από τις οδηγίες: κίνδυνος μπροστά, βενζίνη (και υψόμετρο όταν ανοίξει).
         val navExtras: @Composable () -> Unit = {
@@ -1360,6 +1415,19 @@ fun MapScreen(
             ) {
                 androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Space.sm)) {
                     RecPill(session)
+                    noGoToDelete?.let { ng ->
+                        androidx.compose.material3.Surface(
+                            shape = RoundedCornerShape(Radius.lg),
+                            color = LocalAppColors.current.base.surface,
+                            border = BorderStroke(1.dp, LocalAppColors.current.outline),
+                        ) {
+                            Row(Modifier.padding(horizontal = Space.md, vertical = Space.xs), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+                                Text("Σβήσιμο περιοχής αποφυγής;", style = MotoType.label, color = LocalAppColors.current.base.text)
+                                TextChoice("Ναι", selected = true, onClick = { app.motonav.routing.NoGoAreas.remove(ng); noGoToDelete = null })
+                                TextChoice("Όχι", selected = false, onClick = { noGoToDelete = null })
+                            }
+                        }
+                    }
                     if (!session.navigating) SaveRoutePrompt(session, Modifier.widthIn(max = 420.dp).padding(horizontal = Space.md))
                     if (!session.navigating) UpdatePill()
                 }
@@ -1775,6 +1843,7 @@ private fun DestinationCard(
     var pickList by remember(dest) { mutableStateOf(false) }
     var newList by remember(dest) { mutableStateOf<String?>(null) }
     var reportOpen by remember(dest) { mutableStateOf(false) }
+    var nogoOpen by remember(dest) { mutableStateOf(false) }
     var reportText by remember(dest) { mutableStateOf("") }
     var reportState by remember(dest) { mutableStateOf<String?>(null) }
     val cardScope = rememberCoroutineScope()
@@ -1885,6 +1954,15 @@ private fun DestinationCard(
                     )
                 }
                 Text(
+                    "⊘",
+                    style = MotoType.label,
+                    color = if (nogoOpen) c.accent else c.base.textMuted,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(Radius.sm))
+                        .clickable { nogoOpen = !nogoOpen }
+                        .padding(horizontal = 6.dp),
+                )
+                Text(
                     "⚑",
                     style = MotoType.label,
                     color = if (reportOpen) c.accent else c.base.textMuted,
@@ -1917,6 +1995,21 @@ private fun DestinationCard(
                             val url = if (w.startsWith("http")) w else "https://$w"
                             runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
                         })
+                    }
+                }
+            }
+            if (nogoOpen) {
+                Text(
+                    "Περιοχή αποφυγής: οι διαδρομές δεν θα περνάνε από αυτό το σημείο (π.χ. κέντρο, έργα). Σβήνεται με πάτημα πάνω της.",
+                    style = MotoType.label,
+                    color = c.base.textMuted,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(Space.sm), modifier = Modifier.fillMaxWidth()) {
+                    listOf(300 to "300 m", 1000 to "1 km", 3000 to "3 km").forEach { (r, label) ->
+                        TextChoice(label, selected = false, onClick = {
+                            app.motonav.routing.NoGoAreas.add(dest, r)
+                            session.clear()
+                        }, modifier = Modifier.weight(1f))
                     }
                 }
             }

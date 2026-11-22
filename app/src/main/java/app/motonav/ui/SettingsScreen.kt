@@ -90,6 +90,7 @@ fun SettingsScreen(
                 "about" to "Πηγές και άδειες",
                 "voice" to "Φωνή πλοήγησης",
                 "backup" to "Αντίγραφο ασφαλείας",
+                "keys" to "Χειριστήριο τιμονιού",
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RideIconButton(
@@ -131,6 +132,17 @@ fun SettingsScreen(
                     Group {
                         SwitchRow("Εναλλακτικές διαδρομές", "Έως 4 λογικές, με «+3′» δίπλα. Κάτω από 5 km ή κλειστό εδώ: κουμπί «⇄ Εναλλακτικές» στην κάρτα.", display.showAlternatives) {
                             onDisplayChange(display.copy(showAlternatives = it))
+                        }
+                        SwitchRow("Πολλές στροφές", "Ο τύπος «Στροφές» ψάχνει πιο στριφτούς δρόμους, και με μεγαλύτερη παράκαμψη (έως 2× χρόνο)", display.moreCurves) {
+                            onDisplayChange(display.copy(moreCurves = it))
+                        }
+                        val nogoCount = app.motonav.routing.NoGoAreas.list.size
+                        if (nogoCount > 0) {
+                            LinkRow(
+                                "Περιοχές αποφυγής: $nogoCount",
+                                "Οι διαδρομές δεν περνάνε από εκεί (κόκκινοι κύκλοι στον χάρτη, πάτημα = σβήσιμο). Πάτα εδώ για να σβήσεις όλες.",
+                                { app.motonav.routing.NoGoAreas.clear() },
+                            )
                         }
                         SwitchRow("Χωματόδρομοι", "Καφέ διακεκομμένη γραμμή, από ζουμ 10", display.showDirt) {
                             onDisplayChange(display.copy(showDirt = it))
@@ -228,6 +240,7 @@ fun SettingsScreen(
                 }
                 "voice" -> VoicePage()
                 "backup" -> BackupPage()
+                "keys" -> KeysPage()
                 "about" -> {
             Group {
                 InfoRow("Δεδομένα χάρτη", "© OpenStreetMap contributors, άδεια ODbL")
@@ -256,6 +269,7 @@ fun SettingsScreen(
                         LinkRow("Σελιδοδείκτες και διαδρομές", "Λίστες μερών με χρώματα, αποθηκευμένες διαδρομές, GPX/KML", onOpenBookmarks)
                     }
                     Group {
+                        LinkRow("Χειριστήριο τιμονιού", "Κουμπιά Bluetooth στο τιμόνι: ζουμ, κέντρο, φωνή, αναφορά", { onPage("keys") })
                         LinkRow("Αντίγραφο ασφαλείας", "Όλα σε ένα αρχείο, επαναφορά με ένα πάτημα", { onPage("backup") })
                     }
                     Group {

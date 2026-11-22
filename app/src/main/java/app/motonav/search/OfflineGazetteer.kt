@@ -63,6 +63,62 @@ object OfflineGazetteer {
 
     val available: Boolean get() = load().isNotEmpty()
 
+    /** Σημεία (βενζίνη, συνεργεία, καφέ…): assets/places/gr-pois.tsv. */
+    private class Poi(val name: String, val lat: Double, val lon: Double, val kind: String)
+    @Volatile private var pois: List<Poi>? = null
+
+    private fun loadPois(): List<Poi> {
+        pois?.let { return it }
+        val ctx = appContext ?: return emptyList()
+        val list = runCatching {
+            ctx.assets.open("places/gr-pois.tsv").bufferedReader(Charsets.UTF_8).useLines { lines ->
+                lines.mapNotNull { line ->
+                    val f = line.split('\t')
+                    if (f.size < 4) return@mapNotNull null
+                    Poi(f[0], f[1].toDoubleOrNull() ?: return@mapNotNull null, f[2].toDoubleOrNull() ?: return@mapNotNull null, f[3])
+                }.toList()
+            }
+        }.getOrDefault(emptyList())
+        pois = list
+        return list
+    }
+
+    private fun kindsOf(cat: Category): Set<String> = when (cat) {
+        Category.FUEL -> setOf("fuel")
+        Category.FOOD -> setOf("restaurant", "fast_food")
+        Category.CAFE -> setOf("cafe")
+        Category.GARAGE -> setOf("motorcycle", "motorcycle_repair", "car_repair", "tyres")
+        Category.LODGING -> setOf("hotel", "guest_house", "hostel", "camp_site", "alpine_hut")
+        Category.VIEW -> setOf("viewpoint")
+        Category.WATER -> setOf("drinking_water")
+        Category.MOTO -> setOf("motorcycle", "motorcycle_repair")
+        Category.WASH -> setOf("car_wash")
+    }
+
+    /** Κατηγορία γύρω σου χωρίς internet: τα πιο κοντινά (έως 60) σε ακτίνα radiusM. */
+    fun category(cat: Category, near: LatLon, radiusM: Int): List<Place> {
+        val kinds = kindsOf(cat)
+        return loadPois().asSequence()
+            .filter { it.kind in kinds }
+            .map { it to Geo.distance(near, LatLon(it.lat, it.lon)) }
+            .filter { it.second <= radiusM }
+            .sortedBy { it.second }
+            .take(60)
+            .map { (p, _) -> Place(p.name.ifBlank { cat.fallbackName }, "χωρίς internet", p.lat, p.lon, p.kind) }
+            .toList()
+    }
+
+    /** Βενζινάδικα κοντά σε σημεία (για «βενζίνη στη διαδρομή» χωρίς internet). */
+    fun fuelNear(points: List<LatLon>, maxM: Double): List<Pair<String, LatLon>> {
+        if (points.isEmpty()) return emptyList()
+        val minLat = points.minOf { it.lat } - 0.02
+        val maxLat = points.maxOf { it.lat } + 0.02
+        val minLon = points.minOf { it.lon } - 0.02
+        val maxLon = points.maxOf { it.lon } + 0.02
+        return loadPois().filter { it.kind == "fuel" && it.lat in minLat..maxLat && it.lon in minLon..maxLon }
+            .map { it.name to LatLon(it.lat, it.lon) }
+    }
+
     private fun weight(kind: String) = when (kind) {
         "city" -> 0
         "town" -> 1

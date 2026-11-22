@@ -73,6 +73,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /** Χειριστήριο τιμονιού: τα πλήκτρα του γίνονται ενέργειες στον χάρτη (Ρυθμίσεις → Χειριστήριο τιμονιού). */
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        val handled = app.motonav.nav.KeyBus.onKey(event) { text ->
+            kotlinx.coroutines.MainScope().launch { SettingsRepo(applicationContext).saveKeyMap(text) }
+        }
+        return handled || super.dispatchKeyEvent(event)
+    }
+
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         handleLink(intent)
@@ -91,6 +99,7 @@ class MainActivity : ComponentActivity() {
         // Η οθόνη μένει αναμμένη μόνο στην πλοήγηση ή όταν κινείσαι (το ρυθμίζει ο χάρτης).
         MapLibre.getInstance(this)
         app.motonav.search.OfflineGazetteer.init(applicationContext)
+        app.motonav.routing.NoGoAreas.init(applicationContext)
         val repo = SettingsRepo(applicationContext)
 
         setContent {
@@ -116,6 +125,8 @@ class MainActivity : ComponentActivity() {
             )
             // Κρύβουμε τη γραμμή του κινητού στον χάρτη (φαίνεται για λίγο αν σύρεις από πάνω).
             val overlay = showSettings || showAppearance || showTrips || showOffline || showMarker || showGroup || showBookmarks
+            app.motonav.nav.KeyBus.overlay = overlay
+            androidx.compose.runtime.LaunchedEffect(display.keyMap) { app.motonav.nav.KeyBus.load(display.keyMap) }
             androidx.compose.runtime.LaunchedEffect(display.customStatus, overlay, inPip) {
                 val ctl = androidx.core.view.WindowCompat.getInsetsController(window, window.decorView)
                 ctl.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
