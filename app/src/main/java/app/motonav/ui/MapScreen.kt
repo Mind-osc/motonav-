@@ -1249,7 +1249,7 @@ fun MapScreen(
                                 kind = if (session.muted) ButtonKind.SECONDARY else ButtonKind.PRIMARY,
                                 size = sizes.smallButton,
                             )
-                            if (st != null) TripBar(st, Modifier.width(330.dp).height(sizes.button), compact = true, delayS = tripDelayS)
+                            if (st != null) TripBar(st, Modifier.width(330.dp).height(sizes.button), compact = true, delayS = tripDelayS, doneBeforeM = session.tripDoneM)
                         }
                     }
                     // Πάνω δεξιά: κουμπιά και καιρός.
@@ -1322,7 +1322,7 @@ fun MapScreen(
                                         size = sizes.smallButton,
                                     )
                                     // Τέρμα κάτω αριστερά: άφιξη/χρόνος/απόσταση (το ✕ είναι πάνω από την ταχύτητα).
-                                    if (st != null) TripBar(st, Modifier.fillMaxWidth().height(sizes.button), compact = true, delayS = tripDelayS, narrow = true)
+                                    if (st != null) TripBar(st, Modifier.fillMaxWidth().height(sizes.button), compact = true, delayS = tripDelayS, narrow = true, doneBeforeM = session.tripDoneM)
                                 }
                             }
                             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(Space.sm)) {
@@ -1638,7 +1638,7 @@ object TimeColors {
 }
 
 @Composable
-private fun TripBar(s: NavState, modifier: Modifier = Modifier, compact: Boolean = false, delayS: Double = 0.0, narrow: Boolean = false) {
+private fun TripBar(s: NavState, modifier: Modifier = Modifier, compact: Boolean = false, delayS: Double = 0.0, narrow: Boolean = false, doneBeforeM: Double = 0.0) {
     val c = LocalAppColors.current
     Surface(shape = RoundedCornerShape(Radius.md), color = c.base.surface, border = BorderStroke(1.dp, c.outline), modifier = modifier) {
         // Νούμερα και μπάρα μαζί, κεντραρισμένα στο ύψος και στο πλάτος του πινακακιού.
@@ -1666,9 +1666,11 @@ private fun TripBar(s: NavState, modifier: Modifier = Modifier, compact: Boolean
                 Stat(formatKm(s.remainingM), "", compact, narrow = narrow)
             }
             // Πρόοδος της διαδρομής: γκρι ό,τι πέρασες, σκούρο ό,τι μένει, άσπρη κουκίδα με ▶ εκεί που είσαι.
-            val total = s.progressM + s.remainingM
+            // Όλο το ταξίδι, και μετά από «νέα διαδρομή» (όχι μόνο η τρέχουσα διαδρομή).
+            val done = doneBeforeM + s.progressM
+            val total = done + s.remainingM
             Spacer(Modifier.height(4.dp))
-            RouteProgress(if (total > 0) (s.progressM / total).toFloat() else 0f, Modifier.fillMaxWidth().height(12.dp).padding(horizontal = Space.md))
+            RouteProgress(if (total > 0) (done / total).toFloat() else 0f, Modifier.fillMaxWidth().height(12.dp).padding(horizontal = Space.md))
         }
     }
 }

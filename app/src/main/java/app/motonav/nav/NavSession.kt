@@ -382,6 +382,7 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
         val r = route ?: return
         clearAlternatives()
         engine = NavigationEngine(r)
+        tripDoneM = 0.0
         announcer.reset()
         arrived = false
         navigating = true
@@ -409,6 +410,10 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
         recordingPaused = false
         voice.silence()
     }
+
+    /** Μέτρα που έκανες σε προηγούμενες διαδρομές του ίδιου ταξιδιού (πριν από κάθε «νέα διαδρομή»). */
+    var tripDoneM by mutableStateOf(0.0)
+        private set
 
     // ---- Καταγραφή διαδρομής και χωρίς πλοήγηση (με παύση)
 
@@ -564,6 +569,8 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
                     route = r
                     indexStops(r)
                     fetchStreetNames(r)
+                    // Η νέα διαδρομή ξεκινά από εδώ: κρατάμε ό,τι έχεις ήδη κάνει, για τη μπάρα προόδου.
+                    tripDoneM += state?.progressM ?: 0.0
                     engine = NavigationEngine(r)
                     announcer.reset()
                     resetTraffic()

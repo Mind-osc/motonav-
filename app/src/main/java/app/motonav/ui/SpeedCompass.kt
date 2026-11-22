@@ -84,7 +84,7 @@ fun SpeedCompass(
     val over = limitKmh != null && speedKmh != null && speedKmh > limitKmh + 3
     val tabH = height * 0.62f
     val tabW = tabH * 1.05f
-    val barH = 9.dp
+    val barH = 16.dp
     val leftW = if (showAltitude) tabW else 0.dp
     val topH = if (showLean) barH else 0.dp
     val outline = if (over) c.base.danger else c.outline
@@ -257,11 +257,11 @@ private fun LeanBar(lean: Float, maxLeft: Float, maxRight: Float, modifier: Modi
         modifier
             .pointerInput(Unit) { detectTapGestures(onTap = { onReset() }) },
     ) {
-        val pad = 4.dp.toPx()
+        val pad = 6.dp.toPx()
         val w = size.width - 2 * pad
         val mid = size.width / 2f
-        val h = 3.5.dp.toPx()
-        val y = size.height / 2f + 0.5.dp.toPx()
+        val h = 7.dp.toPx()
+        val y = size.height / 2f + 1.dp.toPx()
         drawRoundRect(c.base.surface2, Offset(pad, y - h / 2), Size(w, h), CornerRadius(h / 2))
         // lean < 0 = αριστερά
         val f = (abs(lean) / full).coerceIn(0f, 1f) * w / 2
@@ -273,11 +273,11 @@ private fun LeanBar(lean: Float, maxLeft: Float, maxRight: Float, modifier: Modi
         fun mark(v: Float, left: Boolean) {
             if (v < 2f) return
             val x = if (left) mid - (v / full).coerceIn(0f, 1f) * w / 2 else mid + (v / full).coerceIn(0f, 1f) * w / 2
-            drawLine(c.base.textMuted, Offset(x, y - h), Offset(x, y + h), 1.dp.toPx())
+            drawLine(c.base.text.copy(alpha = 0.8f), Offset(x, y - h * 0.85f), Offset(x, y + h * 0.85f), 2.dp.toPx(), StrokeCap.Round)
         }
         mark(maxLeft, true)
         mark(maxRight, false)
-        drawLine(c.base.text.copy(alpha = 0.6f), Offset(mid, y - h), Offset(mid, y + h), 1.dp.toPx())
+        drawLine(c.base.text.copy(alpha = 0.7f), Offset(mid, y - h * 0.85f), Offset(mid, y + h * 0.85f), 1.5.dp.toPx())
     }
 }
 
