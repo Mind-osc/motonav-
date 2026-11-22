@@ -57,13 +57,21 @@ jobs:
         if: steps.keys.outputs.signed == 'true'
         run: cp app/build/outputs/apk/release/app-release.apk moto-nav.apk
 
+      # Δεύτερο APK για το public repo: ίδιο κλειδί, χωρίς την Pointer (άδεια μόνο για προσωπική χρήση).
+      - name: Build για το public (χωρίς Pointer)
+        if: steps.keys.outputs.signed == 'true' && hashFiles('app/src/main/res/font/pointer.ttf') != ''
+        run: |
+          rm app/src/main/res/font/pointer.ttf
+          gradle :app:assembleRelease --no-daemon
+          cp app/build/outputs/apk/release/app-release.apk moto-nav-public.apk
+
       - name: Release
         if: steps.keys.outputs.signed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           git log -1 --pretty=%B > notes.txt
-          gh release create "build-${{ github.run_number }}" moto-nav.apk \
+          gh release create "build-${{ github.run_number }}" moto-nav.apk $(ls moto-nav-public.apk 2>/dev/null) \
             --title "Moto Nav 0.1.${{ github.run_number }}" \
             --notes-file notes.txt \
             --latest
