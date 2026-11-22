@@ -51,7 +51,6 @@ import app.motonav.ui.theme.MotoType
 import app.motonav.ui.theme.Radius
 import kotlin.math.abs
 import kotlin.math.cos
-import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
@@ -179,13 +178,26 @@ fun SpeedCompass(
     }
 }
 
-/** Σημείο στην περίμετρο ενός «στρογγυλεμένου τετραγώνου» (υπερέλλειψη) στη γωνία theta (0 = πάνω, δεξιόστροφα). */
-private fun squircle(theta: Double, a: Float, b: Float, k: Float): Offset {
+/**
+ * Σημείο πάνω στο περίγραμμα του κουτιού (στρογγυλεμένο ορθογώνιο, μισά πλάτη a/b, ακτίνα γωνίας r)
+ * στη γωνία theta (0 = πάνω, δεξιόστροφα), και η κατεύθυνση από το κέντρο.
+ * Έτσι οι γραμμούλες ακουμπάνε ακριβώς στο περίγραμμα, και στις γωνίες.
+ */
+private fun onFrame(theta: Double, a: Float, b: Float, r: Float): Pair<Offset, Offset> {
     val dx = sin(theta)
     val dy = -cos(theta)
-    val n = 5.0
-    val t = 1.0 / ((abs(dx) / a).pow(n) + (abs(dy) / b).pow(n)).pow(1.0 / n)
-    return Offset((dx * t * k).toFloat(), (dy * t * k).toFloat())
+    val ax = abs(dx)
+    val ay = abs(dy)
+    var t = minOf(if (ax > 1e-9) a / ax else Double.MAX_VALUE, if (ay > 1e-9) b / ay else Double.MAX_VALUE)
+    val rr = r.coerceIn(0f, minOf(a, b)).toDouble()
+    if (ax * t > a - rr && ay * t > b - rr) {
+        // γωνία: τομή με τον κύκλο κέντρου (a-r, b-r)
+        val cx = a - rr
+        val cy = b - rr
+        val dc = ax * cx + ay * cy
+        t = dc + kotlin.math.sqrt((dc * dc - (cx * cx + cy * cy) + rr * rr).coerceAtLeast(0.0))
+    }
+    return Offset((dx * t).toFloat(), (dy * t).toFloat()) to Offset(dx.toFloat(), dy.toFloat())
 }
 
 @Composable
@@ -203,31 +215,35 @@ private fun CompassBezel(headingDeg: Float?, modifier: Modifier) {
     Canvas(modifier) {
         val cx = size.width / 2f
         val cy = size.height / 2f
-        val inset = 3.dp.toPx()
+        val inset = 3.5.dp.toPx()
         val a = cx - inset
         val b = cy - inset
+        val r = Radius.md.toPx() - inset
+        val minor = 4.5.dp.toPx()
+        val major = 7.dp.toPx()
+        val north = 9.dp.toPx()
         for (deg in 0 until 360 step 10) {
             val theta = Math.toRadians((deg - heading).toDouble())
-            val major = deg % 30 == 0
-            val outer = squircle(theta, a, b, 1f)
-            val inner = squircle(theta, a, b, if (major) 0.86f else 0.91f)
+            val (p, d) = onFrame(theta, a, b, r)
+            val outer = Offset(cx + p.x, cy + p.y)
             if (deg == 0) {
                 // Βορράς: κόκκινη γραμμίτσα, πιο μακριά και χοντρή.
-                val n0 = squircle(theta, a, b, 0.80f)
-                drawLine(Color(0xFFFF3B30), Offset(cx + n0.x, cy + n0.y), Offset(cx + outer.x, cy + outer.y), 3.dp.toPx(), StrokeCap.Round)
+                drawLine(Color(0xFFFF3B30), outer - d * north, outer, 3.dp.toPx(), StrokeCap.Round)
             } else {
+                val isMajor = deg % 30 == 0
                 drawLine(
-                    if (major) c.base.text.copy(alpha = 0.75f) else c.base.textMuted.copy(alpha = 0.45f),
-                    Offset(cx + inner.x, cy + inner.y), Offset(cx + outer.x, cy + outer.y),
-                    (if (major) 1.4f else 1f).dp.toPx(), StrokeCap.Round,
+                    if (isMajor) c.base.text.copy(alpha = 0.75f) else c.base.textMuted.copy(alpha = 0.45f),
+                    outer - d * (if (isMajor) major else minor), outer,
+                    (if (isMajor) 1.4f else 1f).dp.toPx(), StrokeCap.Round,
                 )
             }
         }
         listOf(90 to "Α", 180 to "Ν", 270 to "Δ").forEach { (deg, letter) ->
             val theta = Math.toRadians((deg - heading).toDouble())
-            val p = squircle(theta, a, b, 0.74f)
+            val (p, d) = onFrame(theta, a, b, r)
+            val q = Offset(cx + p.x, cy + p.y) - d * 14.dp.toPx()
             val layout = measurer.measure(letter, letterStyle.copy(color = c.base.textMuted))
-            drawText(layout, topLeft = Offset(cx + p.x - layout.size.width / 2f, cy + p.y - layout.size.height / 2f))
+            drawText(layout, topLeft = Offset(q.x - layout.size.width / 2f, q.y - layout.size.height / 2f))
         }
     }
 }
