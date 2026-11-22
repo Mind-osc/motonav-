@@ -84,4 +84,20 @@ class TomTomTest {
         assertTrue(u.contains("/relative-delay/{z}/{x}/{y}.png"))
         assertTrue(u.endsWith("key=abc+123"))
     }
+
+    @Test
+    fun numberedRoadsGetBlueSign() {
+        // 3 σημεία σε ευθεία ~1,1 km το καθένα. Στροφή στα ~1,1 km σε δρόμο με αριθμό («8Α»).
+        val json = """{"routes":[{"summary":{"travelTimeInSeconds":200},
+          "legs":[{"points":[{"latitude":38.0,"longitude":23.0},{"latitude":38.01,"longitude":23.0},{"latitude":38.02,"longitude":23.0}]}],
+          "guidance":{"instructions":[
+            {"maneuver":"DEPART","routeOffsetInMeters":0,"pointIndex":0,"street":"Λιοσίων"},
+            {"maneuver":"TURN_RIGHT","routeOffsetInMeters":1112,"pointIndex":1,"roadNumbers":["8Α"]},
+            {"maneuver":"ARRIVE","routeOffsetInMeters":2224,"pointIndex":2}
+          ]},
+          "sections":[]}]}"""
+        val r = TomTomParser.routes(json).first()
+        assertEquals(app.motonav.routing.RoadKind.OTHER, r.roadKindAt(500.0))
+        assertEquals(app.motonav.routing.RoadKind.MAIN, r.roadKindAt(1500.0))
+    }
 }

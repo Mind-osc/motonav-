@@ -238,14 +238,30 @@ object TomTomParser {
             val b = o.optInt("endPointIndex").coerceIn(0, points.lastIndex)
             kinds += Triple(cumulative[a], cumulative[b], kind)
         }
-        val roadKinds = ArrayList<Pair<Double, app.motonav.routing.RoadKind>>()
-        var at = 0.0
-        for ((a, b, k) in kinds.sortedBy { it.first }) {
-            if (a > at) roadKinds += a to app.motonav.routing.RoadKind.OTHER
-            roadKinds += b to k
-            at = b
+        // Εθνικές/κύριες: όσα κομμάτια έχουν αριθμό δρόμου στην οδηγία (π.χ. «1», «8Α», «Ε65») → μπλε ταμπέλα,
+        // όπως στις διαδρομές BRouter. Αυτοκινητόδρομος και χώμα έχουν προτεραιότητα.
+        val numbered = ArrayList<Pair<Double, Double>>()
+        val instrAt = (0 until instr.length()).mapNotNull { i ->
+            val o = instr.optJSONObject(i) ?: return@mapNotNull null
+            val m = if (o.has("routeOffsetInMeters")) o.optDouble("routeOffsetInMeters")
+            else if (o.has("pointIndex")) cumulative[o.optInt("pointIndex").coerceIn(0, points.lastIndex)] else return@mapNotNull null
+            m to ((o.optJSONArray("roadNumbers")?.length() ?: 0) > 0)
+        }.sortedBy { it.first }
+        instrAt.forEachIndexed { i, (m, hasNumber) ->
+            if (hasNumber) numbered += m to (instrAt.getOrNull(i + 1)?.first ?: cumulative.last())
         }
-        if (at < cumulative.last()) roadKinds += cumulative.last() to app.motonav.routing.RoadKind.OTHER
+        fun kindAt(m: Double): app.motonav.routing.RoadKind =
+            kinds.firstOrNull { m >= it.first && m <= it.second }?.third
+                ?: if (numbered.any { m >= it.first && m <= it.second }) app.motonav.routing.RoadKind.MAIN
+                else app.motonav.routing.RoadKind.OTHER
+        val cuts = (listOf(0.0, cumulative.last()) + kinds.flatMap { listOf(it.first, it.second) } + numbered.flatMap { listOf(it.first, it.second) })
+            .filter { it in 0.0..cumulative.last() }.distinct().sorted()
+        val roadKinds = ArrayList<Pair<Double, app.motonav.routing.RoadKind>>()
+        for (i in 1 until cuts.size) {
+            val k = kindAt((cuts[i - 1] + cuts[i]) / 2)
+            if (roadKinds.isNotEmpty() && roadKinds.last().second == k) roadKinds[roadKinds.lastIndex] = cuts[i] to k
+            else roadKinds += cuts[i] to k
+        }
         for (i in 0 until sections.length()) {
             val o = sections.optJSONObject(i) ?: continue
             if (o.optString("sectionType") != "LANES") continue
