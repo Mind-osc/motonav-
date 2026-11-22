@@ -31,7 +31,7 @@ android {
         val f = file("keystore.properties"); if (f.exists()) f.inputStream().use { load(it) }
     }
     val ksPath = System.getenv("MOTONAV_KEYSTORE") ?: file("release.keystore").takeIf { it.exists() }?.path
-    val ksPass = System.getenv("MOTONAV_KEYSTORE_PASSWORD")?.takeIf { it.isNotEmpty() } ?: props.getProperty("storePassword")
+    val ksPass = System.getenv("MOTONAV_KEYSTORE_PASSWORD")?.trim()?.takeIf { it.isNotEmpty() } ?: props.getProperty("storePassword")
     val hasKey = ksPath != null && file(ksPath).exists() && ksPass != null
     // Μόνο για μία φορά: APK με το παλιό κλειδί, για να μπει από πάνω στην παλιά εφαρμογή
     // και να βγει αντίγραφο ασφαλείας πριν την αλλαγή κλειδιού.
