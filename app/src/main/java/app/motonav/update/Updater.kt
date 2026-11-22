@@ -108,18 +108,25 @@ object Updater {
             runCatching {
                 val dir = File(context.cacheDir, "update").apply { mkdirs(); listFiles()?.forEach { it.delete() } }
                 val f = File(dir, "moto-nav-${a.tag}.apk")
+                // Το GitHub στέλνει redirect σε άλλον server: καινούργια σύνδεση κάθε φορά, με τα headers πριν συνδεθεί.
                 var u = URL(url)
-                var c = u.openConnection() as HttpURLConnection
-                // το GitHub στέλνει redirect σε άλλο host
-                repeat(5) {
-                    c.instanceFollowRedirects = true
+                var c: HttpURLConnection
+                var hops = 0
+                while (true) {
+                    c = u.openConnection() as HttpURLConnection
+                    c.instanceFollowRedirects = false
+                    c.connectTimeout = 10_000
+                    c.readTimeout = 30_000
                     c.setRequestProperty("User-Agent", "MotoNav")
                     val code = c.responseCode
-                    if (code in 300..399) {
-                        u = URL(c.getHeaderField("Location"))
+                    if (code in 300..399 && hops < 5) {
+                        val loc = c.getHeaderField("Location") ?: throw IOException("redirect χωρίς Location")
                         c.disconnect()
-                        c = u.openConnection() as HttpURLConnection
-                    } else return@repeat
+                        u = URL(u, loc)
+                        hops++
+                        continue
+                    }
+                    break
                 }
                 if (c.responseCode !in 200..299) throw IOException("HTTP ${c.responseCode}")
                 val total = c.contentLengthLong
