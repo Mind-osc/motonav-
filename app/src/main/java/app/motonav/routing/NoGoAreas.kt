@@ -15,6 +15,12 @@ data class NoGo(val center: LatLon, val radiusM: Int)
 object NoGoAreas {
     var list by mutableStateOf<List<NoGo>>(emptyList())
         private set
+    /** Προσωρινές (π.χ. «κλειστός δρόμος μπροστά»): μόνο για την τωρινή πλοήγηση, δεν αποθηκεύονται. */
+    var temp by mutableStateOf<List<NoGo>>(emptyList())
+        private set
+
+    fun addTemp(center: LatLon, radiusM: Int) { temp = temp + NoGo(center, radiusM) }
+    fun clearTemp() { temp = emptyList() }
     private var appContext: Context? = null
 
     fun init(context: Context) {
@@ -51,7 +57,7 @@ object NoGoAreas {
     }
 
     /** Για το BRouter: «lon,lat,radius|lon,lat,radius». null αν δεν υπάρχουν. */
-    fun brouterParam(): String? = list.takeIf { it.isNotEmpty() }?.joinToString("|") {
+    fun brouterParam(): String? = (list + temp).takeIf { it.isNotEmpty() }?.joinToString("|") {
         String.format(Locale.US, "%.6f,%.6f,%d", it.center.lon, it.center.lat, it.radiusM)
     }
 

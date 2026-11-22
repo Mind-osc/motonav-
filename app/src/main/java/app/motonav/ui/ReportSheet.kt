@@ -53,7 +53,14 @@ import kotlin.math.roundToInt
 
 /** S07 Αναφορά: μεγάλα πλακίδια για γάντια. Ένα πάτημα σημειώνει εκεί που είσαι και κλείνει. */
 @Composable
-fun ReportSheet(onPick: (HazardKind) -> Unit, onClose: () -> Unit, onCamera: (() -> Unit)? = null) {
+fun ReportSheet(
+    onPick: (HazardKind) -> Unit,
+    onClose: () -> Unit,
+    onCamera: (() -> Unit)? = null,
+    /** Στην πλοήγηση: «κλειστός δρόμος μπροστά» και «νέα διαδρομή» (όπως στο Kurviger). */
+    onRoadClosed: (() -> Unit)? = null,
+    onReroute: (() -> Unit)? = null,
+) {
     val c = LocalAppColors.current
     val haptic = LocalHapticFeedback.current
     Box(
@@ -71,6 +78,34 @@ fun ReportSheet(onPick: (HazardKind) -> Unit, onClose: () -> Unit, onCamera: (()
         ) {
             Column(Modifier.padding(Space.md), verticalArrangement = Arrangement.spacedBy(Space.sm)) {
                 Text("Τι υπάρχει εδώ;", style = MotoType.title, color = c.base.text)
+                if (onRoadClosed != null || onReroute != null) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+                        listOfNotNull(
+                            onRoadClosed?.let { Triple("⛔", "Κλειστός δρόμος μπροστά", it) },
+                            onReroute?.let { Triple("↻", "Νέα διαδρομή από εδώ", it) },
+                        ).forEach { (emoji, label, action) ->
+                            Surface(
+                                shape = RoundedCornerShape(Radius.md),
+                                color = c.base.surface2,
+                                border = BorderStroke(2.dp, c.accent),
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    action()
+                                },
+                                modifier = Modifier.weight(1f).height(64.dp),
+                            ) {
+                                Row(
+                                    Modifier.padding(horizontal = Space.sm),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(Space.sm),
+                                ) {
+                                    Text(emoji, fontSize = 26.sp, color = c.base.text)
+                                    Text(label, style = MotoType.body, color = c.base.text, maxLines = 2)
+                                }
+                            }
+                        }
+                    }
+                }
                 if (onCamera != null) {
                     Surface(
                         shape = RoundedCornerShape(Radius.md),

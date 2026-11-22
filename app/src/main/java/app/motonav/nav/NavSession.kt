@@ -264,6 +264,14 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
         }
     }
 
+    /** Έτοιμη διαδρομή ανάποδα (από το τέλος προς την αρχή), πριν ξεκινήσεις. */
+    fun reverseTrack() {
+        if (!followingTrack || navigating) return
+        val pts = trackPoints ?: return
+        if (pts.size < 2) return
+        followTrack(pts.reversed(), destinationName ?: "Διαδρομή")
+    }
+
     /** Διαδρομή ως το σημείο εισόδου (BRouter, offline) + το υπόλοιπο της έτοιμης διαδρομής. */
     private suspend fun joinTrack(from: Location, minIndex: Int): Route? {
         val track = trackPoints ?: return null
@@ -396,6 +404,53 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
         if (!rerouting) reroute(fix)
     }
 
+    /** Η επόμενη στάση και πόσα μέτρα μένουν ως εκεί (στην πλοήγηση). */
+    fun nextStop(): Pair<Stop, Double>? {
+        val s = stops.firstOrNull() ?: return null
+        val at = stopProgress.firstOrNull() ?: return null
+        val here = state?.progressM ?: return null
+        return s to (at - here).coerceAtLeast(0.0)
+    }
+
+    /** Μέτρα ως κάθε στάση (για τη λίστα «πήγαινε σε…»). */
+    fun stopDistances(): List<Double> {
+        val here = state?.progressM ?: 0.0
+        return stopProgress.map { (it - here).coerceAtLeast(0.0) }
+    }
+
+    /**
+     * Στην πλοήγηση: πας κατευθείαν στη στάση [index] (οι προηγούμενες παραλείπονται).
+     * index = stops.size → κατευθείαν στον προορισμό.
+     */
+    fun skipTo(index: Int) {
+        if (!navigating || index <= 0 || index > stops.size) return
+        stops = stops.drop(index)
+        stopProgress = emptyList()
+        voice.say(if (stops.isEmpty()) "Κατευθείαν στον προορισμό." else "Πάμε στην επόμενη στάση.", interrupt = false)
+        lastFix?.let { if (!rerouting) reroute(it) }
+    }
+
+    /** Κουμπί «Νέα διαδρομή»: ξαναϋπολογίζει από εδώ, χωρίς να περιμένει να βγεις από τη γραμμή. */
+    fun rerouteNow() {
+        val fix = lastFix ?: return
+        if (!navigating || rerouting) return
+        if (followingTrack) rejoinTrack(fix) else reroute(fix)
+    }
+
+    /**
+     * «Κλειστός δρόμος μπροστά»: κλείνει τον δρόμο [aheadM] μέτρα μπροστά σου (προσωρινά, ως το τέλος της
+     * πλοήγησης) και βγάζει νέα διαδρομή γύρω του, offline με το BRouter (το TomTom δεν ξέρει τέτοια σημεία).
+     */
+    fun roadClosedAhead(aheadM: Double = 150.0) {
+        val r = route ?: return
+        val st = state ?: return
+        val fix = lastFix ?: return
+        if (!navigating || rerouting) return
+        val at = r.pointAt((st.progressM + aheadM).coerceAtMost(r.lengthM - 1.0))
+        app.motonav.routing.NoGoAreas.addTemp(at, 60)
+        reroute(fix, offline = true, phrase = "Κλειστός δρόμος. Ψάχνω άλλο δρόμο.")
+    }
+
     fun removeStop(index: Int) {
         if (navigating || index !in stops.indices) return
         stops = stops.filterIndexed { i, _ -> i != index }
@@ -490,7 +545,8 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
         arrived = false
         navigating = true
         NavBus.navigating.value = true
-        if (recorder == null) recorder = TripRecorder(appContext).also { it.start() }
+        // Στην προσομοίωση δεν καταγράφουμε (δεν είναι αληθινή βόλτα).
+        if (recorder == null && !app.motonav.nav.Simulator.active) recorder = TripRecorder(appContext).also { it.start() }
         recordingFree = false
         recordingPaused = false
         saveHistory()
@@ -503,6 +559,8 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
 
     fun stop() {
         if (navigating) NavService.stop(appContext)
+        app.motonav.routing.NoGoAreas.clearTemp()
+        app.motonav.nav.Simulator.active = false
         navigating = false
         NavBus.navigating.value = false
         state = null
@@ -672,19 +730,19 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
         } else if (s.offRoute && !rerouting && now - lastRerouteAt > 5_000) reroute(loc)
     }
 
-    private fun reroute(loc: Location) {
+    private fun reroute(loc: Location, offline: Boolean = false, phrase: String = "Υπολογίζω νέα διαδρομή.") {
         val dest = destination ?: return
         rerouting = true
         lastRerouteAt = SystemClock.elapsedRealtime()
-        voice.say("Υπολογίζω νέα διαδρομή.")
+        voice.say(phrase)
         scope.launch {
             try {
-                val r = computeRoute(
-                    LatLon(loc.latitude, loc.longitude),
-                    dest,
-                    if (loc.hasBearing()) loc.bearing else null,
-                    prefer = route,
-                )
+                val from = LatLon(loc.latitude, loc.longitude)
+                val heading = if (loc.hasBearing()) loc.bearing else null
+                val r = if (offline) {
+                    val type = if (routeType == RouteType.TRAFFIC) RouteType.FASTEST else routeType
+                    router.route(listOf(from) + stops.map { it.position } + dest, heading, avoidMotorways, type, avoidTolls)
+                } else computeRoute(from, dest, heading, prefer = route)
                 if (navigating) {
                     route = r
                     indexStops(r)

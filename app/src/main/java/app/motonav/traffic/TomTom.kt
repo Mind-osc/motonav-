@@ -58,6 +58,8 @@ class TomTomClient(private val key: String) {
             if (headingDeg != null) append("&vehicleHeading=").append(headingDeg.toInt().coerceIn(0, 359))
             if (avoidTolls) append("&avoid=tollRoads")
             if (avoidMotorways) append("&avoid=motorways")
+            if (app.motonav.routing.Avoid.ferries) append("&avoid=ferries")
+            if (app.motonav.routing.Avoid.unpaved) append("&avoid=unpavedRoads")
             if (alternatives > 0 && via.isEmpty()) append("&maxAlternatives=").append(alternatives)
         }
         TomTomParser.routes(request(url, null))

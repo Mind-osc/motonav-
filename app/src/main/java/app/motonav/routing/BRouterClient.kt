@@ -167,7 +167,8 @@ class BRouterClient(context: Context) {
             putString("maxRunningTime", "90")
             putString("alternativeidx", alternative.toString())
             NoGoAreas.brouterParam()?.let { putString("nogos", it) }
-            if (avoidTolls) putString("extraParams", "avoid_toll=1")
+            val ex = (if (avoidTolls) listOf("avoid_toll=1") else emptyList()) + Avoid.brouterParams().filter { !it.startsWith("avoid_unpaved") }
+            if (ex.isNotEmpty()) putString("extraParams", ex.joinToString("&"))
             headingDeg?.let { putString("heading", it.roundToInt().toString()) }
         }
         val result = withContext(Dispatchers.IO) {
@@ -188,6 +189,8 @@ class BRouterClient(context: Context) {
         extra: List<String>,
         alternative: Int,
     ): Route {
+        // Με αποφυγές (πλοία, κύριοι, στενοί, χώμα): το δικό μας προφίλ, σε «δρόμο» (χωρίς προτίμηση χώματος).
+        if (Avoid.any) return callRoad(service, waypoints, headingDeg, extra, alternative)
         // Πρώτα το προφίλ που δούλεψε την τελευταία φορά, μετά τα υπόλοιπα με τη σειρά.
         val order = (listOfNotNull(workingProfile) + PROFILES).distinct()
         var lastError: RoutingException? = null
@@ -222,6 +225,36 @@ class BRouterClient(context: Context) {
             lastError = err
         }
         throw lastError ?: RoutingException("Δεν βρέθηκε προφίλ αυτοκινήτου στο BRouter.", RoutingException.Kind.NO_PROFILE)
+    }
+
+    private suspend fun callRoad(
+        service: IBRouterService,
+        waypoints: List<LatLon>,
+        headingDeg: Float?,
+        extra: List<String>,
+        alternative: Int,
+    ): Route {
+        val profile = app.assets.open("brouter/moto-dirt.brf").bufferedReader().use { it.readText() }
+        val params = Bundle().apply {
+            putString("lonlats", waypoints.joinToString("|") { String.format(Locale.US, "%.6f,%.6f", it.lon, it.lat) })
+            putString("remoteProfile", profile)
+            putString("trackFormat", "json")
+            putString("timode", "2")
+            putString("maxRunningTime", "90")
+            putString("alternativeidx", alternative.toString())
+            putString("extraParams", (listOf("use_offroad=0", "dirt_preference=0") + extra + Avoid.brouterParams()).joinToString("&"))
+            NoGoAreas.brouterParam()?.let { putString("nogos", it) }
+            headingDeg?.let { putString("heading", it.roundToInt().toString()) }
+        }
+        val result = withContext(Dispatchers.IO) {
+            try {
+                service.getTrackFromParams(params)
+            } catch (e: Exception) {
+                throw RoutingException(e.message ?: e.toString(), RoutingException.Kind.OTHER)
+            }
+        } ?: throw RoutingException("Το BRouter δεν έστειλε διαδρομή.", RoutingException.Kind.OTHER)
+        if (!result.trimStart().startsWith("{")) throw classify(result)
+        return withContext(Dispatchers.Default) { BRouterJson.parse(result) }
     }
 
     private suspend fun <T> withService(block: suspend (IBRouterService) -> T): T {

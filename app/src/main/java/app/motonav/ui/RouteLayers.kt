@@ -90,8 +90,62 @@ object RouteLayers {
             }
             below = id
         }
+        // Βελάκια κατεύθυνσης πάνω στη γραμμή (όπως στο Kurviger): φαίνονται από ζουμ 12 και μετά.
+        style.addImage(ARROW, arrow())
+        if (style.getLayer(L_ARROWS) == null) {
+            val layer = SymbolLayer(L_ARROWS, SRC_ROUTE).withProperties(
+                PropertyFactory.symbolPlacement(Property.SYMBOL_PLACEMENT_LINE),
+                PropertyFactory.symbolSpacing(110f),
+                PropertyFactory.iconImage(ARROW),
+                PropertyFactory.iconSize(0.55f),
+                PropertyFactory.iconAllowOverlap(true),
+                PropertyFactory.iconIgnorePlacement(true),
+                PropertyFactory.iconRotationAlignment(Property.ICON_ROTATION_ALIGNMENT_MAP),
+                PropertyFactory.iconPitchAlignment(Property.ICON_PITCH_ALIGNMENT_MAP),
+            )
+            layer.minZoom = 12f
+            if (style.getLayer(below) != null) style.addLayerAbove(layer, below) else addBelowPuck(style, layer)
+        }
+        // Αριθμοί πάνω στις στάσεις (1, 2, 3…).
+        if (style.getLayer(L_STOP_NUM) == null) {
+            val layer = SymbolLayer(L_STOP_NUM, SRC_DEST).withProperties(
+                PropertyFactory.textField(Expression.get("n")),
+                PropertyFactory.textFont(arrayOf("Noto Sans Bold")),
+                PropertyFactory.textSize(12f),
+                PropertyFactory.textAllowOverlap(true),
+                PropertyFactory.textIgnorePlacement(true),
+            ).withFilter(Expression.has("n"))
+            if (style.getLayer(L_DEST) != null) style.addLayerAbove(layer, L_DEST) else addBelowPuck(style, layer)
+        }
         installAlternatives(style, c)
         recolor(style, c)
+    }
+
+    private const val L_ARROWS = "moto-route-arrows"
+    private const val L_STOP_NUM = "moto-stop-num"
+    private const val ARROW = "moto-route-arrow"
+
+    /** Σεβρόν «›» που δείχνει προς τα πάνω (το MapLibre το στρίβει με τη γραμμή). */
+    private fun arrow(): android.graphics.Bitmap {
+        val w = 40
+        val h = 40
+        val bmp = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
+        val cv = android.graphics.Canvas(bmp)
+        val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xCC1B1B27.toInt()
+            style = android.graphics.Paint.Style.STROKE
+            strokeWidth = 7f
+            strokeCap = android.graphics.Paint.Cap.ROUND
+            strokeJoin = android.graphics.Paint.Join.ROUND
+        }
+        // Η γραμμή πάει «προς τα δεξιά» στη θέση του συμβόλου: το βελάκι κοιτάει δεξιά.
+        val path = android.graphics.Path().apply {
+            moveTo(12f, 8f)
+            lineTo(28f, 20f)
+            lineTo(12f, 32f)
+        }
+        cv.drawPath(path, p)
+        return bmp
     }
 
     private const val SRC_JAM = "moto-jam-src-"
@@ -155,6 +209,7 @@ object RouteLayers {
             PropertyFactory.circleColor(c.accent.toArgb()),
             PropertyFactory.circleStrokeColor(c.base.bg.toArgb()),
         )
+        (style.getLayer(L_STOP_NUM) as? SymbolLayer)?.setProperties(PropertyFactory.textColor(android.graphics.Color.WHITE))
     }
 
     fun setRoute(style: Style, route: Route?) {
@@ -266,8 +321,11 @@ object RouteLayers {
 
     fun setDestination(style: Style, dest: LatLon?, stops: List<LatLon> = emptyList()) {
         val src = style.getSource(SRC_DEST) as? GeoJsonSource ?: return
-        val pts = stops + listOfNotNull(dest)
-        src.setGeoJson(FeatureCollection.fromFeatures(pts.map { Feature.fromGeometry(Point.fromLngLat(it.lon, it.lat)) }))
+        val numbered = stops.size >= 1
+        val features = stops.mapIndexed { i, it ->
+            Feature.fromGeometry(Point.fromLngLat(it.lon, it.lat)).apply { if (numbered) addStringProperty("n", "${i + 1}") }
+        } + listOfNotNull(dest).map { Feature.fromGeometry(Point.fromLngLat(it.lon, it.lat)) }
+        src.setGeoJson(FeatureCollection.fromFeatures(features))
     }
 
     private fun addBelowPuck(style: Style, layer: Layer) {

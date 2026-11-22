@@ -36,7 +36,8 @@ jobs:
           sleep 8
           # Αχαρνές → Μπάφι (Πάρνηθα), Κηφισιά → Νέα Μάκρη (Πεντέλη), Θήβα → Βίλια (Κιθαιρώνας)
           for R in "23.7350,38.0830%7C23.6930,38.1720" "23.8100,38.0740%7C23.9800,38.0870" "23.3190,38.3200%7C23.3500,38.1900"; do
-          for p in "car-vario" "moto-dirt" "moto-dirt&profile:dirt_preference=2" "moto-dirt&profile:dirt_preference=4"; do
+          RD="moto-dirt&profile:use_offroad=0&profile:dirt_preference=0"
+          for p in "car-vario" "moto-dirt" "moto-dirt&profile:dirt_preference=4" "$RD" "$RD&profile:avoid_main=1" "$RD&profile:avoid_narrow=1" "$RD&profile:avoid_unpaved=1" "$RD&profile:avoid_ferries=1"; do
             curl -sS "http://localhost:17777/brouter?lonlats=$R&profile=$p&alternativeidx=0&format=geojson" -o out.json
             python3 - "$R $p" <<'PY'
           import json, sys

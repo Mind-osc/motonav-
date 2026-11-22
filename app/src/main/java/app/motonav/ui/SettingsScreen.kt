@@ -136,6 +136,23 @@ fun SettingsScreen(
                         SwitchRow("Πολλές στροφές", "Ο τύπος «Στροφές» ψάχνει πιο στριφτούς δρόμους, και με μεγαλύτερη παράκαμψη (έως 2× χρόνο)", display.moreCurves) {
                             onDisplayChange(display.copy(moreCurves = it))
                         }
+                    }
+                    Group {
+                        // Αποφυγές (όπως στο Kurviger). Αυτοκινητόδρομοι και διόδια είναι στην κάρτα της διαδρομής.
+                        SwitchRow("Αποφυγή πλοίων", "Χωρίς φέρι στη διαδρομή", display.avoidFerries) {
+                            onDisplayChange(display.copy(avoidFerries = it))
+                        }
+                        SwitchRow("Αποφυγή κύριων δρόμων", "Λιγότερες εθνικές και κύριες οδούς (λιγότερη κίνηση)", display.avoidMain) {
+                            onDisplayChange(display.copy(avoidMain = it))
+                        }
+                        SwitchRow("Αποφυγή πολύ στενών δρόμων", "Λιγότερα αγροτικά, δρομάκια εξυπηρέτησης και πεζόδρομους", display.avoidNarrow) {
+                            onDisplayChange(display.copy(avoidNarrow = it))
+                        }
+                        SwitchRow("Αποφυγή χωματόδρομων", "Όσο γίνεται χωρίς χώμα και χαλίκι (όχι στον τύπο «Χώμα»)", display.avoidUnpaved) {
+                            onDisplayChange(display.copy(avoidUnpaved = it))
+                        }
+                    }
+                    Group {
                         val nogoCount = app.motonav.routing.NoGoAreas.list.size
                         if (nogoCount > 0) {
                             LinkRow(

@@ -22,6 +22,9 @@ assign validForCars        = true
 assign avoid_toll          = false  # %avoid_toll% | Avoid paid roads | boolean
 assign avoid_unpaved       = false  # %avoid_unpaved% | Avoid unpaved roads, if possible | boolean
 assign avoid_motorways     = false  # %avoid_motorways% | Avoid motorways | boolean
+assign avoid_ferries       = false  # %avoid_ferries% | Avoid ferries | boolean
+assign avoid_main          = false  # %avoid_main% | Avoid trunk/primary roads | boolean
+assign avoid_narrow        = false  # %avoid_narrow% | Avoid the smallest roads | boolean
 
 assign add_beeline         = false  # %add_beeline% | Enable beeline on distant start/end points | boolean
 assign use_offroad         = true   # %use_offroad% | Enable additional roads | boolean
@@ -244,14 +247,23 @@ assign town_penalty
 
 assign is_dirt = or highway=track surface=unpaved|gravel|fine_gravel|compacted|dirt|ground|earth|grass|sand
 assign paved_penalty = if is_dirt then 0 else dirt_preference
+# Αποφυγές του Moto Nav (Ρυθμίσεις → Χάρτης → Αποφυγές)
+assign is_avoided_ferry = and avoid_ferries route=ferry
+assign main_penalty = if and avoid_main highway=trunk|trunk_link|primary|primary_link then 2 else 0
+assign narrow_penalty = if and avoid_narrow highway=track|road|service|living_street then 4 else 0
+assign unpaved_penalty = if and avoid_unpaved is_dirt then 4 else 0
 
 assign costfactor =
   if ( equal maxspeed 0 ) then 10000
   else if is_avoided_toll_road then 10000
   else if is_avoided_motorway then 10
+  else if is_avoided_ferry then 10000
   else min 9999
   add town_penalty
   add paved_penalty
+  add main_penalty
+  add narrow_penalty
+  add unpaved_penalty
   add no_forest_penalty
   add no_river_penalty
   0

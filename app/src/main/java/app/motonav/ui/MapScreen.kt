@@ -1,4 +1,4 @@
-@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 
 package app.motonav.ui
 
@@ -17,6 +17,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -314,6 +315,37 @@ fun MapScreen(
         }
     }
     LaunchedEffect(gps.value.location) { gps.value.location?.let(session::onLocation) }
+    // Προσομοίωση: «ψεύτικο» GPS πάνω στη διαδρομή, με το όριο του δρόμου (30–90 km/h) × 1/2/4.
+    LaunchedEffect(app.motonav.nav.Simulator.active) {
+        if (!app.motonav.nav.Simulator.active) return@LaunchedEffect
+        var current: app.motonav.routing.Route? = null
+        var along = 0.0
+        var pos: LatLon? = null
+        while (app.motonav.nav.Simulator.active) {
+            val r = session.route
+            if (r == null || r.points.size < 2) { kotlinx.coroutines.delay(1_000); continue }
+            if (r !== current) {
+                along = pos?.let { app.motonav.routing.OnRoute.project(r, it)?.alongM } ?: 0.0
+                current = r
+            }
+            val kmh = (r.speedLimitAt(along) ?: 50).coerceIn(30, 90).toDouble()
+            along = (along + kmh / 3.6 * app.motonav.nav.Simulator.speedUp).coerceAtMost(r.lengthM)
+            val p = r.pointAt(along)
+            val ahead = r.pointAt((along + 20.0).coerceAtMost(r.lengthM))
+            pos = p
+            val loc = Location("sim").apply {
+                latitude = p.lat
+                longitude = p.lon
+                if (Geo.distance(p, ahead) > 1.0) bearing = Geo.bearing(p, ahead).toFloat()
+                speed = (kmh / 3.6).toFloat()
+                accuracy = 4f
+                time = System.currentTimeMillis()
+                elapsedRealtimeNanos = SystemClock.elapsedRealtimeNanos()
+            }
+            gps.value = gps.value.copy(enabled = true, location = loc, speedKmh = kmh.toFloat())
+            kotlinx.coroutines.delay(1_000)
+        }
+    }
 
     val mapView = rememberMapViewWithLifecycle()
     // fps χάρτη: 30 στην οδήγηση, όσο πάει η οθόνη (60/120) σταματημένος, 20 με ζέστη ή χαμηλή μπαταρία.
@@ -404,6 +436,7 @@ fun MapScreen(
     var fuelRaw by remember { mutableStateOf<List<FuelStation>>(emptyList()) }
     var fuelOnRoute by remember { mutableStateOf<List<FuelOnRouteStop>>(emptyList()) }
     var fuelShown by remember { mutableStateOf(false) }
+    var stopsOpen by remember { mutableStateOf(false) }
     var fuelLoading by remember { mutableStateOf(false) }
     // Το Overpass δεν απάντησε (μετά από 3 προσπάθειες). Πάτημα στο ⛽ = ξανά.
     var fuelFailed by remember { mutableStateOf(false) }
@@ -626,6 +659,15 @@ fun MapScreen(
         }
         LaunchedEffect(display.showAlternatives) { session.showAlternatives = display.showAlternatives }
         LaunchedEffect(display.moreCurves) { session.router.moreCurves = display.moreCurves }
+        LaunchedEffect(display.avoidFerries, display.avoidMain, display.avoidNarrow, display.avoidUnpaved) {
+            val A = app.motonav.routing.Avoid
+            val changed = A.ferries != display.avoidFerries || A.mainRoads != display.avoidMain || A.narrow != display.avoidNarrow || A.unpaved != display.avoidUnpaved
+            A.ferries = display.avoidFerries
+            A.mainRoads = display.avoidMain
+            A.narrow = display.avoidNarrow
+            A.unpaved = display.avoidUnpaved
+            if (changed && !session.navigating && session.destination != null) session.plan()
+        }
         LaunchedEffect(style, session.alternatives, session.route, session.navigating) {
             val s = style ?: return@LaunchedEffect
             val alts = if (session.navigating) emptyList() else session.alternatives
@@ -1024,9 +1066,9 @@ fun MapScreen(
         LaunchedEffect(style != null) {
             if (style != null) runCatching { app.motonav.map.OfflineMaps.autoUpdate(context) }
         }
-        LaunchedEffect(style, app.motonav.routing.NoGoAreas.list) {
+        LaunchedEffect(style, app.motonav.routing.NoGoAreas.list, app.motonav.routing.NoGoAreas.temp) {
             val s = style ?: return@LaunchedEffect
-            NoGoLayer.set(s, app.motonav.routing.NoGoAreas.list)
+            NoGoLayer.set(s, app.motonav.routing.NoGoAreas.list + app.motonav.routing.NoGoAreas.temp)
         }
         val accentArgb = LocalAppColors.current.accent.toArgb()
         LaunchedEffect(style, favorites, accentArgb) {
@@ -1209,6 +1251,7 @@ fun MapScreen(
                 StatusPill("${k?.emoji ?: ""} ${k?.label ?: "Αναφορά"}: πάτα εδώ για να σβηστεί.", onClick = deleteHazard)
             }
             if (reportedAt > 0 && SystemClock.elapsedRealtime() - reportedAt < 4_000) StatusPill("Σημειώθηκε. Θα σε ειδοποιήσω όταν ξαναπεράσεις.")
+            if (session.navigating && session.stops.isNotEmpty()) NextStopPill(session, stopsOpen) { stopsOpen = !stopsOpen }
             if (session.navigating && display.showFuel) {
                 if (fuelOpen) {
                     FuelList(fuelAhead, progressNow, addFuelStop) { fuelOpen = false }
@@ -1433,6 +1476,7 @@ fun MapScreen(
                 contentAlignment = Alignment.TopCenter,
             ) {
                 androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Space.sm)) {
+                    SimulationPill { app.motonav.nav.Simulator.active = false; session.stop() }
                     RecPill(session)
                     noGoToDelete?.let { ng ->
                         androidx.compose.material3.Surface(
@@ -1452,7 +1496,13 @@ fun MapScreen(
                 }
             }
         }
-        if (reportOpen && !pip) ReportSheet(onPick = report, onClose = { reportOpen = false }, onCamera = { markCamera(); reportOpen = false })
+        if (reportOpen && !pip) ReportSheet(
+            onPick = report,
+            onClose = { reportOpen = false },
+            onCamera = { markCamera(); reportOpen = false },
+            onRoadClosed = if (session.navigating && !session.followingTrack) ({ session.roadClosedAhead(); reportOpen = false }) else null,
+            onReroute = if (session.navigating) ({ session.rerouteNow(); reportOpen = false }) else null,
+        )
         BackHandler(enabled = reportOpen) { reportOpen = false }
 
         if (showSearch && !pip) {
@@ -1974,6 +2024,18 @@ private fun DestinationCard(
                             .padding(horizontal = 6.dp, vertical = 2.dp),
                     )
                 }
+                // Έτοιμη διαδρομή (αποθηκευμένη/GPX): ανάποδα, από το τέλος προς την αρχή.
+                if (session.followingTrack && !session.navigating) {
+                    Text(
+                        "⇅ Ανάποδα",
+                        style = MotoType.label,
+                        color = c.accent,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(Radius.sm))
+                            .clickable { session.reverseTrack() }
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                    )
+                }
                 Text(
                     "⊘",
                     style = MotoType.label,
@@ -2172,14 +2234,23 @@ private fun DestinationCard(
                     else -> null
                 }
                 if (primary != null) {
+                    // Παρατεταμένο πάτημα στο «Ξεκίνα»: προσομοίωση (βλέπεις τη διαδρομή να «τρέχει» πριν φύγεις).
                     Surface(
                         shape = RoundedCornerShape(Radius.md),
                         color = c.accent,
                         contentColor = c.onAccent,
-                        onClick = primary.second,
                         modifier = Modifier
                             .weight(1f)
-                            .height(48.dp),
+                            .height(48.dp)
+                            .clip(RoundedCornerShape(Radius.md))
+                            .combinedClickable(
+                                onClick = primary.second,
+                                onLongClick = if (route != null) ({
+                                    app.motonav.nav.Simulator.speedUp = 1
+                                    app.motonav.nav.Simulator.active = true
+                                    session.start()
+                                }) else null,
+                            ),
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Text(primary.first, style = MotoType.title.copy(fontSize = 18.sp), color = c.onAccent)
@@ -2782,6 +2853,7 @@ private fun rememberGps(permitted: Boolean, active: Boolean = true): MutableStat
         val lm = context.getSystemService(LocationManager::class.java)
         val listener = object : LocationListener {
             override fun onLocationChanged(loc: Location) {
+                if (app.motonav.nav.Simulator.active) return // προσομοίωση: το «GPS» το δίνει ο Simulator
                 state.value = state.value.copy(
                     enabled = true,
                     location = loc,

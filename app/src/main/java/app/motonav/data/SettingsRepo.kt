@@ -42,6 +42,11 @@ data class DisplayPrefs(
     val showAlternatives: Boolean = true,
     /** «Στροφές» με ακόμα περισσότερες στροφές (δέχεται μεγαλύτερη παράκαμψη). */
     val moreCurves: Boolean = false,
+    /** Αποφυγές: πλοία, κύριοι δρόμοι, πολύ στενοί δρόμοι, χωματόδρομοι. */
+    val avoidFerries: Boolean = false,
+    val avoidMain: Boolean = false,
+    val avoidNarrow: Boolean = false,
+    val avoidUnpaved: Boolean = false,
     /** Κουμπιά χειριστηρίου τιμονιού: ενέργεια → keyCode (κείμενο «zoom_in=19,zoom_out=20,…»). */
     val keyMap: String = "",
     /** Δική μας ώρα/μπαταρία/δορυφόροι πάνω πάνω, αντί για τη γραμμή του κινητού. */
@@ -102,6 +107,10 @@ class SettingsRepo(private val context: Context) {
     private val spotsKey = booleanPreferencesKey("show_spots")
     private val altKey = booleanPreferencesKey("show_alternatives")
     private val curvesKey = booleanPreferencesKey("more_curves")
+    private val avFerryKey = booleanPreferencesKey("avoid_ferries")
+    private val avMainKey = booleanPreferencesKey("avoid_main")
+    private val avNarrowKey = booleanPreferencesKey("avoid_narrow")
+    private val avUnpavedKey = booleanPreferencesKey("avoid_unpaved")
     private val keyMapKey = stringPreferencesKey("key_map")
     private val statusKey = booleanPreferencesKey("custom_status")
     private val scaleKey = floatPreferencesKey("ui_scale")
@@ -128,6 +137,10 @@ class SettingsRepo(private val context: Context) {
             showSpots = p[spotsKey] ?: true,
             showAlternatives = p[altKey] ?: true,
             moreCurves = p[curvesKey] ?: false,
+            avoidFerries = p[avFerryKey] ?: false,
+            avoidMain = p[avMainKey] ?: false,
+            avoidNarrow = p[avNarrowKey] ?: false,
+            avoidUnpaved = p[avUnpavedKey] ?: false,
             keyMap = p[keyMapKey] ?: "",
             customStatus = p[statusKey] ?: true,
             uiScale = p[scaleKey] ?: 1f,
@@ -194,6 +207,10 @@ class SettingsRepo(private val context: Context) {
             p[spotsKey] = d.showSpots
             p[altKey] = d.showAlternatives
             p[curvesKey] = d.moreCurves
+            p[avFerryKey] = d.avoidFerries
+            p[avMainKey] = d.avoidMain
+            p[avNarrowKey] = d.avoidNarrow
+            p[avUnpavedKey] = d.avoidUnpaved
             p[keyMapKey] = d.keyMap
             p[statusKey] = d.customStatus
             p[scaleKey] = d.uiScale
