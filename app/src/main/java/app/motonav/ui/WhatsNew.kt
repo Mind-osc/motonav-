@@ -57,6 +57,10 @@ object WhatsNew {
 
     val entries = listOf(
         Entry(
+            5, "Κέρασέ με έναν καφέ",
+            added = listOf("☕ Αν σου αρέσει η εφαρμογή: Ρυθμίσεις → «Κέρασέ με έναν καφέ» (PayPal). Η εφαρμογή μένει δωρεάν, χωρίς διαφημίσεις."),
+        ),
+        Entry(
             4, "Ιδέες από το Kurviger",
             added = listOf(
                 "Αποφυγές: πλοία, κύριοι δρόμοι, πολύ στενοί δρόμοι, χωματόδρομοι (Ρυθμίσεις → Χάρτης)",
@@ -108,12 +112,13 @@ object WhatsNew {
         val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val latest = entries.maxOf { it.id }
         if (!p.contains(SEEN)) {
-            // Πρώτη εγκατάσταση: τίποτα. Ενημέρωση από παλιά έκδοση (χωρίς αυτό το παράθυρο): μόνο το τελευταίο.
+            // Πρώτη εγκατάσταση: τίποτα. Ενημέρωση από παλιά έκδοση (χωρίς αυτό το παράθυρο): όλα, από το πιο νέο.
             val info = runCatching { context.packageManager.getPackageInfo(context.packageName, 0) }.getOrNull()
             val fresh = info == null || info.firstInstallTime == info.lastUpdateTime
             if (fresh) { markSeen(context); return emptyList() }
-            return entries.filter { it.id == latest }
+            return entries
         }
+        // Όλες οι αλλαγές από την έκδοση που είχες ως αυτή που κατέβασες (π.χ. από την 13 στην 17: 14, 15, 16, 17).
         val seen = p.getInt(SEEN, latest)
         return entries.filter { it.id > seen }
     }

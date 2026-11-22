@@ -12,7 +12,7 @@ import androidx.compose.ui.platform.LocalContext
  * Ο σύνδεσμος ορίζεται εδώ· αν είναι κενός, το κουμπί δεν φαίνεται.
  */
 object Donate {
-    const val URL = ""
+    const val URL = "https://www.paypal.com/qrcodes/p2pqrc/WXK6QG8TNCN7J"
 }
 
 @Composable
