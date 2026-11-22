@@ -33,7 +33,17 @@ android {
     val ksPath = System.getenv("MOTONAV_KEYSTORE") ?: file("release.keystore").takeIf { it.exists() }?.path
     val ksPass = System.getenv("MOTONAV_KEYSTORE_PASSWORD")?.takeIf { it.isNotEmpty() } ?: props.getProperty("storePassword")
     val hasKey = ksPath != null && file(ksPath).exists() && ksPass != null
+    // Μόνο για μία φορά: APK με το παλιό κλειδί, για να μπει από πάνω στην παλιά εφαρμογή
+    // και να βγει αντίγραφο ασφαλείας πριν την αλλαγή κλειδιού.
+    val legacy = System.getenv("MOTONAV_LEGACY") == "1" && file("legacy.keystore").exists() &&
+        props.getProperty("legacyPassword") != null
     signingConfigs {
+        if (legacy) create("legacy") {
+            storeFile = file("legacy.keystore")
+            storePassword = props.getProperty("legacyPassword")
+            keyAlias = "motonav"
+            keyPassword = props.getProperty("legacyPassword")
+        }
         if (hasKey) create("own") {
             storeFile = file(ksPath!!)
             storePassword = ksPass
@@ -45,7 +55,11 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            signingConfig = if (hasKey) signingConfigs.getByName("own") else signingConfigs.getByName("debug")
+            signingConfig = when {
+                legacy -> signingConfigs.getByName("legacy")
+                hasKey -> signingConfigs.getByName("own")
+                else -> signingConfigs.getByName("debug")
+            }
         }
         debug {
             if (hasKey) signingConfig = signingConfigs.getByName("own")

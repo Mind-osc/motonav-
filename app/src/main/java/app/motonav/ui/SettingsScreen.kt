@@ -87,6 +87,7 @@ fun SettingsScreen(
                 "cameras" to "Κάμερες και ειδοποιήσεις",
                 "about" to "Πηγές και άδειες",
                 "voice" to "Φωνή πλοήγησης",
+                "backup" to "Αντίγραφο ασφαλείας",
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RideIconButton(
@@ -224,6 +225,7 @@ fun SettingsScreen(
 
                 }
                 "voice" -> VoicePage()
+                "backup" -> BackupPage()
                 "about" -> {
             Group {
                 InfoRow("Δεδομένα χάρτη", "© OpenStreetMap contributors, άδεια ODbL")
@@ -249,6 +251,9 @@ fun SettingsScreen(
                     Group {
                         LinkRow("Παρέα", "Βλέπετε ο ένας τον άλλον στον χάρτη · walkie-talkie", onOpenGroup)
                         LinkRow("Ημερολόγιο διαδρομών", "Χιλιόμετρα, ταχύτητες, κλίσεις, GPX", onOpenTrips)
+                    }
+                    Group {
+                        LinkRow("Αντίγραφο ασφαλείας", "Όλα σε ένα αρχείο, επαναφορά με ένα πάτημα", { onPage("backup") })
                     }
                     Group {
                         LinkRow("Πηγές και άδειες", "Από πού έρχονται χάρτες, διαδρομές, κίνηση", { onPage("about") })
