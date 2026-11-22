@@ -1,0 +1,174 @@
+{
+  "_about": "Θέμα light + Ροζ. Γεννιέται από gen_tokens.py. Τα ονόματα ρόλων δεν αλλάζουν.",
+  "color": {
+    "bg": "#FFFFFF",
+    "surface": "#F3F4F6",
+    "surface-2": "#E9EBEF",
+    "surface-3": "#DDE0E6",
+    "border": "#D3D7DE",
+    "border-input": "#79808C",
+    "text": "#111318",
+    "text-muted": "#545A66",
+    "danger": "#C62828",
+    "on-danger": "#FFFFFF",
+    "success": "#1B7F45",
+    "warning": "#9A6200",
+    "info": "#0369A1",
+    "accent": "#BE185D",
+    "on-accent": "#FFFFFF",
+    "focus": "#BE185D"
+  },
+  "pairs": [
+    [
+      "text",
+      "bg"
+    ],
+    [
+      "text",
+      "surface"
+    ],
+    [
+      "text",
+      "surface-2"
+    ],
+    [
+      "text-muted",
+      "bg"
+    ],
+    [
+      "text-muted",
+      "surface"
+    ],
+    [
+      "text-muted",
+      "surface-2"
+    ],
+    [
+      "on-accent",
+      "accent"
+    ],
+    [
+      "accent",
+      "bg"
+    ],
+    [
+      "accent",
+      "surface"
+    ],
+    [
+      "danger",
+      "bg"
+    ],
+    [
+      "danger",
+      "surface"
+    ],
+    [
+      "success",
+      "bg"
+    ],
+    [
+      "warning",
+      "bg"
+    ],
+    [
+      "on-danger",
+      "danger"
+    ],
+    [
+      "border-input",
+      "bg",
+      "ui"
+    ],
+    [
+      "border-input",
+      "surface",
+      "ui"
+    ],
+    [
+      "focus",
+      "bg",
+      "ui"
+    ],
+    [
+      "accent",
+      "bg",
+      "ui"
+    ]
+  ],
+  "font": {
+    "sans": "Inter (OFL), fallback Roboto",
+    "mono": "JetBrains Mono (OFL), fallback monospace",
+    "numerals": "Inter tabular figures (tnum) για ταχύτητα, αποστάσεις, ώρες"
+  },
+  "type": {
+    "label": {
+      "size": 14,
+      "line": 18,
+      "weight": 600
+    },
+    "body": {
+      "size": 16,
+      "line": 22,
+      "weight": 400
+    },
+    "title": {
+      "size": 20,
+      "line": 26,
+      "weight": 600
+    },
+    "street": {
+      "size": 24,
+      "line": 30,
+      "weight": 600
+    },
+    "maneuver": {
+      "size": 40,
+      "line": 44,
+      "weight": 700
+    },
+    "speed": {
+      "size": 64,
+      "line": 64,
+      "weight": 800
+    },
+    "_unit": "sp (Android). Ελάχιστο 14sp οπουδήποτε κατά την οδήγηση, όχι 12."
+  },
+  "space": [
+    0,
+    4,
+    8,
+    12,
+    16,
+    24,
+    32,
+    48
+  ],
+  "touch": {
+    "min": 56,
+    "ride": 72,
+    "_unit": "dp. ride = κουμπιά στην οθόνη πλοήγησης, για γάντια",
+    "gap": 12
+  },
+  "radius": {
+    "sm": 8,
+    "md": 14,
+    "lg": 22,
+    "pill": 999
+  },
+  "elevation": {
+    "card": "surface-2, χωρίς σκιά σε dark",
+    "pop": "surface-3 + border"
+  },
+  "motion": {
+    "fast": "120ms",
+    "base": "200ms",
+    "ease": "cubic-bezier(.2,.8,.2,1)",
+    "reduce": "χωρίς κινήσεις όταν το κινητό έχει μειωμένη κίνηση"
+  },
+  "map": {
+    "route-width": 9,
+    "route-casing": 3,
+    "_route": "γραμμή διαδρομής = accent, περίγραμμα = bg"
+  }
+}

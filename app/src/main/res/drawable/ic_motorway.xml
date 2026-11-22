@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Αυτοκινητόδρομος: δύο ρεύματα με διαχωριστικό. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path android:fillColor="#FFFFFFFF" android:pathData="M8.2,3 L9.8,3 L6.6,21 L3,21 Z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M14.2,3 L15.8,3 L21,21 L17.4,21 Z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M11.3,3 L12.7,3 L12.8,6 L11.2,6 Z M11.1,9 L12.9,9 L13.1,13 L10.9,13 Z M10.7,16 L13.3,16 L13.5,21 L10.5,21 Z" />
+</vector>

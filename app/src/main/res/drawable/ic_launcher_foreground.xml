@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Εικονίδιο Moto Nav: βουνά, δρόμος με στροφές και το βελάκι πλοήγησης. Δικό μας σχέδιο. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:fillColor="#FF2B2245" android:pathData="M0,62 L22,40 L32,48 L50,26 L64,42 L72,34 L108,62 L108,108 L0,108 Z" />
+    <path android:fillColor="#FF4A3D72" android:pathData="M50,26 L44,33 L50,31 L54,35 L57,34 Z" />
+    <path android:fillColor="#FF17131F" android:pathData="M0,70 L26,56 L44,64 L70,50 L108,70 L108,108 L0,108 Z" />
+    <path android:pathData="M26,110 L26,100 C40,84 74,80 60,66 C52,58 58,54 61,52 L63,52 C62,55 60,59 67,65 C84,80 68,88 82,100 L82,110 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="54" android:startY="104" android:endX="54" android:endY="52">
+                <item android:offset="0" android:color="#FFA78BFA" />
+                <item android:offset="1" android:color="#FF5B21B6" />
+            </gradient>
+        </aapt:attr>
+    </path>
+        <path android:pathData="M54,108 L54,99 C56,86 76,80 64,66 C59,60 61,56 62,53" android:strokeColor="#BFFFFFFF" android:strokeWidth="1.3" android:trimPathStart="0.0" android:trimPathEnd="0.06" />
+        <path android:pathData="M54,108 L54,99 C56,86 76,80 64,66 C59,60 61,56 62,53" android:strokeColor="#BFFFFFFF" android:strokeWidth="1.3" android:trimPathStart="0.111" android:trimPathEnd="0.171" />
+        <path android:pathData="M54,108 L54,99 C56,86 76,80 64,66 C59,60 61,56 62,53" android:strokeColor="#BFFFFFFF" android:strokeWidth="1.3" android:trimPathStart="0.222" android:trimPathEnd="0.282" />
+        <path android:pathData="M54,108 L54,99 C56,86 76,80 64,66 C59,60 61,56 62,53" android:strokeColor="#BFFFFFFF" android:strokeWidth="1.3" android:trimPathStart="0.333" android:trimPathEnd="0.393" />
+        <path android:pathData="M54,108 L54,99 C56,86 76,80 64,66 C59,60 61,56 62,53" android:strokeColor="#BFFFFFFF" android:strokeWidth="1.3" android:trimPathStart="0.444" android:trimPathEnd="0.504" />
+        <path android:pathData="M54,108 L54,99 C56,86 76,80 64,66 C59,60 61,56 62,53" android:strokeColor="#BFFFFFFF" android:strokeWidth="1.3" android:trimPathStart="0.556" android:trimPathEnd="0.616" />
+        <path android:pathData="M54,108 L54,99 C56,86 76,80 64,66 C59,60 61,56 62,53" android:strokeColor="#BFFFFFFF" android:strokeWidth="1.3" android:trimPathStart="0.667" android:trimPathEnd="0.727" />
+        <path android:pathData="M54,108 L54,99 C56,86 76,80 64,66 C59,60 61,56 62,53" android:strokeColor="#BFFFFFFF" android:strokeWidth="1.3" android:trimPathStart="0.778" android:trimPathEnd="0.838" />
+        <path android:pathData="M54,108 L54,99 C56,86 76,80 64,66 C59,60 61,56 62,53" android:strokeColor="#BFFFFFFF" android:strokeWidth="1.3" android:trimPathStart="0.889" android:trimPathEnd="0.949" />
+    <group android:translateX="37" android:translateY="62" android:scaleX="1.3" android:scaleY="1.3">
+        <path android:fillColor="#FFFFFFFF" android:strokeColor="#FF120F1A" android:strokeWidth="1.4" android:strokeLineJoin="round" android:pathData="M13,2.5 L21.5,22.5 Q21.8,23.4 20.9,23 L13,18.8 L5.1,23 Q4.2,23.4 4.5,22.5 Z" />
+    </group>
+</vector>

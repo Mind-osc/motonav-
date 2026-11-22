@@ -1,0 +1,247 @@
+package app.motonav.data
+
+import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
+import app.motonav.search.Place
+import app.motonav.ui.theme.ThemeMode
+import org.json.JSONArray
+import org.json.JSONObject
+import app.motonav.ui.theme.ThemeSettings
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+
+private val Context.settingsStore by preferencesDataStore(name = "settings")
+
+data class DisplayPrefs(
+    val showLean: Boolean = true,
+    val showCompass: Boolean = true,
+    val showAltitude: Boolean = true,
+    /** Χρώματα κίνησης στον χάρτη (θέλει κλειδί TomTom). */
+    val showTraffic: Boolean = true,
+    /** Κλειδί TomTom του χρήστη. Μένει μόνο στο κινητό. */
+    val tomtomKey: String = "",
+    /** Κάμερες στον χάρτη και κίτρινη μπάρα 300 m πριν. */
+    val showCameras: Boolean = true,
+    /** Φωνή «Κάμερα σε 300 μέτρα». */
+    val cameraVoice: Boolean = true,
+    /** Ανάγλυφο βουνών και κορυφές με υψόμετρο. */
+    val showRelief: Boolean = true,
+    /** Κλειδί MapTiler για ισοϋψείς. Μένει μόνο στο κινητό. */
+    val maptilerKey: String = "",
+    val showContours: Boolean = true,
+    /** Χωματόδρομοι με καφέ διακεκομμένη στον χάρτη. */
+    val showDirt: Boolean = true,
+    /** Μέρη για μηχανόβιους στον χάρτη (θέες, νερό, αυχένες, στέκια, συνεργεία μηχανών…). */
+    val showSpots: Boolean = true,
+    /** Εναλλακτικές διαδρομές με τη διαφορά χρόνου, στην προεπισκόπηση. */
+    val showAlternatives: Boolean = true,
+    /** Δική μας ώρα/μπαταρία/δορυφόροι πάνω πάνω, αντί για τη γραμμή του κινητού. */
+    val customStatus: Boolean = true,
+    /** Μέγεθος όλων των κουμπιών και κειμένων (1 = κανονικό). */
+    val uiScale: Float = 1f,
+    /** Η ταμπέλα στροφής παίρνει το χρώμα του δρόμου όπου βγαίνεις. */
+    val roadColors: Boolean = true,
+    /** Παλλόμενες άκρες οθόνης: όριο, κίνδυνος, κάμερα. */
+    val edgeWarnings: Boolean = true,
+    /** Φωνή «Όριο 50» όταν το περνάς, και για κακό καιρό μπροστά. */
+    val speedVoice: Boolean = true,
+    /** Βενζινάδικα πάνω στη διαδρομή (OpenStreetMap). */
+    val showFuel: Boolean = true,
+    /** Καρό σημαία στο πάνω μέρος της οθόνης πάνω από 120 km/h. */
+    val flagOver120: Boolean = false,
+)
+
+class SettingsRepo(private val context: Context) {
+    private val mode = stringPreferencesKey("theme_mode")
+    private val preset = intPreferencesKey("accent_preset")
+    private val hue = floatPreferencesKey("custom_hue")
+    private val customColorKey = intPreferencesKey("custom_color")
+
+    val theme: Flow<ThemeSettings> = context.settingsStore.data.map { p ->
+        ThemeSettings(
+            mode = runCatching { ThemeMode.valueOf(p[mode] ?: "DARK") }.getOrDefault(ThemeMode.DARK),
+            accentPreset = p[preset] ?: 0,
+            customHue = p[hue] ?: 270f,
+            customColor = p[customColorKey] ?: 0,
+        )
+    }
+
+    suspend fun save(s: ThemeSettings) {
+        context.settingsStore.edit { p ->
+            p[mode] = s.mode.name
+            p[preset] = s.accentPreset
+            p[hue] = s.customHue
+            p[customColorKey] = s.customColor
+        }
+    }
+
+    // ---- Τι φαίνεται στον χάρτη
+
+    private val showLeanKey = booleanPreferencesKey("show_lean")
+    private val showCompassKey = booleanPreferencesKey("show_compass")
+    private val showAltitudeKey = booleanPreferencesKey("show_altitude")
+    private val showTrafficKey = booleanPreferencesKey("show_traffic")
+    private val tomtomKeyKey = stringPreferencesKey("tomtom_key")
+    private val showCamerasKey = booleanPreferencesKey("show_cameras")
+    private val cameraVoiceKey = booleanPreferencesKey("camera_voice")
+    private val reliefKey = booleanPreferencesKey("show_relief")
+    private val maptilerKeyKey = stringPreferencesKey("maptiler_key")
+    private val contoursKey = booleanPreferencesKey("show_contours")
+    private val dirtKey = booleanPreferencesKey("show_dirt")
+    private val spotsKey = booleanPreferencesKey("show_spots")
+    private val altKey = booleanPreferencesKey("show_alternatives")
+    private val statusKey = booleanPreferencesKey("custom_status")
+    private val scaleKey = floatPreferencesKey("ui_scale")
+    private val roadColorsKey = booleanPreferencesKey("road_colors")
+    private val edgeKey = booleanPreferencesKey("edge_warnings")
+    private val speedVoiceKey = booleanPreferencesKey("speed_voice")
+    private val fuelKey = booleanPreferencesKey("show_fuel")
+    private val flagKey = booleanPreferencesKey("flag_over_120")
+
+    val display: Flow<DisplayPrefs> = context.settingsStore.data.map { p ->
+        DisplayPrefs(
+            showLean = p[showLeanKey] ?: true,
+            showCompass = p[showCompassKey] ?: true,
+            showAltitude = p[showAltitudeKey] ?: true,
+            showTraffic = p[showTrafficKey] ?: true,
+            tomtomKey = p[tomtomKeyKey] ?: "",
+            showCameras = p[showCamerasKey] ?: true,
+            cameraVoice = p[cameraVoiceKey] ?: true,
+            showRelief = p[reliefKey] ?: true,
+            maptilerKey = p[maptilerKeyKey] ?: "",
+            showContours = p[contoursKey] ?: true,
+            showDirt = p[dirtKey] ?: true,
+            showSpots = p[spotsKey] ?: true,
+            showAlternatives = p[altKey] ?: true,
+            customStatus = p[statusKey] ?: true,
+            uiScale = p[scaleKey] ?: 1f,
+            roadColors = p[roadColorsKey] ?: true,
+            edgeWarnings = p[edgeKey] ?: true,
+            speedVoice = p[speedVoiceKey] ?: true,
+            showFuel = p[fuelKey] ?: true,
+            flagOver120 = p[flagKey] ?: false,
+        )
+    }
+
+    // ---- Βελάκι και γραμμή διαδρομής
+
+    private val mShape = stringPreferencesKey("marker_shape")
+    private val mSize = intPreferencesKey("marker_size")
+    private val mFill = intPreferencesKey("marker_fill")
+    private val mOutline = booleanPreferencesKey("marker_outline")
+    private val mOutlineColor = intPreferencesKey("marker_outline_color")
+    private val mLine = intPreferencesKey("line_color")
+    private val mLineOutline = intPreferencesKey("line_outline_color")
+    private val mLineOutlineW = floatPreferencesKey("line_outline_width")
+
+    val marker: Flow<app.motonav.ui.MarkerPrefs> = context.settingsStore.data.map { p ->
+        val def = app.motonav.ui.MarkerPrefs()
+        app.motonav.ui.MarkerPrefs(
+            shape = p[mShape]?.let { s -> app.motonav.ui.PuckShape.entries.firstOrNull { it.name == s } } ?: def.shape,
+            sizeDp = p[mSize] ?: def.sizeDp,
+            fill = p[mFill],
+            outline = p[mOutline] ?: def.outline,
+            outlineColor = p[mOutlineColor] ?: def.outlineColor,
+            lineColor = p[mLine],
+            lineOutlineColor = p[mLineOutline],
+            lineOutlineDp = p[mLineOutlineW] ?: def.lineOutlineDp,
+        )
+    }
+
+    suspend fun saveMarker(m: app.motonav.ui.MarkerPrefs) {
+        context.settingsStore.edit { p ->
+            p[mShape] = m.shape.name
+            p[mSize] = m.sizeDp
+            if (m.fill == null) p.remove(mFill) else p[mFill] = m.fill
+            p[mOutline] = m.outline
+            p[mOutlineColor] = m.outlineColor
+            if (m.lineColor == null) p.remove(mLine) else p[mLine] = m.lineColor
+            if (m.lineOutlineColor == null) p.remove(mLineOutline) else p[mLineOutline] = m.lineOutlineColor
+            p[mLineOutlineW] = m.lineOutlineDp
+        }
+    }
+
+    suspend fun saveDisplay(d: DisplayPrefs) {
+        context.settingsStore.edit { p ->
+            p[showLeanKey] = d.showLean
+            p[showCompassKey] = d.showCompass
+            p[showAltitudeKey] = d.showAltitude
+            p[showTrafficKey] = d.showTraffic
+            p[tomtomKeyKey] = d.tomtomKey.trim()
+            p[showCamerasKey] = d.showCameras
+            p[cameraVoiceKey] = d.cameraVoice
+            p[reliefKey] = d.showRelief
+            p[maptilerKeyKey] = d.maptilerKey.trim()
+            p[contoursKey] = d.showContours
+            p[dirtKey] = d.showDirt
+            p[spotsKey] = d.showSpots
+            p[altKey] = d.showAlternatives
+            p[statusKey] = d.customStatus
+            p[scaleKey] = d.uiScale
+            p[roadColorsKey] = d.roadColors
+            p[edgeKey] = d.edgeWarnings
+            p[speedVoiceKey] = d.speedVoice
+            p[fuelKey] = d.showFuel
+            p[flagKey] = d.flagOver120
+        }
+    }
+
+    // ---- Πρόσφατα μέρη (τα 10 τελευταία που διάλεξες στην αναζήτηση)
+
+    private val recentKey = stringPreferencesKey("recent_places")
+
+    val recents: Flow<List<Place>> = context.settingsStore.data.map { p -> decode(p[recentKey]) }
+
+    suspend fun addRecent(place: Place) {
+        context.settingsStore.edit { p ->
+            val list = decode(p[recentKey]).filterNot { it.name == place.name && it.lat == place.lat && it.lon == place.lon }
+            p[recentKey] = encode((listOf(place) + list).take(10))
+        }
+    }
+
+    // ---- Σπίτι, δουλειά, αγαπημένα
+
+    private val homeKey = stringPreferencesKey("place_home")
+    private val workKey = stringPreferencesKey("place_work")
+    private val favKey = stringPreferencesKey("place_favorites")
+
+    val home: Flow<Place?> = context.settingsStore.data.map { p -> decode(p[homeKey]).firstOrNull() }
+    val work: Flow<Place?> = context.settingsStore.data.map { p -> decode(p[workKey]).firstOrNull() }
+    val favorites: Flow<List<Place>> = context.settingsStore.data.map { p -> decode(p[favKey]) }
+
+    suspend fun setHome(place: Place) {
+        context.settingsStore.edit { p -> p[homeKey] = encode(listOf(place)) }
+    }
+
+    suspend fun setWork(place: Place) {
+        context.settingsStore.edit { p -> p[workKey] = encode(listOf(place)) }
+    }
+
+    /** Προσθέτει ή βγάζει (ίδιο σημείο σε ακτίνα ~20 m = ίδιο μέρος). */
+    suspend fun toggleFavorite(place: Place) {
+        context.settingsStore.edit { p ->
+            val list = decode(p[favKey])
+            val same = { o: Place -> kotlin.math.abs(o.lat - place.lat) < 2e-4 && kotlin.math.abs(o.lon - place.lon) < 2e-4 }
+            p[favKey] = encode(if (list.any(same)) list.filterNot(same) else (listOf(place) + list).take(40))
+        }
+    }
+
+    private fun encode(list: List<Place>): String = JSONArray().apply {
+        list.forEach {
+            put(JSONObject().put("n", it.name).put("d", it.detail).put("la", it.lat).put("lo", it.lon).put("k", it.kind))
+        }
+    }.toString()
+
+    private fun decode(s: String?): List<Place> = runCatching {
+        val a = JSONArray(s ?: return emptyList())
+        (0 until a.length()).mapNotNull { i ->
+            val o = a.optJSONObject(i) ?: return@mapNotNull null
+            Place(o.optString("n"), o.optString("d"), o.optDouble("la"), o.optDouble("lo"), o.optString("k"))
+        }
+    }.getOrDefault(emptyList())
+}

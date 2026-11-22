@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Μικρή σκιά κάτω από το βελάκι, για να φαίνεται πάνω σε κάθε χάρτη. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <size android:width="32dp" android:height="32dp" />
+    <solid android:color="#FFFFFFFF" />
+</shape>

@@ -1,0 +1,57 @@
+name: BRouter profile check
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths: ["app/src/main/assets/brouter/**", ".github/workflows/brouter-profile.yml"]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: BRouter + Greece segment
+        run: |
+          set -e
+          mkdir -p br/segments br/profiles br/custom
+          gh release download -R abrensch/brouter --pattern 'brouter-*.zip' -D br
+          unzip -q br/brouter-*.zip -d br
+          JAR=$(find br -name 'brouter-*-all.jar' | head -1)
+          echo "JAR=$JAR" >> $GITHUB_ENV
+          cp -r $(dirname $(find br -name lookups.dat | head -1))/* br/profiles/
+          cp app/src/main/assets/brouter/moto-dirt.brf br/profiles/
+          curl -sSfL -o br/segments/E20_N35.rd5 https://brouter.de/brouter/segments4/E20_N35.rd5
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Route Parnitha forest roads
+        run: |
+          set -e
+          java -cp "$JAR" btools.server.RouteServer br/segments br/profiles br/custom 17777 1 > server.log 2>&1 &
+          sleep 8
+          # Αχαρνές → Μπάφι (Πάρνηθα), Κηφισιά → Νέα Μάκρη (Πεντέλη), Θήβα → Βίλια (Κιθαιρώνας)
+          for R in "23.7350,38.0830%7C23.6930,38.1720" "23.8100,38.0740%7C23.9800,38.0870" "23.3190,38.3200%7C23.3500,38.1900"; do
+          for p in "car-vario" "moto-dirt" "moto-dirt&profile:dirt_preference=2" "moto-dirt&profile:dirt_preference=4"; do
+            curl -sS "http://localhost:17777/brouter?lonlats=$R&profile=$p&alternativeidx=0&format=geojson" -o out.json
+            python3 - "$R $p" <<'PY'
+          import json, sys
+          p = sys.argv[1]
+          t = open("out.json").read()
+          try:
+              d = json.loads(t)
+          except Exception:
+              print(p, "ERROR:", t[:300]); sys.exit(0)
+          pr = d["features"][0]["properties"]
+          msgs = pr.get("messages", [])
+          hdr = msgs[0]; iT = hdr.index("WayTags"); iD = hdr.index("Distance")
+          dirt = sum(int(r[iD]) for r in msgs[1:] if any(k in r[iT] for k in ("highway=track", "surface=gravel", "surface=unpaved", "surface=dirt", "surface=ground", "surface=compacted", "surface=fine_gravel")))
+          print("RESULT", p, "length", pr["track-length"], "m, time", pr["total-time"], "s, dirt", dirt, "m")
+          PY
+          done
+          done
+          tail -20 server.log

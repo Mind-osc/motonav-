@@ -1,0 +1,15 @@
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+.DS_Store
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+
+# κλειδιά: μόνο αυτά, μόνο στο private (το .publicignore τα κρατάει έξω από το public)
+*.keystore
+*.jks
+!app/release.keystore

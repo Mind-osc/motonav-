@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Βελάκι θέσης. Βάφεται με το χρώμα του θέματος (foregroundTintColor). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="46dp"
+    android:height="46dp"
+    android:viewportWidth="26"
+    android:viewportHeight="26">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M13,2.5 L21.5,22.5 Q21.8,23.4 20.9,23 L13,18.8 L5.1,23 Q4.2,23.4 4.5,22.5 Z" />
+</vector>

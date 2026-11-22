@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Μονόχρωμο (θεματικά εικονίδια Android 13+): δρόμος και βελάκι. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:fillColor="#FFFFFFFF" android:fillAlpha="0.45" android:pathData="M18,64 L32,48 L40,55 L52,38 L62,50 L68,44 L90,64 Z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M34,92 C44,82 72,80 60,68 C54,62 58,58 61,56 L63,56 C62,58 60,62 66,67 C80,78 68,86 76,92 Z" />
+    <group android:translateX="38" android:translateY="62" android:scaleX="1.2" android:scaleY="1.2">
+        <path android:fillColor="#FF000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.6" android:strokeLineJoin="round" android:pathData="M13,2.5 L21.5,22.5 Q21.8,23.4 20.9,23 L13,18.8 L5.1,23 Q4.2,23.4 4.5,22.5 Z" />
+    </group>
+</vector>
