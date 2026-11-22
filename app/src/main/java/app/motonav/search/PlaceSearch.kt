@@ -121,7 +121,7 @@ class PlaceSearch(private val tomtomKey: String = "") {
         val t = tomtom.await()
         if (a.isFailure && b.isFailure && c.isFailure && t.isFailure && av.all { it.isFailure }) {
             // Χωρίς internet: πόλεις, χωριά και κορυφές από τη λίστα μέσα στην εφαρμογή.
-            val offline = withContext(Dispatchers.IO) { OfflineGazetteer.search(q, near) }
+            val offline = withContext(Dispatchers.IO) { OfflineGazetteer.search(split?.first ?: q, near) }
             if (offline.isNotEmpty()) return@coroutineScope offline
             throw (a.exceptionOrNull() ?: IOException("search"))
         }
@@ -132,7 +132,7 @@ class PlaceSearch(private val tomtomKey: String = "") {
             near,
         )
         val result = PlaceParsers.markMissingNumber(ranked, split?.second)
-        result.ifEmpty { withContext(Dispatchers.IO) { OfflineGazetteer.search(q, near) } }
+        result.ifEmpty { withContext(Dispatchers.IO) { OfflineGazetteer.search(split?.first ?: q, near) } }
     }
 
     /**
