@@ -4,9 +4,19 @@
 Διαδρομές με στροφές ή χώμα, φωνή στα ελληνικά, κάμερες, βενζίνη, όργανα, παρέα με walkie-talkie.
 Χάρτες από OpenStreetMap. Μεγάλα κουμπιά για γάντια.
 
-![Θέματα και χρώματα (σχέδιο)](replica/design/preview.png)
+<p align="center">
+  <img src="docs/screenshots/04-ploigisi.jpg" width="24%" alt="Πλοήγηση">
+  <img src="docs/screenshots/03-diadromi.jpg" width="24%" alt="Διαδρομή με εναλλακτικές">
+  <img src="docs/screenshots/01-xartis.jpg" width="24%" alt="Χάρτης με ανάγλυφο και κορυφές">
+  <img src="docs/screenshots/02-poli.jpg" width="24%" alt="Χάρτης πόλης">
+</p>
+<p align="center"><sub>Πλοήγηση · Διαδρομή με υψόμετρο και εναλλακτικές · Ανάγλυφο και κορυφές · Πόλη</sub></p>
 
-*Σχέδιο της οθόνης πλοήγησης σε 4 θέματα. Διαλέγεις ανάμεσα σε 9 χρώματα ή δικό σου.*
+<p align="center">
+  <img src="docs/screenshots/05-orizontia.jpg" width="49%" alt="Οριζόντια οθόνη">
+  <img src="docs/screenshots/06-xoma.jpg" width="49%" alt="Χωματόδρομοι και ισοϋψείς">
+</p>
+<p align="center"><sub>Οριζόντια, για βάση στο τιμόνι · Χωματόδρομοι και ισοϋψείς για off-road</sub></p>
 
 ## Εγκατάσταση
 
@@ -112,6 +122,15 @@ OpenStreetMap (χάρτης, κάμερες, βενζίνη, μέρη) · OpenFr
 ## Άδεια
 
 MIT. Δες το `LICENSE`. Γραμματοσειρά Barlow Condensed: SIL OFL 1.1 (`licenses/`).
+
+## Προσαρμογή
+
+<p align="center">
+  <img src="docs/screenshots/07-rythmiseis.jpg" width="32%" alt="Ρυθμίσεις">
+  <img src="docs/screenshots/08-xromata.jpg" width="32%" alt="Θέμα και χρώματα">
+  <img src="docs/screenshots/09-velaki.jpg" width="32%" alt="Βελάκι και γραμμή">
+</p>
+<p align="center"><sub>Ρυθμίσεις · Σκούρο / Μαύρο / Ανοιχτό / Αυτόματο, 9 χρώματα ή δικό σου · Σχήμα, μέγεθος και χρώμα βελακιού, ή δική σου εικόνα</sub></p>
 
 ## Για developers
 

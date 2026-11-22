@@ -261,7 +261,7 @@ fun SettingsScreen(
                 }
             }
 
-            Text("Moto Nav $version · προσωπική χρήση", style = MotoType.label, color = c.base.textMuted)
+            Text("Moto Nav $version · δωρεάν, open source", style = MotoType.label, color = c.base.textMuted)
             Spacer(Modifier.heightIn(min = Space.xxl))
         }
     }
