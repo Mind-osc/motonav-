@@ -37,7 +37,13 @@ class NavigationEngine(val route: Route) {
     private var offCount = 0
     private var snapped: LatLon? = null
 
-    fun update(p: LatLon, accuracyM: Float): NavState {
+    private var offNeeded = OFF_ROUTE_FIXES
+
+    /**
+     * bearingDeg/speedMps: πού πας (GPS). Αν πας αντίθετα ή κάθετα στη διαδρομή, βγαίνεις πιο γρήγορα «εκτός»·
+     * αν πας παράλληλα και κοντά (GPS που πετάγεται ανάμεσα σε πολυκατοικίες), περιμένει λίγο περισσότερο.
+     */
+    fun update(p: LatLon, accuracyM: Float, bearingDeg: Float? = null, speedMps: Float = 0f): NavState {
         val pts = route.points
         val cum = route.cumulative
         val lastSeg = pts.size - 2
@@ -58,6 +64,10 @@ class NavigationEngine(val route: Route) {
         val tolerance = max(25.0, accuracyM * 1.2)
         if (bestD > tolerance) {
             offCount++
+            // Πόσα στίγματα χρειάζονται: 2 αν είσαι πολύ μακριά ή πας αλλού, 3 αν πας παράλληλα (μάλλον GPS).
+            val segBearing = Geo.bearing(pts[bestI], pts[bestI + 1])
+            val wrongWay = bearingDeg != null && speedMps > 3f && angleDiff(bearingDeg.toDouble(), segBearing) > 50.0
+            offNeeded = if (bestD > FAR_M || wrongWay) OFF_ROUTE_FIXES else OFF_ROUTE_FIXES_PARALLEL
         } else {
             offCount = 0
             segIndex = bestI
@@ -84,7 +94,7 @@ class NavigationEngine(val route: Route) {
             distToNextM = next?.let { max(0.0, it.atMeters - progress) } ?: 0.0,
             then = then,
             after = route.maneuvers.getOrNull(nextIdx + 1)?.takeIf { next != null },
-            offRoute = offCount >= OFF_ROUTE_FIXES,
+            offRoute = offCount >= offNeeded,
             arrived = remaining < 30.0 && offCount == 0,
             segIndex = segIndex,
             snapped = snapped,
@@ -93,8 +103,17 @@ class NavigationEngine(val route: Route) {
     }
 
     companion object {
-        /** Πόσα συνεχόμενα στίγματα εκτός διαδρομής (1/s) πριν τη νέα διαδρομή. */
+        /** Πόσα συνεχόμενα στίγματα εκτός διαδρομής (1/s) πριν τη νέα διαδρομή: μακριά ή σε άλλη κατεύθυνση. */
         const val OFF_ROUTE_FIXES = 2
+        /** Κοντά και παράλληλα με τη διαδρομή (συχνά GPS που πετάγεται στην πόλη). */
+        const val OFF_ROUTE_FIXES_PARALLEL = 4
+        /** Πάνω από τόσα μέτρα είσαι σίγουρα αλλού. */
+        const val FAR_M = 60.0
+
+        fun angleDiff(a: Double, b: Double): Double {
+            val d = ((a - b) % 360.0 + 360.0) % 360.0
+            return if (d > 180.0) 360.0 - d else d
+        }
 
         /** Πόσα μέτρα μετά τη στροφή αλλάζει η ταμπέλα στην επόμενη. */
         const val PASS_M = 20.0

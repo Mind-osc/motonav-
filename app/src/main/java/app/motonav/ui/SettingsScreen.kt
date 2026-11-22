@@ -128,7 +128,7 @@ fun SettingsScreen(
                 }
                 "map" -> {
                     Group {
-                        SwitchRow("Εναλλακτικές διαδρομές", "Έως 4 ακόμα, με «+3′» δίπλα. Πατάς για να διαλέξεις.", display.showAlternatives) {
+                        SwitchRow("Εναλλακτικές διαδρομές", "Έως 4 λογικές, με «+3′» δίπλα. Κάτω από 5 km ή κλειστό εδώ: κουμπί «⇄ Εναλλακτικές» στην κάρτα.", display.showAlternatives) {
                             onDisplayChange(display.copy(showAlternatives = it))
                         }
                         SwitchRow("Χωματόδρομοι", "Καφέ διακεκομμένη γραμμή, από ζουμ 10", display.showDirt) {

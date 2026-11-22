@@ -1855,6 +1855,20 @@ private fun DestinationCard(
                             copied = true
                         },
                 )
+                if (session.alternativesNone) {
+                    Text("⇄ καμία λογική", style = MotoType.label, color = c.base.textMuted)
+                }
+                if (session.canAskAlternatives || session.alternativesLoading) {
+                    Text(
+                        if (session.alternativesLoading) "⇄ …" else "⇄ Εναλλακτικές",
+                        style = MotoType.label,
+                        color = c.accent,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(Radius.sm))
+                            .clickable(enabled = !session.alternativesLoading) { session.requestAlternatives() }
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                    )
+                }
                 Text(
                     "⚑",
                     style = MotoType.label,
@@ -1868,6 +1882,9 @@ private fun DestinationCard(
                     val delay = if (session.trafficKnown) session.trafficDelayS else route.trafficDelayS
                     if (delay >= 60) {
                         Text("+${(delay / 60).roundToInt()}′ κίνηση", style = MotoType.label, color = TimeColors.of(delay, route.durationS))
+                    } else if (session.trafficKey.isNotBlank() && !session.trafficKnown && route.source != "TomTom") {
+                        // Ο χρόνος είναι ακόμα χωρίς κίνηση (έρχεται σε λίγα δευτερόλεπτα από το TomTom).
+                        Text("χωρίς κίνηση", style = MotoType.label, color = c.base.textMuted)
                     }
                     Text("●".repeat(route.twistinessStars) + "○".repeat(5 - route.twistinessStars), style = MotoType.label, color = c.accent)
                 }

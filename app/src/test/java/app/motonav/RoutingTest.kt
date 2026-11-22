@@ -93,6 +93,18 @@ class RoutingTest {
     }
 
     @Test
+    fun parallelGpsDriftWaitsLonger() {
+        val r = BRouterJson.parse(sample)
+        val e = NavigationEngine(r)
+        e.update(LatLon(39.0, 22.001), 5f)
+        // ~35 m δίπλα στη διαδρομή, ίδια κατεύθυνση (ανατολικά): μάλλον GPS, όχι ακόμα «εκτός»
+        val drift = LatLon(39.0003, 22.0015)
+        val bearing = app.motonav.geo.Geo.bearing(r.points[0], r.points[1]).toFloat()
+        repeat(3) { assertFalse(e.update(drift, 5f, bearing, 10f).offRoute) }
+        assertTrue(e.update(drift, 5f, bearing, 10f).offRoute)
+    }
+
+    @Test
     fun navZoomBySpeedAndTurn() {
         assertEquals(17.5, app.motonav.ui.navZoomFor(20f, null), 0.01)
         assertEquals(15.0, app.motonav.ui.navZoomFor(130f, 2000.0), 0.01)

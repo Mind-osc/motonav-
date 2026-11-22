@@ -286,14 +286,22 @@ class AlternativesTest {
     @Test fun keepsDifferentDropsSame() {
         val main = line(38.0 to 23.0, 38.0 to 23.01, 38.0 to 23.02)
         val same = line(38.0 to 23.0, 38.0001 to 23.01, 38.0 to 23.02)            // ~11 m δίπλα
-        val north = line(38.0 to 23.0, 38.01 to 23.01, 38.0 to 23.02)             // ~1 km βόρεια
-        val north2 = line(38.0 to 23.0, 38.0102 to 23.01, 38.0 to 23.02)          // σχεδόν ίδια με τη north
-        val south = line(38.0 to 23.0, 37.99 to 23.01, 38.0 to 23.02)
+        val north = line(38.0 to 23.0, 38.004 to 23.01, 38.0 to 23.02)            // ~450 m βόρεια, +11%
+        val north2 = line(38.0 to 23.0, 38.0042 to 23.01, 38.0 to 23.02)          // σχεδόν ίδια με τη north
+        val south = line(38.0 to 23.0, 37.996 to 23.01, 38.0 to 23.02)
         val alts = app.motonav.routing.Alternatives.build(main, listOf(same, north, north2, south))
         assertEquals(2, alts.size)
-        assertEquals(38.01, alts[0].labelAt.lat, 1e-9)
-        assertEquals(37.99, alts[1].labelAt.lat, 1e-9)
+        assertEquals(38.004, alts[0].labelAt.lat, 1e-9)
+        assertEquals(37.996, alts[1].labelAt.lat, 1e-9)
     }
+
+    @Test fun dropsAbsurdDetours() {
+        // 1,8 km κύρια· «εναλλακτική» με κύκλο 1 km βόρεια = σχεδόν διπλάσια: όχι.
+        val main = line(38.0 to 23.0, 38.0 to 23.01, 38.0 to 23.02)
+        val loop = line(38.0 to 23.0, 38.01 to 23.01, 38.0 to 23.02)
+        assertEquals(0, app.motonav.routing.Alternatives.build(main, listOf(loop)).size)
+    }
+
 
     @Test fun deltaLabels() {
         assertEquals("+3′", app.motonav.routing.Alternatives.deltaLabel(780.0, 600.0))

@@ -24,6 +24,9 @@ import kotlinx.coroutines.launch
  * Η κατάσταση από τον προορισμό ως την άφιξη:
  * προορισμός → υπολογισμός → προεπισκόπηση → πλοήγηση → άφιξη.
  */
+/** Κάτω από τόσα μέτρα: εναλλακτικές μόνο αν τις ζητήσεις. */
+private const val SHORT_TRIP_M = 5_000.0
+
 class NavSession(context: Context, private val scope: CoroutineScope) {
     private val appContext = context.applicationContext
     val router = BRouterClient(appContext)
@@ -77,14 +80,39 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
 
     private fun clearAlternatives() {
         altJob?.cancel()
+        alternativesLoading = false
+        alternativesNone = false
         alternatives = emptyList()
     }
 
     /** Ψάχνει εναλλακτικές για την κύρια διαδρομή, στο παρασκήνιο: η κύρια φαίνεται αμέσως. */
-    private fun findAlternatives(main: Route, from: LatLon, dest: LatLon, heading: Float?) {
+    /** Μικρές διαδρομές: εναλλακτικές μόνο αν τις ζητήσεις (κουμπί στην κάρτα). */
+    var alternativesLoading by mutableStateOf(false)
+        private set
+    /** Τις ζήτησες αλλά δεν βγήκε καμία λογική. */
+    var alternativesNone by mutableStateOf(false)
+        private set
+    private var altArgs: Triple<LatLon, LatLon, Float?>? = null
+    private var altRequested = false
+
+    /** Χωρίς αυτόματες εναλλακτικές (μικρή διαδρομή ή κλειστές στις Ρυθμίσεις): φαίνεται το κουμπί. */
+    val canAskAlternatives: Boolean
+        get() = route != null && !navigating && !followingTrack && alternatives.isEmpty() && !alternativesLoading && !altRequested
+
+    fun requestAlternatives() {
+        val main = route ?: return
+        val (from, dest, heading) = altArgs ?: return
+        altRequested = true
+        findAlternatives(main, from, dest, heading, force = true)
+    }
+
+    private fun findAlternatives(main: Route, from: LatLon, dest: LatLon, heading: Float?, force: Boolean = false) {
         clearAlternatives()
-        if (!showAlternatives || followingTrack || navigating) return
+        altArgs = Triple(from, dest, heading)
+        if (followingTrack || navigating) return
+        if (!force && !altRequested && (!showAlternatives || main.lengthM < SHORT_TRIP_M)) return
         val via = stops.map { it.position }
+        alternativesLoading = true
         altJob = scope.launch {
             try {
                 val raw = if (routeType == RouteType.TRAFFIC) {
@@ -95,11 +123,16 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
                 val alts = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
                     app.motonav.routing.Alternatives.build(main, raw)
                 }
-                if (route === main && !navigating) alternatives = alts
+                if (route === main && !navigating) {
+                    alternatives = alts
+                    alternativesNone = alts.isEmpty() && altRequested
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
                 // χωρίς εναλλακτικές: μένει η κύρια
+            } finally {
+                alternativesLoading = false
             }
         }
     }
@@ -260,6 +293,7 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
         addingStop = false
         route = null
         arrived = false
+        altRequested = false
         plan()
         if (name == null) nameFromMap(p)
     }
@@ -329,6 +363,7 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
 
     fun clear() {
         stop()
+        altRequested = false
         planJob?.cancel()
         planning = false
         clearAlternatives()
@@ -520,7 +555,12 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
 
         if (!recordingPaused) recorder?.add(loc)
         val e = engine ?: return
-        val s = e.update(LatLon(loc.latitude, loc.longitude), loc.accuracy)
+        val s = e.update(
+            LatLon(loc.latitude, loc.longitude),
+            loc.accuracy,
+            if (loc.hasBearing()) loc.bearing else null,
+            if (loc.hasSpeed()) loc.speed else 0f,
+        )
         state = s
         if (s.arrived) {
             announcer.arrived()
@@ -564,6 +604,7 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
                     LatLon(loc.latitude, loc.longitude),
                     dest,
                     if (loc.hasBearing()) loc.bearing else null,
+                    prefer = route,
                 )
                 if (navigating) {
                     route = r
@@ -618,8 +659,44 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
         }
     }
 
-    private suspend fun computeRoute(from: LatLon, dest: LatLon, heading: Float?): Route {
+    /** Πόσο από το c (0..1) πέφτει πάνω στη γραμμή old (σε 35 m), με δειγματοληψία. */
+    private fun overlap(c: Route, old: List<LatLon>): Double {
+        if (c.points.size < 2 || old.size < 2) return 0.0
+        val step = maxOf(1, c.points.size / 80)
+        val ostep = maxOf(1, old.size / 600)
+        var on = 0
+        var n = 0
+        var i = 0
+        while (i < c.points.size) {
+            val p = c.points[i]
+            var best = Double.MAX_VALUE
+            var j = 0
+            while (j < old.size - 1) {
+                val k = minOf(j + ostep, old.size - 1)
+                val d = app.motonav.geo.Geo.project(p, old[j], old[k]).second
+                if (d < best) best = d
+                j = k
+            }
+            if (best < 35.0) on++
+            n++
+            i += step
+        }
+        return if (n == 0) 0.0 else on.toDouble() / n
+    }
+
+    private suspend fun computeRoute(from: LatLon, dest: LatLon, heading: Float?, prefer: Route? = null): Route {
         val via = stops.map { it.position }
+        // Κίνηση, νέα διαδρομή εν κινήσει: το TomTom μπορεί να διαλέξει άλλο δρόμο κάθε φορά και ο χρόνος να πηδάει.
+        // Προτιμάμε όποια μένει πάνω στον δρόμο που είχες, εκτός αν άλλη είναι ≥ 3′ πιο γρήγορη.
+        if (routeType == RouteType.TRAFFIC && prefer != null && via.isEmpty() && trafficKey.isNotBlank()) {
+            val cands = runCatching { TomTomClient(trafficKey).routes(from, dest, heading, avoidTolls, avoidMotorways, via, 2) }.getOrNull()
+            if (!cands.isNullOrEmpty()) {
+                val oldRest = prefer.points.drop((state?.segIndex ?: 0).coerceAtMost(prefer.points.size - 2))
+                val fastest = cands.minOf { it.durationS }
+                val sticky = cands.filter { it.durationS <= fastest + 180.0 }.maxByOrNull { overlap(it, oldRest) }
+                return sticky ?: cands.first()
+            }
+        }
         if (routeType == RouteType.TRAFFIC) {
             if (trafficKey.isBlank()) {
                 throw RoutingException(
