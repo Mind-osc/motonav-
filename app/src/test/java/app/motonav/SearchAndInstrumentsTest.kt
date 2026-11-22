@@ -86,3 +86,18 @@ class SearchAndInstrumentsTest {
         val yaw = LeanMath.yawRate(gy[0], gy[1], gy[2], ac[0], ac[1], ac[2])
         assertEquals(-45.0, LeanMath.leanDeg(v, yaw), 0.1)
     }
+
+    @Test
+    fun headingAndLabels() {
+        assertEquals(0.0, LeanMath.headingDeg(0.0, 1.0), 1e-6)
+        assertEquals(90.0, LeanMath.headingDeg(1.0, 0.0), 1e-6)
+        assertEquals(270.0, LeanMath.headingDeg(-1.0, 0.0), 1e-6)
+        assertEquals("Β", cardinal(359f))
+        assertEquals("ΒΑ", cardinal(44f))
+        assertEquals("Ν", cardinal(181f))
+        assertEquals("ΒΔ", cardinal(-45f))
+        assertEquals("24° Α", leanLabel(-24.2f))
+        assertEquals("31° Δ", leanLabel(30.6f))
+        assertEquals("0°", leanLabel(0.3f))
+    }
+}
