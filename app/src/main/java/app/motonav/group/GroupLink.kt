@@ -179,15 +179,13 @@ object GroupLink {
         available = runCatching { FirebaseApp.initializeApp(appContext) != null || FirebaseApp.getApps(appContext).isNotEmpty() }.getOrDefault(false)
         if (!available) return
         player = VoicePlayer(appContext)
-        runCatching {
-            FirebaseDatabase.getInstance().getReference(".info/serverTimeOffset").addValueEventListener(object : ValueEventListener {
-                override fun onDataChange(s: DataSnapshot) { serverOffsetMs = (s.getValue(Double::class.java) ?: 0.0).toLong() }
-                override fun onCancelled(e: DatabaseError) = Unit
-            })
-        }
+        // Σύνδεση με τη βάση ΜΟΝΟ όσο είσαι σε παρέα (όριο Spark: 100 ταυτόχρονες συνδέσεις για όλους τους χρήστες).
+        runCatching { FirebaseDatabase.getInstance().goOffline() }
         // παλιός 8ψήφιος κωδικός (πριν την κρυπτογράφηση): δεν ισχύει πια
         prefs.getString("code", null)?.let { c -> if (GroupCodes.normalize(c) != null) connect(c) else prefs.edit().remove("code").apply() }
     }
+
+    private var offsetListener: ValueEventListener? = null
 
     fun setProfile(newName: String, newColor: Int) {
         name = newName.trim().take(20).ifBlank { "Αναβάτης" }
@@ -219,10 +217,13 @@ object GroupLink {
     fun leave() {
         micOn = false
         vox?.stop()
-        myRef()?.removeValue()
+        val pending = myRef()?.removeValue()
         detach()
         prefs.edit().remove("code").apply()
         code = null
+        // Αποσύνδεση από τη βάση όταν φύγει το «σβήσε τη θέση μου» (ή αμέσως αν δεν υπάρχει).
+        val off = { if (code == null) runCatching { FirebaseDatabase.getInstance().goOffline() } }
+        if (pending != null) pending.addOnCompleteListener { off() } else off()
         keys = null
         members = emptyList()
     }
@@ -232,6 +233,8 @@ object GroupLink {
             membersListener?.let { g.child("m").removeEventListener(it) }
             voiceListener?.let { g.child("v").removeEventListener(it) }
         }
+        offsetListener?.let { runCatching { FirebaseDatabase.getInstance().getReference(".info/serverTimeOffset").removeEventListener(it) } }
+        offsetListener = null
         group = null
         membersListener = null
         voiceListener = null
@@ -266,7 +269,13 @@ object GroupLink {
 
     private fun attach(k: GroupCrypto.Keys) {
         detach()
-        val g = FirebaseDatabase.getInstance().getReference("g").child(k.path)
+        val db = FirebaseDatabase.getInstance()
+        db.goOnline()
+        offsetListener = db.getReference(".info/serverTimeOffset").addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(s: DataSnapshot) { serverOffsetMs = (s.getValue(Double::class.java) ?: 0.0).toLong() }
+            override fun onCancelled(e: DatabaseError) = Unit
+        })
+        val g = db.getReference("g").child(k.path)
         group = g
         joinedAt = now()
         lastSentAt = 0L
