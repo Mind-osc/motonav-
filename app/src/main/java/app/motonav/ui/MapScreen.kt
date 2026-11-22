@@ -403,6 +403,7 @@ fun MapScreen(
     // ---- Βενζίνη στη διαδρομή (OpenStreetMap)
     var fuelRaw by remember { mutableStateOf<List<FuelStation>>(emptyList()) }
     var fuelOnRoute by remember { mutableStateOf<List<FuelOnRouteStop>>(emptyList()) }
+    var fuelShown by remember { mutableStateOf(false) }
     var fuelLoading by remember { mutableStateOf(false) }
     // Το Overpass δεν απάντησε (μετά από 3 προσπάθειες). Πάτημα στο ⛽ = ξανά.
     var fuelFailed by remember { mutableStateOf(false) }
@@ -973,8 +974,15 @@ fun MapScreen(
             }
         }
         LaunchedEffect(session.navigating) { if (!session.navigating) fuelOpen = false }
-        // Τα βενζινάδικα στον χάρτη: στην προεπισκόπηση όλα, στην πλοήγηση μόνο όσα είναι μπροστά.
-        val fuelOnMap = if (session.navigating) fuelAhead else fuelOnRoute
+        // Τα βενζινάδικα στον χάρτη: στην προεπισκόπηση μόνο αν πατήσεις τη γραμμή ⛽ της κάρτας·
+        // στην πλοήγηση μόνο το επόμενο (όλα όσα είναι μπροστά αν ανοίξεις τη λίστα).
+        LaunchedEffect(session.destination) { fuelShown = false }
+        val fuelOnMap = when {
+            session.navigating && fuelOpen -> fuelAhead
+            session.navigating -> fuelAhead.take(1)
+            fuelShown -> fuelOnRoute
+            else -> emptyList()
+        }
         val fuelNextId = fuelAhead.firstOrNull()?.station?.id
         LaunchedEffect(style, fuelOnMap.map { it.station.id }, fuelNextId, display.showFuel, c.base.isDark) {
             val s = style ?: return@LaunchedEffect
@@ -1171,8 +1179,16 @@ fun MapScreen(
                         trackingDismissedAt = SystemClock.elapsedRealtime() + 5_000
                         val b = LatLngBounds.Builder()
                         rest.forEach { b.include(LatLng(it.lat, it.lon)) }
-                        val pad = (80 * density).toInt()
-                        runCatching { m.animateCamera(CameraUpdateFactory.newLatLngBounds(b.build(), pad, pad * 3, pad, pad * 2), 900) }
+                        // Από πάνω (χωρίς κλίση/στροφή της πλοήγησης) και με χώρο για τα πάνελ:
+                        // με την κλίση των 50° και το padding της πλοήγησης το «χώρεμα» έβγαινε στραβό.
+                        val d = density
+                        val pads = if (landscape) intArrayOf((440 * d).toInt(), (40 * d).toInt(), (150 * d).toInt(), (40 * d).toInt())
+                        else intArrayOf((40 * d).toInt(), (210 * d).toInt(), (40 * d).toInt(), (190 * d).toInt())
+                        runCatching {
+                            m.moveCamera(CameraUpdateFactory.paddingTo(0.0, 0.0, 0.0, 0.0))
+                            val cam = m.getCameraForLatLngBounds(b.build(), pads, 0.0, 0.0)
+                            if (cam != null) m.animateCamera(CameraUpdateFactory.newCameraPosition(cam), 900)
+                        }
                     } else centerOnMe(m, true)
                 } else {
                     centerOnMe(m, session.navigating)
@@ -1254,6 +1270,7 @@ fun MapScreen(
                     onTap = recenter,
                     onLongPress = toggleNorth,
                     onResetLean = resetMax,
+                    limitAtBottom = landscape,
                 )
             }
             // Μόνο οι μπάρες του συστήματος, όχι η εγκοπή της κάμερας: τα πάνελ φτάνουν σχεδόν στην άκρη.
@@ -1290,7 +1307,7 @@ fun MapScreen(
                         if (!session.navigating && session.destination != null) {
                             // Η κάρτα «Ξεκίνα» μένει όπου ήταν: με κενό για την κάμερα της οθόνης.
                             Box(Modifier.windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))) {
-                                DestinationCard(session, gps.value.location, onAddStop = { session.addingStop = true; showSearch = true }, onSave = saveDestination, spot = selectedSpot?.takeIf { it.latLon == session.destination }, fuel = if (display.showFuel) fuelOnRoute else null, fuelLoading = fuelLoading, fuelFailed = fuelFailed, elevation = elevation, lists = favLists)
+                                DestinationCard(session, gps.value.location, onAddStop = { session.addingStop = true; showSearch = true }, onSave = saveDestination, spot = selectedSpot?.takeIf { it.latLon == session.destination }, fuel = if (display.showFuel) fuelOnRoute else null, fuelLoading = fuelLoading, fuelFailed = fuelFailed, elevation = elevation, lists = favLists, fuelShown = fuelShown, onFuelTap = { fuelShown = !fuelShown })
                             }
                         }
                     }
@@ -1358,7 +1375,7 @@ fun MapScreen(
                         verticalArrangement = Arrangement.spacedBy(Space.sm),
                     ) {
                         if (!session.navigating && session.destination != null) {
-                            DestinationCard(session, gps.value.location, onAddStop = { session.addingStop = true; showSearch = true }, onSave = saveDestination, spot = selectedSpot?.takeIf { it.latLon == session.destination }, fuel = if (display.showFuel) fuelOnRoute else null, fuelLoading = fuelLoading, fuelFailed = fuelFailed, elevation = elevation, lists = favLists)
+                            DestinationCard(session, gps.value.location, onAddStop = { session.addingStop = true; showSearch = true }, onSave = saveDestination, spot = selectedSpot?.takeIf { it.latLon == session.destination }, fuel = if (display.showFuel) fuelOnRoute else null, fuelLoading = fuelLoading, fuelFailed = fuelFailed, elevation = elevation, lists = favLists, fuelShown = fuelShown, onFuelTap = { fuelShown = !fuelShown })
                         }
                         // Αριστερά: (κάμερα, σίγαση) + χρόνος, και από κάτω ✕.
                         // Δεξιά, σε στήλη από κάτω προς τα πάνω: ταχύτητα · κλισιόμετρο · πυξίδα+υψόμετρο · κέντραρε.
@@ -1372,15 +1389,17 @@ fun MapScreen(
                                     // Πυξίδα, από κάτω υψόμετρο, από κάτω η κάμερα.
                                     if (groupActive) TalkButton(sizes.smallButton, { recording = it })
                                     RideIconButton(Icons.Filled.Warning, "Αναφορά κινδύνου ή κάμερας", { reportOpen = true }, size = sizes.smallButton)
-                                    RideIconButton(
-                                        ImageVector.vectorResource(if (session.muted) R.drawable.ic_voice_off else R.drawable.ic_voice),
-                                        if (session.muted) "Άνοιγμα φωνής" else "Σίγαση φωνής",
-                                        session::toggleMute,
-                                        kind = if (session.muted) ButtonKind.SECONDARY else ButtonKind.PRIMARY,
-                                        size = sizes.smallButton,
-                                    )
-                                    // Τέρμα κάτω αριστερά: άφιξη/χρόνος/απόσταση (το ✕ είναι πάνω από την ταχύτητα).
-                                    if (st != null) TripBar(st, Modifier.fillMaxWidth().height(sizes.button), compact = true, delayS = tripDelayS, narrow = true, doneBeforeM = session.tripDoneM)
+                                    // Τέρμα κάτω αριστερά: ηχείο, και δίπλα του άφιξη/χρόνος/απόσταση (το ✕ είναι πάνω από την ταχύτητα).
+                                    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+                                        RideIconButton(
+                                            ImageVector.vectorResource(if (session.muted) R.drawable.ic_voice_off else R.drawable.ic_voice),
+                                            if (session.muted) "Άνοιγμα φωνής" else "Σίγαση φωνής",
+                                            session::toggleMute,
+                                            kind = if (session.muted) ButtonKind.SECONDARY else ButtonKind.PRIMARY,
+                                            size = sizes.smallButton,
+                                        )
+                                        if (st != null) TripBar(st, Modifier.weight(1f).height(sizes.smallButton), compact = true, delayS = tripDelayS, narrow = true, doneBeforeM = session.tripDoneM)
+                                    }
                                 }
                             }
                             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(Space.sm)) {
@@ -1402,7 +1421,7 @@ fun MapScreen(
 
         if (!pip) {
             val edge = when {
-                display.edgeWarnings && overspeed -> EdgeAlert.OVERSPEED
+                display.edgeWarnings && display.overspeedGlow && overspeed -> EdgeAlert.OVERSPEED
                 display.flagOver120 && speedNow > 120f -> EdgeAlert.CHECKERED
                 display.edgeWarnings && (hazardAlert?.second ?: 1e9) < 300 -> EdgeAlert.HAZARD
                 display.edgeWarnings && (cameraAlert?.second ?: 1e9) < 200 -> EdgeAlert.CAMERA
@@ -1741,7 +1760,7 @@ private fun TripBar(s: NavState, modifier: Modifier = Modifier, compact: Boolean
                 val time = if (compact) formatDurationShort(s.remainingS) else formatDuration(s.remainingS)
                 // Χωρίς λέξεις: μεγαλύτερα νούμερα. Η άφιξη έχει μικρή σημαία μπροστά.
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(ImageVector.vectorResource(R.drawable.ic_flag), contentDescription = "Άφιξη", tint = c.base.textMuted, modifier = Modifier.size(if (narrow) 13.dp else 16.dp))
+                    Icon(ImageVector.vectorResource(R.drawable.ic_flag), contentDescription = "Άφιξη", tint = c.base.textMuted, modifier = Modifier.size(if (narrow) 14.dp else 16.dp))
                     Spacer(Modifier.width(3.dp))
                     Stat(eta, "", compact, narrow = narrow)
                 }
@@ -1786,8 +1805,8 @@ private fun Stat(value: String, label: String, compact: Boolean = false, color: 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         val size = when {
             // Όρθια οθόνη: στενή μπάρα, μικρότερα νούμερα.
-            narrow && big -> 20.sp
-            narrow -> 16.sp
+            narrow && big -> 25.sp
+            narrow -> 19.sp
             compact && big -> 26.sp
             compact -> 21.sp
             big -> MotoType.title.fontSize * 1.2f
@@ -1832,6 +1851,8 @@ private fun DestinationCard(
     elevation: ElevationProfile? = null,
     /** Λίστες σελιδοδεικτών (όνομα, χρώμα), για το ★. */
     lists: List<Pair<String, Int>> = emptyList(),
+    fuelShown: Boolean = false,
+    onFuelTap: () -> Unit = {},
 ) {
     val c = LocalAppColors.current
     val context = LocalContext.current
@@ -2050,9 +2071,11 @@ private fun DestinationCard(
                         fuel.isEmpty() -> "⛽ κανένα βενζινάδικο στη διαδρομή"
                         else -> "⛽ ${fuel.size} στη διαδρομή · πρώτο σε ${fuelKm(fuel.first().alongM)} · μεγαλύτερο κενό ${fuelKm(gap)}"
                     }
+                    // Πάτημα: εμφάνιση/απόκρυψη των βενζινάδικων στον χάρτη.
                     Text(
                         text,
-                        style = MotoType.label,
+                        modifier = Modifier.fillMaxWidth().clickable(onClick = onFuelTap).padding(vertical = 2.dp),
+                        style = MotoType.label.copy(fontWeight = if (fuelShown) FontWeight.Bold else MotoType.label.fontWeight),
                         color = if (gap >= 150_000 && !(fuel.isEmpty() && (fuelLoading || fuelFailed))) c.base.warning else c.base.textMuted,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,

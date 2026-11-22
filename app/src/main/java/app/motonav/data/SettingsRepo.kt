@@ -52,6 +52,8 @@ data class DisplayPrefs(
     val roadColors: Boolean = true,
     /** Παλλόμενες άκρες οθόνης: όριο, κίνδυνος, κάμερα. */
     val edgeWarnings: Boolean = true,
+    /** Κόκκινος φωτισμός πάνω όταν περνάς το όριο (μέρος των παλλόμενων άκρων). */
+    val overspeedGlow: Boolean = true,
     /** Φωνή «Όριο 50» όταν το περνάς, και για κακό καιρό μπροστά. */
     val speedVoice: Boolean = true,
     /** Βενζινάδικα πάνω στη διαδρομή (OpenStreetMap). */
@@ -105,6 +107,7 @@ class SettingsRepo(private val context: Context) {
     private val scaleKey = floatPreferencesKey("ui_scale")
     private val roadColorsKey = booleanPreferencesKey("road_colors")
     private val edgeKey = booleanPreferencesKey("edge_warnings")
+    private val overGlowKey = booleanPreferencesKey("overspeed_glow")
     private val speedVoiceKey = booleanPreferencesKey("speed_voice")
     private val fuelKey = booleanPreferencesKey("show_fuel")
     private val flagKey = booleanPreferencesKey("flag_over_120")
@@ -130,6 +133,7 @@ class SettingsRepo(private val context: Context) {
             uiScale = p[scaleKey] ?: 1f,
             roadColors = p[roadColorsKey] ?: true,
             edgeWarnings = p[edgeKey] ?: true,
+            overspeedGlow = p[overGlowKey] ?: true,
             speedVoice = p[speedVoiceKey] ?: true,
             showFuel = p[fuelKey] ?: true,
             flagOver120 = p[flagKey] ?: false,
@@ -195,6 +199,7 @@ class SettingsRepo(private val context: Context) {
             p[scaleKey] = d.uiScale
             p[roadColorsKey] = d.roadColors
             p[edgeKey] = d.edgeWarnings
+            p[overGlowKey] = d.overspeedGlow
             p[speedVoiceKey] = d.speedVoice
             p[fuelKey] = d.showFuel
             p[flagKey] = d.flagOver120

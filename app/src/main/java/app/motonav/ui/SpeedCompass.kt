@@ -79,6 +79,8 @@ fun SpeedCompass(
     onTap: () -> Unit,
     onLongPress: () -> Unit,
     onResetLean: () -> Unit,
+    /** Το σήμα ορίου έξω αριστερά από το κουτί: κάτω (οριζόντια) ή πάνω (κάθετη). */
+    limitAtBottom: Boolean = false,
 ) {
     val c = LocalAppColors.current
     val over = limitKmh != null && speedKmh != null && speedKmh > limitKmh + 3
@@ -159,20 +161,21 @@ fun SpeedCompass(
                 ),
                 color = if (over) c.base.danger else c.base.text,
             )
-            // Όριο: σήμα ΚΟΚ πάνω αριστερά στο κουτί της ταχύτητας.
-            if (limitKmh != null) {
-                Box(
-                    Modifier
-                        .align(Alignment.TopStart)
-                        .offset(x = (-6).dp, y = (-10).dp)
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(Color.White)
-                        .border(3.5.dp, Color(0xFFD32F2F), CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("$limitKmh", style = MotoType.label.copy(fontSize = 12.sp, fontWeight = FontWeight.Bold), color = Color(0xFF111111))
-                }
+        }
+        // Όριο: σήμα ΚΟΚ έξω από το κουτί, αριστερά (δεν σκεπάζει την πυξίδα).
+        if (limitKmh != null) {
+            val sign = 36.dp
+            Box(
+                Modifier
+                    .align(if (limitAtBottom) Alignment.BottomStart else Alignment.TopStart)
+                    .offset(x = -(sign + 6.dp))
+                    .size(sign)
+                    .clip(CircleShape)
+                    .background(Color.White)
+                    .border(4.dp, Color(0xFFD32F2F), CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("$limitKmh", style = MotoType.label.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = Color(0xFF111111))
             }
         }
     }

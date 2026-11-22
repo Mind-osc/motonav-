@@ -223,6 +223,11 @@ fun SettingsScreen(
                 SwitchRow("Παλλόμενες άκρες οθόνης", "Κόκκινο πάνω: πέρασες το όριο · πορτοκαλί: κίνδυνος μπροστά · κίτρινο: κάμερα", display.edgeWarnings) {
                     onDisplayChange(display.copy(edgeWarnings = it))
                 }
+                if (display.edgeWarnings) {
+                    SwitchRow("Φωτισμός όταν περνάς το όριο", "Το κόκκινο πάνω στην οθόνη· κλείσ' το αν σε ενοχλεί (μένει το κόκκινο νούμερο)", display.overspeedGlow) {
+                        onDisplayChange(display.copy(overspeedGlow = it))
+                    }
+                }
                 SwitchRow("Φωνή για όριο και καιρό", "«Όριο 50» όταν το περνάς, «Βροχή σε 8 χιλιόμετρα»", display.speedVoice) {
                     onDisplayChange(display.copy(speedVoice = it))
                 }
@@ -280,6 +285,7 @@ fun SettingsScreen(
 
             Text("Moto Nav $version · δωρεάν, open source", style = MotoType.label, color = c.base.textMuted)
             if (page == "main") {
+                DonateButton()
                 val updScope = androidx.compose.runtime.rememberCoroutineScope()
                 var checking by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
                 val avail = app.motonav.update.Updater.available

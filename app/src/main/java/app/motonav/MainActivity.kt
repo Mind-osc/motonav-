@@ -217,6 +217,8 @@ class MainActivity : ComponentActivity() {
                             onBack = { showAppearance = false },
                         )
                     }
+                    // «Τι νέο υπάρχει» μία φορά μετά από ενημέρωση.
+                    if (!inPip) app.motonav.ui.WhatsNewOverlay()
                 }
                 BackHandler(enabled = showSettings && !showAppearance && !showTrips && !showOffline && !showMarker && !showGroup && !showBookmarks) {
                     if (settingsPage != "main") settingsPage = "main" else showSettings = false
