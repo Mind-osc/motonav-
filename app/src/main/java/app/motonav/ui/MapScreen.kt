@@ -98,6 +98,7 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -262,7 +263,7 @@ fun MapScreen(
     // Μπαταρία: στο παρασκήνιο GPS μόνο αν πλοηγείσαι ή μοιράζεσαι θέση στην παρέα.
     val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
     val foreground = lifecycleState.isAtLeast(Lifecycle.State.STARTED)
-    val gps = rememberGps(hasLocation, active = foreground || session.navigating || GroupLink.code != null)
+    val gps = rememberGps(hasLocation, active = foreground || session.navigating || session.recordingFree || GroupLink.code != null)
     // Οθόνη αναμμένη μόνο στην πλοήγηση ή όταν κινείσαι (και 3 λεπτά μετά). Αλλιώς σβήνει κανονικά.
     val view = LocalView.current
     var movingAt by remember { mutableStateOf(0L) }
@@ -358,8 +359,9 @@ fun MapScreen(
     val markerPrefs by repo.marker.collectAsStateWithLifecycle(initialValue = MarkerPrefs())
     val workPlace by repo.work.collectAsStateWithLifecycle(initialValue = null)
     val favorites by repo.favorites.collectAsStateWithLifecycle(initialValue = emptyList())
+    val favLists = remember(favorites) { favorites.groupBy { it.listName }.map { (n, ps) -> n to (ps.firstOrNull { it.color != 0 }?.color ?: 0) } }
     var showSearch by rememberSaveable { mutableStateOf(false) }
-    val (instruments, resetMax) = rememberInstruments(gps.value.location, active = foreground || session.navigating)
+    val (instruments, resetMax) = rememberInstruments(gps.value.location, active = foreground || session.navigating || session.recordingFree)
 
     // ---- Κάμερες
     val cameraStore = remember { CameraStore(context) }
@@ -475,6 +477,18 @@ fun MapScreen(
                                 if (spot != null) {
                                     selectedSpot = spot
                                     session.pick(spot.latLon, spot.name)
+                                    return@addOnMapClickListener true
+                                }
+                            }
+                            // Πάτημα σε σελιδοδείκτη: διαδρομή εκεί.
+                            val bm = m.queryRenderedFeatures(
+                                android.graphics.RectF(pt.x - r, pt.y - r, pt.x + r, pt.y + r),
+                                BookmarkLayer.LAYER,
+                            ).firstOrNull()
+                            if (bm != null && !session.navigating) {
+                                val g = bm.geometry() as? org.maplibre.geojson.Point
+                                if (g != null) {
+                                    session.pick(LatLon(g.latitude(), g.longitude()), bm.getStringProperty("name"))
                                     return@addOnMapClickListener true
                                 }
                             }
@@ -711,7 +725,7 @@ fun MapScreen(
         }
         // Κλίση στο ημερολόγιο (μέγιστα).
         LaunchedEffect(instruments.leanDeg) {
-            if (session.navigating) session.recordLean(instruments.leanDeg)
+            if (session.recording && !session.recordingPaused) session.recordLean(instruments.leanDeg)
         }
         // Γύρισες το κινητό στην πλοήγηση: ξαναβάζουμε το βελάκι στο 70% του νέου ύψους.
         LaunchedEffect(landscape) {
@@ -976,6 +990,15 @@ fun MapScreen(
             val s = style ?: return@LaunchedEffect
             HazardLayer.set(s, hazards, density)
         }
+        // Οι offline χάρτες ενημερώνονται μόνοι τους μία φορά τον μήνα, με Wi‑Fi (όταν είναι έτοιμος ο χάρτης).
+        LaunchedEffect(style != null) {
+            if (style != null) runCatching { app.motonav.map.OfflineMaps.autoUpdate(context) }
+        }
+        val accentArgb = LocalAppColors.current.accent.toArgb()
+        LaunchedEffect(style, favorites, accentArgb) {
+            val s = style ?: return@LaunchedEffect
+            BookmarkLayer.set(s, favorites, accentArgb)
+        }
         LaunchedEffect(hazardToDelete) {
             if (hazardToDelete != null) {
                 kotlinx.coroutines.delay(8_000)
@@ -1060,7 +1083,11 @@ fun MapScreen(
                     when (kind) {
                         "home" -> repo.setHome(place)
                         "work" -> repo.setWork(place)
-                        else -> repo.toggleFavorite(place)
+                        else -> if (kind.startsWith("fav:")) {
+                            val listName = kind.removePrefix("fav:").substringBeforeLast("|")
+                            val col = kind.substringAfterLast("|").toIntOrNull() ?: 0
+                            repo.saveFavorite(place.copy(list = listName, color = col))
+                        } else repo.toggleFavorite(place)
                     }
                 }
             }
@@ -1205,7 +1232,7 @@ fun MapScreen(
                         if (!session.navigating && session.destination != null) {
                             // Η κάρτα «Ξεκίνα» μένει όπου ήταν: με κενό για την κάμερα της οθόνης.
                             Box(Modifier.windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))) {
-                                DestinationCard(session, gps.value.location, onAddStop = { session.addingStop = true; showSearch = true }, onSave = saveDestination, spot = selectedSpot?.takeIf { it.latLon == session.destination }, fuel = if (display.showFuel) fuelOnRoute else null, fuelLoading = fuelLoading, fuelFailed = fuelFailed, elevation = elevation)
+                                DestinationCard(session, gps.value.location, onAddStop = { session.addingStop = true; showSearch = true }, onSave = saveDestination, spot = selectedSpot?.takeIf { it.latLon == session.destination }, fuel = if (display.showFuel) fuelOnRoute else null, fuelLoading = fuelLoading, fuelFailed = fuelFailed, elevation = elevation, lists = favLists)
                             }
                         }
                     }
@@ -1273,7 +1300,7 @@ fun MapScreen(
                         verticalArrangement = Arrangement.spacedBy(Space.sm),
                     ) {
                         if (!session.navigating && session.destination != null) {
-                            DestinationCard(session, gps.value.location, onAddStop = { session.addingStop = true; showSearch = true }, onSave = saveDestination, spot = selectedSpot?.takeIf { it.latLon == session.destination }, fuel = if (display.showFuel) fuelOnRoute else null, fuelLoading = fuelLoading, fuelFailed = fuelFailed, elevation = elevation)
+                            DestinationCard(session, gps.value.location, onAddStop = { session.addingStop = true; showSearch = true }, onSave = saveDestination, spot = selectedSpot?.takeIf { it.latLon == session.destination }, fuel = if (display.showFuel) fuelOnRoute else null, fuelLoading = fuelLoading, fuelFailed = fuelFailed, elevation = elevation, lists = favLists)
                         }
                         // Αριστερά: (κάμερα, σίγαση) + χρόνος, και από κάτω ✕.
                         // Δεξιά, σε στήλη από κάτω προς τα πάνω: ταχύτητα · κλισιόμετρο · πυξίδα+υψόμετρο · κέντραρε.
@@ -1324,6 +1351,10 @@ fun MapScreen(
                 else -> null
             }
             EdgeGlow(edge)
+            Box(
+                Modifier.fillMaxSize().safeDrawingPadding().padding(top = 64.dp),
+                contentAlignment = Alignment.TopCenter,
+            ) { RecPill(session) }
         }
         if (reportOpen && !pip) ReportSheet(onPick = report, onClose = { reportOpen = false }, onCamera = { markCamera(); reportOpen = false })
         BackHandler(enabled = reportOpen) { reportOpen = false }
@@ -1350,6 +1381,11 @@ fun MapScreen(
                 onLoop = { hours ->
                     showSearch = false
                     session.planLoop(hours)
+                },
+                history = session.history,
+                onReplay = { h ->
+                    showSearch = false
+                    session.replay(h)
                 },
             )
         }
@@ -1709,15 +1745,41 @@ private fun DestinationCard(
     fuelLoading: Boolean = false,
     fuelFailed: Boolean = false,
     elevation: ElevationProfile? = null,
+    /** Λίστες σελιδοδεικτών (όνομα, χρώμα), για το ★. */
+    lists: List<Pair<String, Int>> = emptyList(),
 ) {
     val c = LocalAppColors.current
     val context = LocalContext.current
     val dest = session.destination ?: return
     var saveOpen by remember(dest) { mutableStateOf(false) }
     var savedAs by remember(dest) { mutableStateOf<String?>(null) }
+    // Κάρτα που μαζεύει: μένουν χρόνος/χιλιόμετρα και «Ξεκίνα», για να φαίνεται ο χάρτης.
+    var collapsed by remember { mutableStateOf(false) }
+    var pickList by remember(dest) { mutableStateOf(false) }
+    var newList by remember(dest) { mutableStateOf<String?>(null) }
+    var reportOpen by remember(dest) { mutableStateOf(false) }
+    var reportText by remember(dest) { mutableStateOf("") }
+    var reportState by remember(dest) { mutableStateOf<String?>(null) }
+    val cardScope = rememberCoroutineScope()
+    // Ώρες / τηλέφωνο / site από το OpenStreetMap, για μέρη με όνομα.
+    var info by remember(dest, session.destinationName) { mutableStateOf<app.motonav.search.PlaceInfo?>(null) }
+    LaunchedEffect(dest, session.destinationName) {
+        info = app.motonav.search.PlaceInfoLookup.lookup(dest, session.destinationName)
+    }
     Surface(shape = RoundedCornerShape(Radius.lg), color = c.base.surface, border = BorderStroke(1.dp, c.outline), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(Space.md), verticalArrangement = Arrangement.spacedBy(Space.sm)) {
-            if (spot != null && !session.navigating) SpotPhotoBox(spot)
+            // Λαβή: πάτημα = μάζεμα / άνοιγμα της κάρτας.
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(Radius.sm))
+                    .clickable { collapsed = !collapsed }
+                    .padding(vertical = 2.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(Modifier.size(width = 36.dp, height = 4.dp).clip(RoundedCornerShape(2.dp)).background(c.base.textMuted.copy(alpha = 0.5f)))
+            }
+            if (spot != null && !session.navigating && !collapsed) SpotPhotoBox(spot)
             val crow = here?.let { Geo.distance(LatLon(it.latitude, it.longitude), dest) }
             val route = session.route
             val err = session.error
@@ -1771,6 +1833,7 @@ private fun DestinationCard(
                 )
                 if (!session.followingTrack) RideIconButton(Icons.Filled.Add, "Στάση", onAddStop, size = 56.dp)
             }
+            if (!collapsed) {
             // Από κάτω: ο προορισμός με λευκά, και κάτω του οι συντεταγμένες (πάτημα = αντιγραφή), κίνηση, στροφές.
             session.destinationName?.let { name ->
                 Text(name, style = MotoType.body, color = c.base.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -1790,12 +1853,63 @@ private fun DestinationCard(
                             copied = true
                         },
                 )
+                Text(
+                    "⚑",
+                    style = MotoType.label,
+                    color = if (reportOpen) c.accent else c.base.textMuted,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(Radius.sm))
+                        .clickable { reportOpen = !reportOpen; reportState = null }
+                        .padding(horizontal = 6.dp),
+                )
                 if (route != null) {
                     val delay = if (session.trafficKnown) session.trafficDelayS else route.trafficDelayS
                     if (delay >= 60) {
                         Text("+${(delay / 60).roundToInt()}′ κίνηση", style = MotoType.label, color = TimeColors.of(delay, route.durationS))
                     }
                     Text("●".repeat(route.twistinessStars) + "○".repeat(5 - route.twistinessStars), style = MotoType.label, color = c.accent)
+                }
+            }
+            info?.let { inf ->
+                inf.hours?.let { Text("🕑 $it", style = MotoType.label, color = c.base.textMuted, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+                Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+                    inf.phone?.let { ph ->
+                        TextChoice("📞 $ph", selected = false, onClick = {
+                            runCatching { context.startActivity(Intent(Intent.ACTION_DIAL, android.net.Uri.parse("tel:" + ph.replace(" ", "")))) }
+                        })
+                    }
+                    inf.website?.let { w ->
+                        TextChoice("🌐 Site", selected = false, onClick = {
+                            val url = if (w.startsWith("http")) w else "https://$w"
+                            runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
+                        })
+                    }
+                }
+            }
+            if (reportOpen) {
+                Text(
+                    "Λάθος ή κάτι λείπει στον χάρτη εδώ; Γράψ' το και πάει ως σημείωση στο OpenStreetMap (ανώνυμα). Το διορθώνουν εθελοντές.",
+                    style = MotoType.label,
+                    color = c.base.textMuted,
+                )
+                androidx.compose.material3.OutlinedTextField(
+                    value = reportText,
+                    onValueChange = { reportText = it.take(500) },
+                    placeholder = { Text("π.χ. Ο δρόμος είναι κλειστός / λείπει βενζινάδικο") },
+                    shape = RoundedCornerShape(Radius.md),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(Space.sm), verticalAlignment = Alignment.CenterVertically) {
+                    TextChoice("Αποστολή", selected = true, onClick = {
+                        if (reportText.isBlank() || reportState == "…") return@TextChoice
+                        reportState = "…"
+                        cardScope.launch {
+                            val ok = app.motonav.search.OsmNotes.create(dest, reportText.trim())
+                            reportState = if (ok) "Στάλθηκε. Ευχαριστούμε!" else "Δεν στάλθηκε (χωρίς internet;)"
+                            if (ok) reportText = ""
+                        }
+                    })
+                    reportState?.let { Text(it, style = MotoType.label, color = c.base.textMuted) }
                 }
             }
             // Προφίλ υψομέτρου και βενζίνη πάνω στη διαδρομή.
@@ -1820,8 +1934,43 @@ private fun DestinationCard(
             }
             if (saveOpen) {
                 Row(horizontalArrangement = Arrangement.spacedBy(Space.sm), modifier = Modifier.fillMaxWidth()) {
-                    listOf("home" to "Σπίτι", "work" to "Δουλειά", "fav" to "Αγαπημένο").forEach { (kind, label) ->
+                    listOf("home" to "Σπίτι", "work" to "Δουλειά").forEach { (kind, label) ->
                         TextChoice(label, selected = savedAs == kind, onClick = { onSave(kind); savedAs = kind; saveOpen = false }, modifier = Modifier.weight(1f))
+                    }
+                    TextChoice("Σε λίστα…", selected = pickList || savedAs?.startsWith("fav") == true, onClick = { pickList = !pickList }, modifier = Modifier.weight(1.2f))
+                }
+                if (pickList) {
+                    // Λίστες σελιδοδεικτών: πάτημα = αποθήκευση εκεί· «＋ Νέα» = καινούργια λίστα.
+                    val all = (lists.ifEmpty { listOf(app.motonav.search.Place.DEFAULT_LIST to 0) })
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(Space.xs),
+                    ) {
+                        all.forEach { (name, col) ->
+                            TextChoice(if (col != 0) "● $name" else name, selected = false, onClick = {
+                                onSave("fav:$name|$col"); savedAs = "fav"; pickList = false; saveOpen = false
+                            })
+                        }
+                        TextChoice("＋ Νέα", selected = newList != null, onClick = { newList = if (newList == null) "" else null })
+                    }
+                    newList?.let { nl ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(Space.sm), verticalAlignment = Alignment.CenterVertically) {
+                            androidx.compose.material3.OutlinedTextField(
+                                value = nl,
+                                onValueChange = { newList = it.take(30) },
+                                singleLine = true,
+                                placeholder = { Text("Όνομα λίστας") },
+                                shape = RoundedCornerShape(Radius.md),
+                                modifier = Modifier.weight(1f),
+                            )
+                            TextChoice("OK", selected = true, onClick = {
+                                val name = nl.trim()
+                                if (name.isNotEmpty()) {
+                                    val col = BOOKMARK_COLORS[lists.size % BOOKMARK_COLORS.size]
+                                    onSave("fav:$name|$col"); savedAs = "fav"; pickList = false; saveOpen = false; newList = null
+                                }
+                            })
+                        }
                     }
                 }
             }
@@ -1861,6 +2010,7 @@ private fun DestinationCard(
                 }
             }
 
+            }
             // Μεγάλο «Ξεκίνα» (ή η ενέργεια που χρειάζεται για να βγει διαδρομή) και ✕ δεξιά.
             Row(horizontalArrangement = Arrangement.spacedBy(Space.sm), verticalAlignment = Alignment.CenterVertically) {
                 val primary: Pair<String, () -> Unit>? = when {

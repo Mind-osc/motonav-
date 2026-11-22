@@ -97,6 +97,11 @@ class TripStats {
         points++
     }
 
+    /** Κενό (παύση): το επόμενο σημείο δεν ενώνεται με το προηγούμενο. */
+    fun gap() {
+        last = null
+    }
+
     fun lean(deg: Double) {
         if (deg < 0 && -deg > leanL) leanL = -deg
         if (deg > 0 && deg > leanR) leanR = deg

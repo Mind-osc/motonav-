@@ -113,6 +113,9 @@ fun SearchScreen(
     stopMode: Boolean = false,
     /** Κυκλική βόλτα τόσων ωρών από εδώ που είσαι. */
     onLoop: (Int) -> Unit = {},
+    /** Οι τελευταίες διαδρομές που ξεκίνησες: πάτημα = ίδια διαδρομή ξανά. */
+    history: List<app.motonav.nav.NavSession.HistoryEntry> = emptyList(),
+    onReplay: (app.motonav.nav.NavSession.HistoryEntry) -> Unit = {},
 ) {
     val c = LocalAppColors.current
     val search = remember(tomtomKey) { PlaceSearch(tomtomKey) }
@@ -314,9 +317,33 @@ fun SearchScreen(
                                 items(Category.entries) { cat -> Chip(cat.label, selected = category == cat, onClick = { query = ""; category = cat }) }
                             }
                         }
+                        if (!stopMode && history.isNotEmpty()) {
+                            item { Section("Πρόσφατες διαδρομές") }
+                            items(history.take(5)) { h ->
+                                val label = h.name ?: String.format(java.util.Locale.US, "%.4f, %.4f", h.dest.lat, h.dest.lon)
+                                val type = when (h.type) {
+                                    app.motonav.routing.RouteType.TWISTY -> "Στροφές"
+                                    app.motonav.routing.RouteType.DIRT -> "Χώμα"
+                                    app.motonav.routing.RouteType.TRAFFIC -> "Κίνηση"
+                                    else -> "Γρήγορη"
+                                }
+                                val via = if (h.stops.isNotEmpty()) " · ${h.stops.size} στάσεις" else ""
+                                PlaceRow(
+                                    Place(label, "$type$via", h.dest.lat, h.dest.lon),
+                                    near,
+                                    icon = ImageVector.vectorResource(R.drawable.ic_history),
+                                ) { onReplay(h) }
+                            }
+                        }
                         if (favorites.isNotEmpty()) {
-                            item { Section("Αγαπημένα") }
-                            items(favorites) { place -> PlaceRow(place, near, onRemove = { onToggleFavorite(place) }) { onPick(place) } }
+                            // Σελιδοδείκτες ανά λίστα, με το χρώμα της.
+                            favorites.groupBy { it.listName }.forEach { (listName, ps) ->
+                                val col = ps.firstOrNull { it.color != 0 }?.color ?: 0
+                                item(key = "list|$listName") { ListSection(listName, col) }
+                                items(ps, key = { "fav|$listName|${it.lat}|${it.lon}" }) { place ->
+                                    PlaceRow(place, near, onRemove = { onToggleFavorite(place) }) { onPick(place) }
+                                }
+                            }
                         }
                         if (recents.isNotEmpty()) {
                             item { Section("Πρόσφατα") }
@@ -483,6 +510,20 @@ private fun Chip(
 private fun Section(text: String) {
     val c = LocalAppColors.current
     Text(text, style = MotoType.label, color = c.base.textMuted, modifier = Modifier.padding(top = Space.sm, bottom = 2.dp))
+}
+
+@Composable
+private fun ListSection(name: String, color: Int) {
+    val c = LocalAppColors.current
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = Space.sm, bottom = 2.dp)) {
+        androidx.compose.foundation.layout.Box(
+            Modifier
+                .size(10.dp)
+                .background(if (color != 0) androidx.compose.ui.graphics.Color(color) else c.accent, androidx.compose.foundation.shape.CircleShape),
+        )
+        androidx.compose.foundation.layout.Spacer(Modifier.width(6.dp))
+        Text(name, style = MotoType.label, color = c.base.textMuted)
+    }
 }
 
 @Composable

@@ -55,6 +55,7 @@ fun SettingsScreen(
     onOpenOffline: () -> Unit = {},
     onOpenMarker: () -> Unit = {},
     onOpenGroup: () -> Unit = {},
+    onOpenBookmarks: () -> Unit = {},
     /** Ποια σελίδα: "main", "look", "map", "gauges", "cameras", "about". */
     page: String = "main",
     onPage: (String) -> Unit = {},
@@ -250,7 +251,8 @@ fun SettingsScreen(
                     }
                     Group {
                         LinkRow("Παρέα", "Βλέπετε ο ένας τον άλλον στον χάρτη · walkie-talkie", onOpenGroup)
-                        LinkRow("Ημερολόγιο διαδρομών", "Χιλιόμετρα, ταχύτητες, κλίσεις, GPX", onOpenTrips)
+                        LinkRow("Ημερολόγιο διαδρομών", "Καταγραφή με παύση, χιλιόμετρα, κλίσεις, GPX", onOpenTrips)
+                        LinkRow("Σελιδοδείκτες", "Λίστες με χρώματα, εισαγωγή GPX/KML, κοινοποίηση", onOpenBookmarks)
                     }
                     Group {
                         LinkRow("Αντίγραφο ασφαλείας", "Όλα σε ένα αρχείο, επαναφορά με ένα πάτημα", { onPage("backup") })

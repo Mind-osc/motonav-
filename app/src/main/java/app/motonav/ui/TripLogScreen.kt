@@ -112,13 +112,14 @@ fun TripLogScreen(onShowOnMap: (List<LatLon>) -> Unit, onBack: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(Space.md),
             ) {
                 Header("Ημερολόγιο διαδρομών", onBack)
+                RecordingControls(app.motonav.car.CarBridge.phoneSession)
                 TextChoice("Άνοιγμα αρχείου GPX", selected = false, onClick = { openError = null; openGpx.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth())
                 openError?.let { Text(it, style = MotoType.label, color = c.base.warning) }
                 val list = trips
                 when {
                     list == null -> Text("Φορτώνω…", style = MotoType.body, color = c.base.textMuted)
                     list.isEmpty() -> Text(
-                        "Δεν υπάρχουν ακόμα διαδρομές. Κάθε πλοήγηση καταγράφεται αυτόματα.",
+                        "Δεν υπάρχουν ακόμα διαδρομές. Κάθε πλοήγηση καταγράφεται αυτόματα· ή πάτα «Ξεκίνα καταγραφή» για βόλτα χωρίς πλοήγηση.",
                         style = MotoType.body,
                         color = c.base.textMuted,
                     )

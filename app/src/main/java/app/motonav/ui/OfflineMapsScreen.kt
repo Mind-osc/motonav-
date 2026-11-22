@@ -105,6 +105,45 @@ fun OfflineMapsScreen(onBack: () -> Unit) {
                 color = c.base.textMuted,
             )
 
+            // Ταξίδι έξω: κύριοι δρόμοι και πόλεις για γειτονικές χώρες.
+            var showCountries by remember { mutableStateOf(false) }
+            TextChoice(
+                if (showCountries) "Άλλες χώρες ▴" else "Άλλες χώρες (για ταξίδι) ▾",
+                selected = false,
+                onClick = { showCountries = !showCountries },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            if (showCountries) {
+                Text(
+                    "Κύριοι δρόμοι και πόλεις, όπως η Ελλάδα. Για διαδρομές εκεί, κατέβασε και στο BRouter τα αντίστοιχα τετράγωνα.",
+                    style = MotoType.label,
+                    color = c.base.textMuted,
+                )
+                OfflineMaps.COUNTRIES.forEach { country ->
+                    val b = country.bounds
+                    val tiles = remember(country.name) { OfflineMaps.tileCount(b[0], b[1], b[2], b[3], OfflineMaps.GREECE_MAX_ZOOM) }
+                    val have = OfflineMaps.saved.any { it.name == country.name }
+                    TextChoice(
+                        if (have) "${country.name} ✓" else "${country.name} (${n(tiles)} κομμάτια)",
+                        selected = false,
+                        onClick = { if (!OfflineMaps.busy && !have) OfflineMaps.download(context, country.name, b, OfflineMaps.GREECE_MAX_ZOOM) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+
+            // Ενημέρωση: αυτόματα μία φορά τον μήνα με Wi‑Fi, ή τώρα.
+            if (OfflineMaps.saved.isNotEmpty()) {
+                val last = OfflineMaps.lastUpdate(context)
+                Text(
+                    if (last == 0L) "Ενημερώνονται μόνοι τους μία φορά τον μήνα, με Wi‑Fi."
+                    else "Τελευταία ενημέρωση: " + SimpleDateFormat("d/M/yyyy", Locale.US).format(Date(last)) + " · αυτόματα κάθε μήνα με Wi‑Fi.",
+                    style = MotoType.label,
+                    color = c.base.textMuted,
+                )
+                TextChoice("Ενημέρωση τώρα", selected = false, onClick = { OfflineMaps.updateAll(context) }, modifier = Modifier.fillMaxWidth())
+            }
+
             OfflineMaps.progress?.let {
                 Surface(shape = RoundedCornerShape(Radius.md), color = c.base.surface, border = BorderStroke(1.dp, c.accent), modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(Space.md)) {

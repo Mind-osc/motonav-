@@ -90,6 +90,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         // Η οθόνη μένει αναμμένη μόνο στην πλοήγηση ή όταν κινείσαι (το ρυθμίζει ο χάρτης).
         MapLibre.getInstance(this)
+        app.motonav.search.OfflineGazetteer.init(applicationContext)
         val repo = SettingsRepo(applicationContext)
 
         setContent {
@@ -102,6 +103,7 @@ class MainActivity : ComponentActivity() {
             var showOffline by rememberSaveable { mutableStateOf(false) }
             var showMarker by rememberSaveable { mutableStateOf(false) }
             var showGroup by rememberSaveable { mutableStateOf(false) }
+            var showBookmarks by rememberSaveable { mutableStateOf(false) }
             var settingsPage by rememberSaveable { mutableStateOf("main") }
             if (openGroup) { showGroup = true; openGroup = false }
             val marker by repo.marker.collectAsStateWithLifecycle(initialValue = app.motonav.ui.MarkerPrefs())
@@ -113,7 +115,7 @@ class MainActivity : ComponentActivity() {
                         .isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED),
             )
             // Κρύβουμε τη γραμμή του κινητού στον χάρτη (φαίνεται για λίγο αν σύρεις από πάνω).
-            val overlay = showSettings || showAppearance || showTrips || showOffline || showMarker || showGroup
+            val overlay = showSettings || showAppearance || showTrips || showOffline || showMarker || showGroup || showBookmarks
             androidx.compose.runtime.LaunchedEffect(display.customStatus, overlay, inPip) {
                 val ctl = androidx.core.view.WindowCompat.getInsetsController(window, window.decorView)
                 ctl.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
@@ -144,6 +146,7 @@ class MainActivity : ComponentActivity() {
                             onOpenOffline = { showOffline = true },
                             onOpenMarker = { showMarker = true },
                             onOpenGroup = { showGroup = true },
+                            onOpenBookmarks = { showBookmarks = true },
                             page = settingsPage,
                             onPage = { settingsPage = it },
                             onBack = { showSettings = false },
@@ -167,6 +170,16 @@ class MainActivity : ComponentActivity() {
                     if (showMarker && !inPip) {
                         app.motonav.ui.MarkerScreen(marker, onChange = { m -> scope.launch { repo.saveMarker(m) } }, onBack = { showMarker = false })
                     }
+                    if (showBookmarks && !inPip) {
+                        app.motonav.ui.BookmarksScreen(
+                            onGo = { p ->
+                                app.motonav.car.CarBridge.phoneSession?.pick(p.latLon, p.name)
+                                showBookmarks = false
+                                showSettings = false
+                            },
+                            onBack = { showBookmarks = false },
+                        )
+                    }
                     if (showOffline && !inPip) {
                         app.motonav.ui.OfflineMapsScreen(onBack = { showOffline = false })
                     }
@@ -188,11 +201,12 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 }
-                BackHandler(enabled = showSettings && !showAppearance && !showTrips && !showOffline && !showMarker && !showGroup) {
+                BackHandler(enabled = showSettings && !showAppearance && !showTrips && !showOffline && !showMarker && !showGroup && !showBookmarks) {
                     if (settingsPage != "main") settingsPage = "main" else showSettings = false
                 }
                 BackHandler(enabled = showMarker) { showMarker = false }
                 BackHandler(enabled = showGroup) { showGroup = false }
+                BackHandler(enabled = showBookmarks) { showBookmarks = false }
                 BackHandler(enabled = showOffline) { showOffline = false }
                 BackHandler(enabled = showTrips) { showTrips = false }
                 BackHandler(enabled = showAppearance) { showAppearance = false }

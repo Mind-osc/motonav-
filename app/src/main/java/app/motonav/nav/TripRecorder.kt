@@ -57,6 +57,16 @@ class TripRecorder(context: Context) {
         }
     }
 
+    /** Παύση: τα στίγματα δεν γράφονται· η συνέχεια ξεκινά νέο κομμάτι (χωρίς ευθεία γραμμή στο κενό). */
+    fun pause() {
+        runCatching { writer?.flush() }
+    }
+
+    fun resume() {
+        stats.gap()
+        runCatching { writer?.write("</trkseg><trkseg>\n") }
+    }
+
     /** Κλίση από τα όργανα (για τα μέγιστα αριστερά/δεξιά). */
     fun lean(deg: Float) = stats.lean(deg.toDouble())
 

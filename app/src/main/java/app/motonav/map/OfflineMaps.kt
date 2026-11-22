@@ -36,6 +36,23 @@ object OfflineMaps {
     const val AREA_MAX_ZOOM = 14
     const val AREA_MAX_TILES = 30_000L
 
+    /** Γειτονικές χώρες για ταξίδια (κύριοι δρόμοι και πόλεις, όπως η Ελλάδα): νότος, δύση, βορράς, ανατολή. */
+    class Country(val name: String, val bounds: DoubleArray)
+    val COUNTRIES = listOf(
+        Country("Κύπρος", doubleArrayOf(34.5, 32.2, 35.75, 34.65)),
+        Country("Αλβανία", doubleArrayOf(39.6, 19.2, 42.7, 21.1)),
+        Country("Βόρεια Μακεδονία", doubleArrayOf(40.8, 20.4, 42.4, 23.1)),
+        Country("Βουλγαρία", doubleArrayOf(41.2, 22.3, 44.3, 28.7)),
+        Country("Τουρκία (δυτική)", doubleArrayOf(36.0, 26.0, 42.2, 32.0)),
+        Country("Μαυροβούνιο", doubleArrayOf(41.8, 18.4, 43.6, 20.4)),
+        Country("Σερβία", doubleArrayOf(42.2, 18.8, 46.2, 23.1)),
+        Country("Βοσνία-Ερζεγοβίνη", doubleArrayOf(42.5, 15.7, 45.3, 19.7)),
+        Country("Κροατία", doubleArrayOf(42.3, 13.4, 46.6, 19.5)),
+        Country("Ρουμανία", doubleArrayOf(43.6, 20.2, 48.3, 29.8)),
+        Country("Ιταλία (νότια)", doubleArrayOf(36.6, 12.3, 42.0, 18.6)),
+        Country("Ιταλία (βόρεια)", doubleArrayOf(42.0, 6.6, 47.1, 14.0)),
+    )
+
     /** Πόσα πλακίδια έχει μια περιοχή από ζουμ 0 ως maxZoom. */
     fun tileCount(south: Double, west: Double, north: Double, east: Double, maxZoom: Int): Long {
         var total = 0L
@@ -165,6 +182,66 @@ object OfflineMaps {
             }
 
             override fun onError(error: String) { this@OfflineMaps.error = error }
+        })
+    }
+
+    // ---- Ενημέρωση: οι δρόμοι αλλάζουν. Ξανακατεβάζει ό,τι έχει αλλάξει στον server (το MapLibre ελέγχει κάθε πλακίδιο).
+
+    private const val UPDATE_EVERY_MS = 30L * 24 * 3600 * 1000
+
+    fun lastUpdate(context: Context): Long =
+        context.getSharedPreferences("offline", Context.MODE_PRIVATE).getLong("updated", 0L)
+
+    /** Όλοι οι χάρτες στο κινητό: «λήγουν» και ξανακατεβαίνουν όσα πλακίδια άλλαξαν. */
+    fun updateAll(context: Context) {
+        if (busy) return
+        val app = context.applicationContext
+        OfflineManager.getInstance(app).listOfflineRegions(object : OfflineManager.ListOfflineRegionsCallback {
+            override fun onList(offlineRegions: Array<OfflineRegion>?) {
+                val regions = offlineRegions?.toList().orEmpty()
+                if (regions.isEmpty()) return
+                busy = true
+                error = null
+                fun next(i: Int) {
+                    if (i >= regions.size) {
+                        busy = false
+                        progress = null
+                        app.getSharedPreferences("offline", Context.MODE_PRIVATE).edit().putLong("updated", System.currentTimeMillis()).apply()
+                        refresh(app)
+                        return
+                    }
+                    val r = regions[i]
+                    progress = "Ενημέρωση ${nameOf(r)}…"
+                    r.invalidate(object : OfflineRegion.OfflineRegionInvalidateCallback {
+                        override fun onInvalidate() = run(app, r, "Ενημέρωση ${nameOf(r)}") { next(i + 1) }
+                        override fun onError(error: String) { this@OfflineMaps.error = error; next(i + 1) }
+                    })
+                }
+                next(0)
+            }
+
+            override fun onError(error: String) { this@OfflineMaps.error = error }
+        })
+    }
+
+    /** Μόνο του, μία φορά τον μήνα, με Wi‑Fi (χωρίς χρέωση δεδομένων). */
+    fun autoUpdate(context: Context) {
+        if (busy) return
+        if (System.currentTimeMillis() - lastUpdate(context) < UPDATE_EVERY_MS) return
+        val cm = context.getSystemService(android.net.ConnectivityManager::class.java) ?: return
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return
+        if (!caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED)) return
+        OfflineManager.getInstance(context.applicationContext).listOfflineRegions(object : OfflineManager.ListOfflineRegionsCallback {
+            override fun onList(offlineRegions: Array<OfflineRegion>?) {
+                if (offlineRegions.isNullOrEmpty()) {
+                    // τίποτα κατεβασμένο: «ενημερωμένο», για να μη ρωτάμε συνέχεια
+                    context.applicationContext.getSharedPreferences("offline", Context.MODE_PRIVATE).edit().putLong("updated", System.currentTimeMillis()).apply()
+                    return
+                }
+                updateAll(context)
+            }
+
+            override fun onError(error: String) = Unit
         })
     }
 

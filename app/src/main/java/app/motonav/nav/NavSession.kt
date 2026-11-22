@@ -261,6 +261,16 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
         route = null
         arrived = false
         plan()
+        if (name == null) nameFromMap(p)
+    }
+
+    /** Σημείο στον χάρτη χωρίς όνομα: ψάχνουμε δρόμο/χωριό (με internet). */
+    private fun nameFromMap(p: LatLon) {
+        scope.launch {
+            val n = app.motonav.search.PlaceSearch().reverse(p) ?: return@launch
+            if (destination == p && destinationName == null) destinationName = n
+            stops = stops.map { if (it.position == p && it.name == null) it.copy(name = n) else it }
+        }
     }
 
     /**
@@ -376,7 +386,10 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
         arrived = false
         navigating = true
         NavBus.navigating.value = true
-        recorder = TripRecorder(appContext).also { it.start() }
+        if (recorder == null) recorder = TripRecorder(appContext).also { it.start() }
+        recordingFree = false
+        recordingPaused = false
+        saveHistory()
         // Η φράση εκκίνησης (Ρυθμίσεις → Φωνή πλοήγησης) δεν κόβεται από την πρώτη οδηγία.
         val phrase = ElevenStore.startPhrase(appContext)
             .replace("{προορισμός}", destinationName ?: "τον προορισμό")
@@ -393,7 +406,96 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
         rerouting = false
         recorder?.finish()
         recorder = null
+        recordingPaused = false
         voice.silence()
+    }
+
+    // ---- Καταγραφή διαδρομής και χωρίς πλοήγηση (με παύση)
+
+    /** Καταγράφεις χωρίς να πλοηγείσαι. */
+    var recordingFree by mutableStateOf(false)
+        private set
+    var recordingPaused by mutableStateOf(false)
+        private set
+    val recording: Boolean get() = recordingFree || navigating
+
+    fun startRecording() {
+        if (recording) return
+        recorder = TripRecorder(appContext).also { it.start() }
+        recordingFree = true
+        recordingPaused = false
+        NavService.start(appContext, "Καταγραφή διαδρομής")
+    }
+
+    fun togglePause() {
+        if (!recording) return
+        recordingPaused = !recordingPaused
+        if (recordingPaused) recorder?.pause() else recorder?.resume()
+    }
+
+    fun stopRecording() {
+        if (navigating) { stop(); return }
+        if (!recordingFree) return
+        recorder?.finish()
+        recorder = null
+        recordingFree = false
+        recordingPaused = false
+        NavService.stop(appContext)
+    }
+
+    // ---- Ιστορικό διαδρομών (οι 10 τελευταίες που ξεκίνησες)
+
+    data class HistoryEntry(val name: String?, val dest: LatLon, val stops: List<Stop>, val type: RouteType, val at: Long)
+
+    var history by mutableStateOf(loadHistory())
+        private set
+
+    private fun loadHistory(): List<HistoryEntry> = runCatching {
+        val a = org.json.JSONArray(prefs.getString("history", "[]"))
+        (0 until a.length()).mapNotNull { i ->
+            val o = a.optJSONObject(i) ?: return@mapNotNull null
+            val st = o.optJSONArray("s") ?: org.json.JSONArray()
+            HistoryEntry(
+                o.optString("n").ifBlank { null },
+                LatLon(o.getDouble("la"), o.getDouble("lo")),
+                (0 until st.length()).mapNotNull { j ->
+                    st.optJSONObject(j)?.let { x -> Stop(LatLon(x.getDouble("la"), x.getDouble("lo")), x.optString("n").ifBlank { null }) }
+                },
+                runCatching { RouteType.valueOf(o.optString("t")) }.getOrDefault(RouteType.FASTEST),
+                o.optLong("at"),
+            )
+        }
+    }.getOrDefault(emptyList())
+
+    private fun saveHistory() {
+        val d = destination ?: return
+        if (followingTrack) return
+        val e = HistoryEntry(destinationName, d, stops, routeType, System.currentTimeMillis())
+        history = (listOf(e) + history.filterNot { app.motonav.geo.Geo.distance(it.dest, d) < 50 && it.stops.size == stops.size }).take(10)
+        val a = org.json.JSONArray()
+        history.forEach { h ->
+            val st = org.json.JSONArray()
+            h.stops.forEach { x -> st.put(org.json.JSONObject().put("la", x.position.lat).put("lo", x.position.lon).put("n", x.name ?: "")) }
+            a.put(
+                org.json.JSONObject().put("n", h.name ?: "").put("la", h.dest.lat).put("lo", h.dest.lon)
+                    .put("t", h.type.name).put("at", h.at).put("s", st),
+            )
+        }
+        prefs.edit().putString("history", a.toString()).apply()
+    }
+
+    /** Ξαναβγάζει μια παλιά διαδρομή: ίδιος προορισμός, στάσεις και τύπος. */
+    fun replay(h: HistoryEntry) {
+        if (navigating) return
+        followingTrack = false
+        destination = h.dest
+        destinationName = h.name
+        stops = h.stops
+        addingStop = false
+        routeType = if (h.type == RouteType.TRAFFIC && trafficKey.isBlank()) RouteType.FASTEST else h.type
+        route = null
+        arrived = false
+        plan()
     }
 
     fun toggleMute() {
@@ -411,7 +513,7 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
         refreshWeather()
         refreshTraffic()
 
-        recorder?.add(loc)
+        if (!recordingPaused) recorder?.add(loc)
         val e = engine ?: return
         val s = e.update(LatLon(loc.latitude, loc.longitude), loc.accuracy)
         state = s

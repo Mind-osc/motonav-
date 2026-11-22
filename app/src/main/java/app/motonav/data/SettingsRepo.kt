@@ -209,6 +209,7 @@ class SettingsRepo(private val context: Context) {
     private val homeKey = stringPreferencesKey("place_home")
     private val workKey = stringPreferencesKey("place_work")
     private val favKey = stringPreferencesKey("place_favorites")
+    private val MAX_FAVORITES = 2000
 
     val home: Flow<Place?> = context.settingsStore.data.map { p -> decode(p[homeKey]).firstOrNull() }
     val work: Flow<Place?> = context.settingsStore.data.map { p -> decode(p[workKey]).firstOrNull() }
@@ -227,13 +228,53 @@ class SettingsRepo(private val context: Context) {
         context.settingsStore.edit { p ->
             val list = decode(p[favKey])
             val same = { o: Place -> kotlin.math.abs(o.lat - place.lat) < 2e-4 && kotlin.math.abs(o.lon - place.lon) < 2e-4 }
-            p[favKey] = encode(if (list.any(same)) list.filterNot(same) else (listOf(place) + list).take(40))
+            p[favKey] = encode(if (list.any(same)) list.filterNot(same) else (listOf(place) + list).take(MAX_FAVORITES))
         }
+    }
+
+    private val samePoint = { a: Place, b: Place -> kotlin.math.abs(a.lat - b.lat) < 2e-4 && kotlin.math.abs(a.lon - b.lon) < 2e-4 }
+
+    /** Αποθήκευση σε λίστα (αν το σημείο υπάρχει ήδη, μετακινείται). */
+    suspend fun saveFavorite(place: Place) {
+        context.settingsStore.edit { p ->
+            val list = decode(p[favKey]).filterNot { samePoint(it, place) }
+            val color = place.color.takeIf { it != 0 } ?: list.firstOrNull { it.listName == place.listName }?.color ?: 0
+            p[favKey] = encode((listOf(place.copy(color = color)) + list).take(MAX_FAVORITES))
+        }
+    }
+
+    suspend fun removeFavorite(place: Place) {
+        context.settingsStore.edit { p -> p[favKey] = encode(decode(p[favKey]).filterNot { samePoint(it, place) }) }
+    }
+
+    /** Εισαγωγή πολλών (π.χ. από GPX/KML) σε μία λίστα. */
+    suspend fun importFavorites(listName: String, color: Int, places: List<Place>) {
+        context.settingsStore.edit { p ->
+            val old = decode(p[favKey]).filterNot { o -> places.any { samePoint(o, it) } }
+            val add = places.map { it.copy(list = listName, color = color, kind = it.kind.ifBlank { "saved" }) }
+            p[favKey] = encode((add + old).take(MAX_FAVORITES))
+        }
+    }
+
+    suspend fun deleteList(listName: String) {
+        context.settingsStore.edit { p -> p[favKey] = encode(decode(p[favKey]).filterNot { it.listName == listName }) }
+    }
+
+    suspend fun setListColor(listName: String, color: Int) {
+        context.settingsStore.edit { p -> p[favKey] = encode(decode(p[favKey]).map { if (it.listName == listName) it.copy(color = color) else it }) }
+    }
+
+    suspend fun renameList(from: String, to: String) {
+        if (to.isBlank()) return
+        context.settingsStore.edit { p -> p[favKey] = encode(decode(p[favKey]).map { if (it.listName == from) it.copy(list = to.trim()) else it }) }
     }
 
     private fun encode(list: List<Place>): String = JSONArray().apply {
         list.forEach {
-            put(JSONObject().put("n", it.name).put("d", it.detail).put("la", it.lat).put("lo", it.lon).put("k", it.kind))
+            put(
+                JSONObject().put("n", it.name).put("d", it.detail).put("la", it.lat).put("lo", it.lon).put("k", it.kind)
+                    .apply { if (it.list.isNotBlank()) put("l", it.list); if (it.color != 0) put("c", it.color) },
+            )
         }
     }.toString()
 
@@ -241,7 +282,7 @@ class SettingsRepo(private val context: Context) {
         val a = JSONArray(s ?: return emptyList())
         (0 until a.length()).mapNotNull { i ->
             val o = a.optJSONObject(i) ?: return@mapNotNull null
-            Place(o.optString("n"), o.optString("d"), o.optDouble("la"), o.optDouble("lo"), o.optString("k"))
+            Place(o.optString("n"), o.optString("d"), o.optDouble("la"), o.optDouble("lo"), o.optString("k"), o.optString("l"), o.optInt("c"))
         }
     }.getOrDefault(emptyList())
 }

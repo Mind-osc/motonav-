@@ -20,8 +20,16 @@ data class Place(
     val lat: Double,
     val lon: Double,
     val kind: String = "",
+    /** Λίστα σελιδοδεικτών (κενό = «Αγαπημένα») και χρώμα της (ARGB, 0 = χρώμα θέματος). */
+    val list: String = "",
+    val color: Int = 0,
 ) {
     val latLon: LatLon get() = LatLon(lat, lon)
+    val listName: String get() = list.ifBlank { DEFAULT_LIST }
+
+    companion object {
+        const val DEFAULT_LIST = "Αγαπημένα"
+    }
 }
 
 /** Κατηγορίες «κοντά μου». Φίλτρα OpenStreetMap για το Overpass. */
@@ -111,14 +119,20 @@ class PlaceSearch(private val tomtomKey: String = "") {
         val b = nominatim.await()
         val c = streetOnly.await()
         val t = tomtom.await()
-        if (a.isFailure && b.isFailure && c.isFailure && t.isFailure && av.all { it.isFailure }) throw (a.exceptionOrNull() ?: IOException("search"))
+        if (a.isFailure && b.isFailure && c.isFailure && t.isFailure && av.all { it.isFailure }) {
+            // Χωρίς internet: πόλεις, χωριά και κορυφές από τη λίστα μέσα στην εφαρμογή.
+            val offline = withContext(Dispatchers.IO) { OfflineGazetteer.search(q, near) }
+            if (offline.isNotEmpty()) return@coroutineScope offline
+            throw (a.exceptionOrNull() ?: IOException("search"))
+        }
         val ranked = PlaceParsers.rank(
             q,
             a.getOrDefault(emptyList()) + av.flatMap { it.getOrDefault(emptyList()) } + c.getOrDefault(emptyList()),
             t.getOrDefault(emptyList()) + b.getOrDefault(emptyList()),
             near,
         )
-        PlaceParsers.markMissingNumber(ranked, split?.second)
+        val result = PlaceParsers.markMissingNumber(ranked, split?.second)
+        result.ifEmpty { withContext(Dispatchers.IO) { OfflineGazetteer.search(q, near) } }
     }
 
     /**
@@ -148,6 +162,16 @@ class PlaceSearch(private val tomtomKey: String = "") {
         val json = kotlinx.coroutines.withTimeoutOrNull(40_000) { call.await() }
             ?: throw java.net.SocketTimeoutException("Overpass")
         PlaceParsers.overpass(json, near, cat.fallbackName)
+    }
+
+    /** Όνομα για σημείο στον χάρτη (δρόμος / χωριό), από το Photon. null αν δεν βρεθεί ή δεν υπάρχει internet. */
+    suspend fun reverse(p: LatLon): String? = withContext(Dispatchers.IO) {
+        runCatching {
+            val url = String.format(Locale.US, "https://photon.komoot.io/reverse?lat=%.6f&lon=%.6f&limit=1", p.lat, p.lon)
+            PlaceParsers.photon(get(url)).firstOrNull()?.let { pl ->
+                listOf(pl.name, pl.detail.substringBefore(",")).filter { it.isNotBlank() }.distinct().joinToString(", ")
+            }
+        }.getOrNull()
     }
 
     private fun enc(s: String) = URLEncoder.encode(s, "UTF-8")
