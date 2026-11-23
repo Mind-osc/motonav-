@@ -221,7 +221,9 @@
       if (window.DeviceOrientationEvent && DeviceOrientationEvent.requestPermission) await DeviceOrientationEvent.requestPermission();
     } catch (e) { toast("Χωρίς άδεια για κίνηση και προσανατολισμό."); return false; }
     window.addEventListener("devicemotion", onMotion);
-    window.addEventListener("deviceorientation", onOrient);
+    // Android (Chrome): η πυξίδα (σε σχέση με τον βορρά) έρχεται από το deviceorientationabsolute.
+    if ("ondeviceorientationabsolute" in window) window.addEventListener("deviceorientationabsolute", onOrient);
+    else window.addEventListener("deviceorientation", onOrient);
     return true;
   }
   function onMotion(e) {
@@ -242,8 +244,11 @@
   function onOrient(e) {
     const moving = S.me && S.me.speed > 2;
     if (moving) return;
-    const h = e.webkitCompassHeading != null ? e.webkitCompassHeading : e.alpha != null && e.absolute ? 360 - e.alpha : null;
-    if (h != null) setHeading(h);
+    let h = e.webkitCompassHeading != null ? e.webkitCompassHeading : e.alpha != null && e.absolute ? 360 - e.alpha : null;
+    if (h == null) return;
+    // Η γωνία της οθόνης (οριζόντια/κάθετη) αλλάζει πού «κοιτάει» το κινητό.
+    if (e.webkitCompassHeading == null) h = (h + ((screen.orientation && screen.orientation.angle) || 0)) % 360;
+    setHeading(h);
   }
 
   // ---------- Αναζήτηση ----------
