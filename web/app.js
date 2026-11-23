@@ -49,7 +49,25 @@
     store.set("zoom", map.getZoom());
     loadSpots();
   });
-  map.on("dragstart", () => { if (S.nav) S.follow = false; });
+  // Στην πλοήγηση: με το πρώτο άγγιγμα ο χάρτης σταματάει να ακολουθεί (αλλιώς «κολλάει» το σύρσιμο),
+  // και ξαναγυρίζει μόνος του 10″ μετά το τελευταίο άγγιγμα (ή αμέσως με ένα πάτημα στην πυξίδα).
+  let touchT = 0, resumeTimer = 0;
+  function pauseFollow() {
+    if (!S.nav) return;
+    S.follow = false; touchT = Date.now();
+    clearTimeout(resumeTimer);
+    resumeTimer = setTimeout(function chk() {
+      if (!S.nav || S.follow) return;
+      if (Date.now() - touchT < 10000) { resumeTimer = setTimeout(chk, 1000); return; }
+      resumeFollow();
+    }, 10000);
+  }
+  function resumeFollow() {
+    clearTimeout(resumeTimer);
+    S.follow = true; zNow = map.getZoom(); S.followIn = performance.now();
+  }
+  ["touchstart", "mousedown", "wheel"].forEach((ev) => map.getCanvasContainer().addEventListener(ev, pauseFollow, { passive: true }));
+  map.on("dragstart", pauseFollow);
   const empty = { type: "FeatureCollection", features: [] };
   // Ίδια αντίθεση με τον σκούρο χάρτη της Android εφαρμογής (MapContrast.kt): γεμάτοι γκρι δρόμοι, ανοιχτά ονόματα.
   const CONTRAST_LINES = { highway_path: "#454A53", highway_minor: "#5A606B", highway_major_subtle: "#555B66", highway_major_casing: "#1B1D22",
@@ -228,7 +246,7 @@
     if (rose) rose.setAttribute("transform", `rotate(${-h} 60 60)`);
   }
   $("gauge").onclick = () => {
-    if (S.nav) { showOverview(); return; }
+    if (S.nav) { if (S.follow) showOverview(); else resumeFollow(); return; }
     if (S.me) map.easeTo({ center: [S.me.lon, S.me.lat], zoom: Math.max(map.getZoom(), 15), bearing: 0, pitch: 0 });
     else { wantCenter = true; startGps(); }
   };
@@ -348,7 +366,11 @@
     let h = e.webkitCompassHeading != null ? e.webkitCompassHeading : e.alpha != null && e.absolute !== false ? deviceHeading(e) : null;
     if (h == null || isNaN(h)) return;
     // Λίγο εξομάλυνση (η πυξίδα του κινητού «τρέμει»).
-    if (S.heading != null) { let d = ((h - S.heading + 540) % 360) - 180; h = (S.heading + d * 0.3 + 360) % 360; }
+    if (S.heading != null) {
+      const d = ((h - S.heading + 540) % 360) - 180;
+      if (Math.abs(d) < 3) return; // μικρό «τρέμουλο» της πυξίδας: αγνοείται
+      h = (S.heading + d * (Math.abs(d) > 40 ? 0.25 : 0.08) + 360) % 360;
+    }
     setHeading(h);
     // Σταματημένος: το βελάκι γυρίζει με την πυξίδα (όπως στην Android εφαρμογή).
     if (!S.nav && S.me) puck.setRotation(h);
@@ -992,8 +1014,18 @@
       const target = near ? Math.max(z, 16.8) : z;
       zNow = zNow == null ? target : zNow + (target - zNow) * 0.03;
       const land = innerWidth > innerHeight;
-      map.jumpTo({ center: [p.lon, p.lat], bearing, pitch: 56, zoom: zNow,
-        padding: { top: innerHeight * 0.6, bottom: 0, left: land ? innerWidth * 0.35 : 0, right: 0 } });
+      const want = { center: [p.lon, p.lat], bearing, pitch: 56, zoom: zNow,
+        padding: { top: innerHeight * 0.6, bottom: 0, left: land ? innerWidth * 0.35 : 0, right: 0 } };
+      // Επιστροφή στο βελάκι: ομαλά μέσα σε ~0,8″ αντί για απότομο πήδημα.
+      const k = S.followIn ? Math.min(1, (now - S.followIn) / 800) : 1;
+      if (k < 1) {
+        const c = map.getCenter(), e = k * k * (3 - 2 * k);
+        const db = ((bearing - map.getBearing() + 540) % 360) - 180;
+        want.center = [c.lng + (p.lon - c.lng) * e, c.lat + (p.lat - c.lat) * e];
+        want.bearing = map.getBearing() + db * e; want.pitch = map.getPitch() + (56 - map.getPitch()) * e;
+        want.zoom = map.getZoom() + (zNow - map.getZoom()) * e;
+      } else S.followIn = 0;
+      map.jumpTo(want);
     }
   }
   function showOverview() {
@@ -1007,7 +1039,7 @@
       map.fitBounds(b, { padding: land ? { top: 40, bottom: 40, left: 440, right: 150 } : { top: 210, bottom: 190, left: 40, right: 40 },
         bearing: 0, pitch: 0, duration: 900 });
     } catch (e) { /* */ }
-    setTimeout(() => { if (S.nav) S.follow = true; }, 12000);
+    pauseFollow();
   }
 
   async function reroute(phrase, offline) {
