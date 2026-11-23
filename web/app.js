@@ -197,7 +197,8 @@
     record(S.me);
     if (S.nav) navTick();
     else {
-      puck.setLngLat([S.me.lon, S.me.lat]).setRotation(S.me.heading || 0).addTo(map);
+      const moving = S.me.speed > 2;
+      puck.setLngLat([S.me.lon, S.me.lat]).setRotation((moving ? S.me.heading : S.heading) || 0).addTo(map);
       if (wantCenter) { wantCenter = false; map.easeTo({ center: [S.me.lon, S.me.lat], zoom: Math.max(map.getZoom(), 14) }); }
     }
   }
@@ -219,7 +220,10 @@
     try {
       if (window.DeviceMotionEvent && DeviceMotionEvent.requestPermission) await DeviceMotionEvent.requestPermission();
       if (window.DeviceOrientationEvent && DeviceOrientationEvent.requestPermission) await DeviceOrientationEvent.requestPermission();
+      store.set("sensorsGranted", true);
     } catch (e) { toast("Χωρίς άδεια για κίνηση και προσανατολισμό."); return false; }
+    if (sensorsOn) return true;
+    sensorsOn = true;
     window.addEventListener("devicemotion", onMotion);
     // Android (Chrome): η πυξίδα (σε σχέση με τον βορρά) έρχεται από το deviceorientationabsolute.
     if ("ondeviceorientationabsolute" in window) window.addEventListener("deviceorientationabsolute", onOrient);
@@ -241,14 +245,19 @@
     $("leanL").style.setProperty("--w", `${Math.min(100, Math.max(0, -v) / 50 * 100)}%`);
     $("leanR").style.setProperty("--w", `${Math.min(100, Math.max(0, v) / 50 * 100)}%`);
   }
+  let sensorsOn = false;
   function onOrient(e) {
     const moving = S.me && S.me.speed > 2;
-    if (moving) return;
+    if (moving || S.sim) return;
     let h = e.webkitCompassHeading != null ? e.webkitCompassHeading : e.alpha != null && e.absolute ? 360 - e.alpha : null;
     if (h == null) return;
     // Η γωνία της οθόνης (οριζόντια/κάθετη) αλλάζει πού «κοιτάει» το κινητό.
     if (e.webkitCompassHeading == null) h = (h + ((screen.orientation && screen.orientation.angle) || 0)) % 360;
+    // Λίγο εξομάλυνση (η πυξίδα του κινητού «τρέμει»).
+    if (S.heading != null) { let d = ((h - S.heading + 540) % 360) - 180; h = (S.heading + d * 0.3 + 360) % 360; }
     setHeading(h);
+    // Σταματημένος: το βελάκι γυρίζει με την πυξίδα (όπως στην Android εφαρμογή).
+    if (!S.nav && S.me) puck.setRotation(h);
   }
 
   // ---------- Αναζήτηση ----------
@@ -1170,6 +1179,12 @@
     closeSheets() { $("search").classList.add("hidden"); $("settings").classList.add("hidden"); },
   };
   applyPrefs("_init");
+  // Android/υπολογιστής: οι αισθητήρες δεν θέλουν άδεια, ανοίγουν αμέσως. iPhone: από Ρυθμίσεις → Όργανα (ή μόνα τους αν έχεις δώσει άδεια).
+  const needsPermission = window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === "function";
+  if (!needsPermission) enableSensors();
+  else if (store.get("sensorsGranted", false)) document.addEventListener("click", function once() {
+    document.removeEventListener("click", once); enableSensors();
+  });
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
   startGps();
 })();
