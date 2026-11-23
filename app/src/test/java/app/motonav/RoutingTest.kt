@@ -122,10 +122,10 @@ class RoutingTest {
 
     @Test
     fun navZoomBySpeedAndTurn() {
-        assertEquals(17.5, app.motonav.ui.navZoomFor(20f, null), 0.01)
-        assertEquals(15.0, app.motonav.ui.navZoomFor(130f, 2000.0), 0.01)
-        assertEquals(17.0, app.motonav.ui.navZoomFor(70f, 150.0), 0.01)
-        assertEquals(15.6, app.motonav.ui.navZoomFor(100f, 150.0), 0.01)
+        assertEquals(17.0, app.motonav.ui.navZoomFor(20f, null), 0.01)
+        assertEquals(14.8, app.motonav.ui.navZoomFor(130f, 2000.0), 0.01)
+        assertEquals(16.8, app.motonav.ui.navZoomFor(70f, 150.0), 0.01)
+        assertEquals(15.3, app.motonav.ui.navZoomFor(100f, 150.0), 0.01)
     }
 
     @Test

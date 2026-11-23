@@ -2679,21 +2679,24 @@ class PuckFilter {
     }
 }
 
-/** Ζουμ στην πλοήγηση: πιο μακριά όσο πιο γρήγορα πας, πιο κοντά λίγο πριν τη στροφή. */
+/**
+ * Ζουμ στην πλοήγηση: πιο μακριά όσο πιο γρήγορα πας, πιο κοντά λίγο πριν τη στροφή.
+ * Λίγο πιο ανοιχτό από πριν (όπως το Google Maps), για να βλέπεις περισσότερο δρόμο μπροστά.
+ */
 internal fun navZoomFor(speedKmh: Float, distToTurnM: Double?): Double {
     val bySpeed = when {
-        speedKmh < 35f -> 17.5
-        speedKmh < 60f -> 17.0
-        speedKmh < 85f -> 16.3
-        speedKmh < 110f -> 15.6
-        else -> 15.0
+        speedKmh < 35f -> 17.0
+        speedKmh < 60f -> 16.5
+        speedKmh < 85f -> 15.9
+        speedKmh < 110f -> 15.3
+        else -> 14.8
     }
     val nearTurn = distToTurnM != null && distToTurnM < 250.0 && speedKmh < 90f
-    return if (nearTurn) maxOf(bySpeed, 17.0) else bySpeed
+    return if (nearTurn) maxOf(bySpeed, 16.8) else bySpeed
 }
 
-/** Πού θέλουμε το βελάκι στην πλοήγηση: στο 70% του ύψους της οθόνης. */
-private const val PUCK_AT = 0.70
+/** Πού θέλουμε το βελάκι στην πλοήγηση: χαμηλά, στο 80% του ύψους, για περισσότερο ορίζοντα μπροστά. */
+private const val PUCK_AT = 0.80
 
 /** Το πάνω περιθώριο της κάμερας (σε px) που φέρνει το βελάκι στο PUCK_AT. Το διορθώνουμε με μέτρηση (βλ. κάτω). */
 private val navTopByHeight = HashMap<Int, Double>()
@@ -2759,9 +2762,10 @@ private fun centerOnMe(map: MapLibreMap, navigating: Boolean) {
         // Βορράς πάνω: ακολουθεί τη θέση αλλά δεν γυρίζει ο χάρτης (το βελάκι γυρίζει).
         if (north) CameraMode.TRACKING else CameraMode.TRACKING_GPS,
         900L,
-        if (navigating) 17.5 else 16.0,
+        if (navigating) 17.0 else 16.0,
         if (north) 0.0 else null,
-        if (navigating) 50.0 else 0.0,
+        // Λίγο περισσότερη κλίση: φαίνεται πιο μακριά ο δρόμος (ορίζοντας).
+        if (navigating) 56.0 else 0.0,
         object : OnLocationCameraTransitionListener {
             override fun onLocationCameraTransitionFinished(cameraMode: Int) {
                 // Μετά τη μετάβαση (στη διάρκειά της το MapLibre απορρίπτει αλλαγές).
