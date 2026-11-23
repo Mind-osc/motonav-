@@ -495,7 +495,10 @@
   map.on("touchend", () => clearTimeout(pressTimer));
   map.on("touchcancel", () => clearTimeout(pressTimer));
   map.on("contextmenu", (e) => openPop({ lat: e.lngLat.lat, lon: e.lngLat.lng }));
-  map.on("click", () => $("pop").classList.add("hidden"));
+  map.on("click", () => closePop());
+  // Καρφίτσα στο σημείο που πάτησες (μένει όσο είναι ανοιχτό το μενού του σημείου)
+  let pressPin = null;
+  function closePop() { $("pop").classList.add("hidden"); if (pressPin) { pressPin.remove(); pressPin = null; } }
   async function openPop(p, name) {
     if (S.nav) return;
     pressAt = p;
@@ -503,20 +506,22 @@
     $("popTitle").textContent = name || `${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}`;
     $("popStop").classList.toggle("hidden", !S.dest);
     $("pop").classList.remove("hidden");
+    if (pressPin) pressPin.remove();
+    pressPin = new maplibregl.Marker({ color: accentNow(), anchor: "bottom" }).setLngLat([p.lon, p.lat]).addTo(map);
     if (navigator.vibrate) navigator.vibrate(20);
     if (!name) {
       const n = await SV.reverse(p);
       if (n && pressAt === p) { p.name = n; $("popTitle").textContent = n; }
     }
   }
-  $("popGo").onclick = () => { $("pop").classList.add("hidden"); if (pressAt) setDest(pressAt); };
+  $("popGo").onclick = () => { closePop(); if (pressAt) setDest(pressAt); };
   $("popStop").onclick = () => {
-    $("pop").classList.add("hidden");
+    closePop();
     if (!pressAt) return;
     S.stops.push({ lat: pressAt.lat, lon: pressAt.lon, name: pressAt.name || `Στάση ${S.stops.length + 1}` });
     plan();
   };
-  $("popFav").onclick = () => { $("pop").classList.add("hidden"); if (pressAt) App.addFavorite(pressAt); };
+  $("popFav").onclick = () => { closePop(); if (pressAt) App.addFavorite(pressAt); };
 
   // ---------- Προορισμός και διαδρομή ----------
   function setDest(p) {
@@ -654,7 +659,7 @@
   function showCard() {
     $("card").classList.remove("hidden");
     $("rightCol").classList.add("hidden");
-    $("pop").classList.add("hidden");
+    closePop();
   }
   function hideCard() {
     $("card").classList.add("hidden");
