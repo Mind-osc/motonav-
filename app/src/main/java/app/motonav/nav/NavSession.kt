@@ -290,7 +290,7 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
         val track = trackPoints ?: return
         rerouting = true
         lastRerouteAt = SystemClock.elapsedRealtime()
-        voice.say("Βγήκες από τη διαδρομή. Σε ξαναφέρνω σε αυτήν.", interrupt = false)
+        voice.say(Phrases.L("Βγήκες από τη διαδρομή. Σε ξαναφέρνω σε αυτήν.", "You left the route. Taking you back to it."), interrupt = false)
         val last = state?.snapped ?: LatLon(loc.latitude, loc.longitude)
         val minIndex = track.indices.minByOrNull { app.motonav.geo.Geo.distance(track[it], last) } ?: 0
         scope.launch {
@@ -426,7 +426,7 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
         if (!navigating || index <= 0 || index > stops.size) return
         stops = stops.drop(index)
         stopProgress = emptyList()
-        voice.say(if (stops.isEmpty()) "Κατευθείαν στον προορισμό." else "Πάμε στην επόμενη στάση.", interrupt = false)
+        voice.say(if (stops.isEmpty()) Phrases.L("Κατευθείαν στον προορισμό.", "Going straight to the destination.") else Phrases.L("Πάμε στην επόμενη στάση.", "Heading to the next stop."), interrupt = false)
         lastFix?.let { if (!rerouting) reroute(it) }
     }
 
@@ -448,7 +448,7 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
         if (!navigating || rerouting) return
         val at = r.pointAt((st.progressM + aheadM).coerceAtMost(r.lengthM - 1.0))
         app.motonav.routing.NoGoAreas.addTemp(at, 60)
-        reroute(fix, offline = true, phrase = "Κλειστός δρόμος. Ψάχνω άλλο δρόμο.")
+        reroute(fix, offline = true, phrase = Phrases.L("Κλειστός δρόμος. Ψάχνω άλλο δρόμο.", "Road closed. Finding another way."))
     }
 
     fun removeStop(index: Int) {
@@ -551,8 +551,9 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
         recordingPaused = false
         saveHistory()
         // Η φράση εκκίνησης (Ρυθμίσεις → Φωνή πλοήγησης) δεν κόβεται από την πρώτη οδηγία.
-        val phrase = ElevenStore.startPhrase(appContext)
-            .replace("{προορισμός}", destinationName ?: "τον προορισμό")
+        val custom = ElevenStore.startPhrase(appContext)
+        val phrase = (if (VoiceLang.english && custom == ElevenStore.DEFAULT_START) "Let's go." else custom)
+            .replace("{προορισμός}", destinationName?.let(Phrases::name) ?: Phrases.L("τον προορισμό", "your destination"))
         voice.sayProtected(phrase)
         NavService.start(appContext, "Ξεκινάμε")
     }
@@ -720,7 +721,7 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
             val name = stops.first().name
             stops = stops.drop(1)
             stopProgress = stopProgress.drop(1)
-            voice.say(if (name != null) "Στάση: $name." else "Έφτασες στη στάση.", interrupt = false)
+            voice.say(if (name != null) Phrases.L("Στάση: $name.", "Stop: ${Phrases.name(name)}.") else Phrases.L("Έφτασες στη στάση.", "You have reached the stop."), interrupt = false)
         }
         if (!rerouting) announcer.onState(s, loc.speed)
         val now = SystemClock.elapsedRealtime()
@@ -730,7 +731,7 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
         } else if (s.offRoute && !rerouting && now - lastRerouteAt > 5_000) reroute(loc)
     }
 
-    private fun reroute(loc: Location, offline: Boolean = false, phrase: String = "Υπολογίζω νέα διαδρομή.") {
+    private fun reroute(loc: Location, offline: Boolean = false, phrase: String = Phrases.L("Υπολογίζω νέα διαδρομή.", "Recalculating.")) {
         val dest = destination ?: return
         rerouting = true
         lastRerouteAt = SystemClock.elapsedRealtime()

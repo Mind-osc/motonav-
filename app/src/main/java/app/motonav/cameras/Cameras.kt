@@ -41,6 +41,14 @@ data class SpeedCamera(
             "ai" -> "Κάμερα AI"
             else -> "Κάμερα"
         }
+
+    /** Για την αγγλική φωνή. */
+    val titleEn: String
+        get() = when (kind) {
+            "red" -> "Red light camera"
+            "ai" -> "AI camera"
+            else -> "Speed camera"
+        }
 }
 
 object CameraParser {

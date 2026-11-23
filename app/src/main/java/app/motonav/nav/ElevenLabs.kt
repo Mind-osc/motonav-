@@ -87,6 +87,14 @@ object ElevenStore {
 
     fun startPhrase(c: Context): String = prefs(c).getString("start_phrase", DEFAULT_START)?.ifBlank { DEFAULT_START } ?: DEFAULT_START
 
+    /** Γλώσσα των οδηγιών: ελληνικά (προεπιλογή) ή αγγλικά. */
+    fun english(c: Context): Boolean = prefs(c).getBoolean("english", false)
+
+    fun setEnglish(c: Context, on: Boolean) {
+        prefs(c).edit().putBoolean("english", on).apply()
+        VoiceLang.english = on
+    }
+
     fun setStartPhrase(c: Context, text: String) {
         prefs(c).edit().putString("start_phrase", text).apply()
     }
@@ -238,7 +246,7 @@ object ElevenClient {
             .put("text", text)
             .put("model_id", s.modelId)
             .put("voice_settings", settings)
-            .apply { if (s.modelId.contains("v2_5") || s.modelId.contains("v3")) put("language_code", "el") }
+            .apply { if (s.modelId.contains("v2_5") || s.modelId.contains("v3")) put("language_code", if (VoiceLang.english) "en" else "el") }
             .toString()
         val c = open("/v1/text-to-speech/${s.voiceId}?output_format=mp3_44100_128", s.key, "POST", body, readTimeoutMs = 12_000)
         try {

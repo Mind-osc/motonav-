@@ -38,6 +38,8 @@ data class DisplayPrefs(
     val showDirt: Boolean = true,
     /** Μέρη για μηχανόβιους στον χάρτη (θέες, νερό, αυχένες, στέκια, συνεργεία μηχανών…). */
     val showSpots: Boolean = true,
+    /** Ποια είδη μερών μηχανόβιων ΔΕΝ θες να φαίνονται (ονόματα του SpotKind). */
+    val hiddenSpots: Set<String> = emptySet(),
     /** Εναλλακτικές διαδρομές με τη διαφορά χρόνου, στην προεπισκόπηση. */
     val showAlternatives: Boolean = true,
     /** «Στροφές» με ακόμα περισσότερες στροφές (δέχεται μεγαλύτερη παράκαμψη). */
@@ -105,6 +107,7 @@ class SettingsRepo(private val context: Context) {
     private val contoursKey = booleanPreferencesKey("show_contours")
     private val dirtKey = booleanPreferencesKey("show_dirt")
     private val spotsKey = booleanPreferencesKey("show_spots")
+    private val hiddenSpotsKey = stringPreferencesKey("hidden_spots")
     private val altKey = booleanPreferencesKey("show_alternatives")
     private val curvesKey = booleanPreferencesKey("more_curves")
     private val avFerryKey = booleanPreferencesKey("avoid_ferries")
@@ -135,6 +138,7 @@ class SettingsRepo(private val context: Context) {
             showContours = p[contoursKey] ?: true,
             showDirt = p[dirtKey] ?: true,
             showSpots = p[spotsKey] ?: true,
+            hiddenSpots = p[hiddenSpotsKey]?.split(',')?.filter { it.isNotBlank() }?.toSet() ?: emptySet(),
             showAlternatives = p[altKey] ?: true,
             moreCurves = p[curvesKey] ?: false,
             avoidFerries = p[avFerryKey] ?: false,
@@ -205,6 +209,7 @@ class SettingsRepo(private val context: Context) {
             p[contoursKey] = d.showContours
             p[dirtKey] = d.showDirt
             p[spotsKey] = d.showSpots
+            p[hiddenSpotsKey] = d.hiddenSpots.joinToString(",")
             p[altKey] = d.showAlternatives
             p[curvesKey] = d.moreCurves
             p[avFerryKey] = d.avoidFerries

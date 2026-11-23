@@ -41,7 +41,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
-private const val SAMPLE = "Σε 300 μέτρα, στρίψε δεξιά στη Λεωφόρο Συγγρού."
+private const val SAMPLE_GR = "Σε 300 μέτρα, στρίψε δεξιά στη Λεωφόρο Συγγρού."
+private const val SAMPLE_EN = "In 300 metres, turn right onto Leoforos Syngrou."
+private val SAMPLE get() = if (app.motonav.nav.VoiceLang.english) SAMPLE_EN else SAMPLE_GR
 
 /** Ρυθμίσεις → Φωνή πλοήγησης: ElevenLabs (όλες οι φωνές και ρυθμίσεις του λογαριασμού) ή η φωνή του κινητού. */
 @Composable
@@ -60,7 +62,6 @@ fun VoicePage() {
     var loading by remember { mutableStateOf<String?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
     var filter by remember { mutableStateOf("") }
-    var onlyFree by remember { mutableStateOf(true) }
     var cacheBytes by remember { mutableStateOf(ElevenStore.cacheSizeBytes(context)) }
     // Τι έγινε στη «Δοκιμή» και στη βιβλιοθήκη: δείχνεται ακριβώς κάτω από το κουμπί, όχι πάνω πάνω.
     var testStatus by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
@@ -108,6 +109,23 @@ fun VoicePage() {
     }
 
     var startPhrase by remember { mutableStateOf(ElevenStore.startPhrase(context)) }
+    var english by remember { mutableStateOf(ElevenStore.english(context)) }
+    Group {
+        Column(Modifier.padding(horizontal = Space.lg, vertical = Space.md), verticalArrangement = Arrangement.spacedBy(Space.xs)) {
+            Text("Γλώσσα οδηγιών", style = MotoType.body, color = c.base.text)
+            Text(
+                "Ελληνικά ή English (φωνή του κινητού ή ElevenLabs). Στα αγγλικά τα ονόματα δρόμων λέγονται με λατινικούς χαρακτήρες. " +
+                    "Αν η αγγλική φωνή δεν ακούγεται, κατέβασέ την: Ρυθμίσεις κινητού → Μετατροπή κειμένου σε ομιλία.",
+                style = MotoType.label,
+                color = c.base.textMuted,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+                TextChoice("Ελληνικά", selected = !english, onClick = { english = false; ElevenStore.setEnglish(context, false) }, modifier = Modifier.weight(1f))
+                TextChoice("English", selected = english, onClick = { english = true; ElevenStore.setEnglish(context, true) }, modifier = Modifier.weight(1f))
+            }
+            TextChoice("Άκουσέ τη", selected = false, onClick = { tester.say(SAMPLE) }, modifier = Modifier.fillMaxWidth())
+        }
+    }
     Group {
         Column(Modifier.padding(horizontal = Space.lg, vertical = Space.md), verticalArrangement = Arrangement.spacedBy(Space.xs)) {
             Text("Φράση στο «Ξεκίνα»", style = MotoType.body, color = c.base.text)
@@ -214,23 +232,24 @@ fun VoicePage() {
         }
     }
 
+    // Επιλεγμένη φωνή που θέλει συνδρομή (π.χ. από τη βιβλιοθήκη): προειδοποίηση, γιατί αλλιώς «σιωπή» και ζητάει subscribe.
+    val chosen = voices.firstOrNull { it.id == s.voiceId }
+    if (chosen != null && chosen.category != "premade" && chosen.category != "generated") {
+        Group { InfoRow("Προσοχή", "Η «${chosen.name}» θέλει συνδρομή στο ElevenLabs. Διάλεξε μία από τις δωρεάν παρακάτω.") }
+    }
     if (voices.isNotEmpty()) {
         Group {
             Column(Modifier.padding(horizontal = Space.lg, vertical = Space.md), verticalArrangement = Arrangement.spacedBy(Space.xs)) {
-                Text("Οι φωνές σου (${voices.size})", style = MotoType.body, color = c.base.text)
+                val free = voices.filter { it.category == "premade" || it.category == "generated" }
+                Text("Δωρεάν φωνές (${free.size})", style = MotoType.body, color = c.base.text)
                 Text(
-                    "«ΔΩΡΕΑΝ» = έτοιμες φωνές του ElevenLabs: δουλεύουν και στο δωρεάν πακέτο και μιλάνε ελληνικά " +
-                        "(με Multilingual v2 ή Flash v2.5). Όσες είναι από τη βιβλιοθήκη θέλουν συνδρομή για να παίξουν από την εφαρμογή.",
+                    "Δείχνουμε μόνο φωνές που παίζουν στο δωρεάν πακέτο, χωρίς συνδρομή. Μιλάνε ελληνικά και αγγλικά " +
+                        "(με Multilingual v2 ή Flash v2.5). ▶ για δείγμα, πάτημα για επιλογή.",
                     style = MotoType.label,
                     color = c.base.textMuted,
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
-                    TextChoice("Μόνο δωρεάν", selected = onlyFree, onClick = { onlyFree = true }, modifier = Modifier.weight(1f))
-                    TextChoice("Όλες", selected = !onlyFree, onClick = { onlyFree = false }, modifier = Modifier.weight(1f))
-                }
                 KeyFieldPlain(filter, "Ψάξε φωνή (όνομα, female, male…)") { filter = it }
-                voices
-                    .filter { v -> !onlyFree || v.category == "premade" }
+                free
                     .filter { v -> filter.isBlank() || (v.name + " " + v.description + " " + v.category).contains(filter, ignoreCase = true) }
                     .sortedBy { if (it.category == "premade") 0 else 1 }
                     .forEach { v ->
@@ -251,47 +270,6 @@ fun VoicePage() {
                             testStatus = true to "Επιλέχθηκε «${v.name}». «Δοκιμή» για να την ακούσεις· στην πλοήγηση μιλάει μόνο αν ανοίξεις τον διακόπτη «Φωνή ElevenLabs»."
                         }
                     }
-            }
-        }
-        Group {
-            Column(Modifier.padding(horizontal = Space.lg, vertical = Space.md), verticalArrangement = Arrangement.spacedBy(Space.xs)) {
-                Text("Βιβλιοθήκη ElevenLabs: ελληνικές φωνές", style = MotoType.body, color = c.base.text)
-                Text("Χιλιάδες φωνές της κοινότητας. Στο δωρεάν πακέτο το ElevenLabs δεν τις δίνει μέσω API· τότε πρόσθεσέ τες από το site (Voice Library → Add) και πάτα ξανά «Φόρτωσε φωνές».", style = MotoType.label, color = c.base.textMuted)
-                TextChoice("Δείξε ελληνικές φωνές", selected = false, onClick = {
-                    scope.launch {
-                        libStatus = true to "Φορτώνω τη βιβλιοθήκη…"
-                        try {
-                            library = withContext(Dispatchers.IO) { ElevenClient.library(s.key, "el") }
-                            libStatus = if (library.isEmpty()) false to "Δεν βρέθηκαν ελληνικές φωνές στη βιβλιοθήκη." else true to "${library.size} φωνές. ▶ για δείγμα, «Πρόσθεσε» για να μπει στις δικές σου."
-                        } catch (e: Exception) {
-                            libStatus = false to "✗ ${e.message ?: e}"
-                        }
-                    }
-                }, modifier = Modifier.fillMaxWidth())
-                libStatus?.let { (ok, text) -> Text(text, style = MotoType.body, color = if (ok) c.base.textMuted else c.base.danger) }
-                library.forEach { v ->
-                    val added = voices.any { it.id == v.id || it.name == v.name }
-                    Choice(
-                        title = v.name,
-                        subtitle = v.description.ifBlank { "βιβλιοθήκη" },
-                        selected = added && s.voiceName == v.name,
-                        onPreview = v.previewUrl?.let { url -> { playPreview(url) } },
-                        actionLabel = if (added) "✓ στις δικές σου" else "Πρόσθεσε",
-                        onAction = {
-                            scope.launch {
-                                libStatus = true to "Προσθέτω «${v.name}»…"
-                                try {
-                                    val id = withContext(Dispatchers.IO) { ElevenClient.addFromLibrary(s.key, v) }
-                                    update(s.copy(voiceId = id, voiceName = v.name))
-                                    voices = withContext(Dispatchers.IO) { ElevenClient.voices(s.key) }
-                                    libStatus = true to "✓ Προστέθηκε και επιλέχθηκε: ${v.name}. Πάτα «Δοκιμή» πάνω."
-                                } catch (e: Exception) {
-                                    libStatus = false to "✗ ${e.message ?: e}"
-                                }
-                            }
-                        },
-                    ) { v.previewUrl?.let { playPreview(it) } }
-                }
             }
         }
     }

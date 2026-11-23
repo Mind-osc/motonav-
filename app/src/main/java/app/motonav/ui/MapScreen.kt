@@ -713,9 +713,9 @@ fun MapScreen(
             spotsLoading = false
             if (found == null) spotCache.failed(missing, now) else spots = spotCache.all
         }
-        LaunchedEffect(style, spots, display.showSpots, c.base.isDark) {
+        LaunchedEffect(style, spots, display.showSpots, display.hiddenSpots, c.base.isDark) {
             val s = style ?: return@LaunchedEffect
-            if (display.showSpots) SpotLayer.set(s, spots, density, c.base.text.toArgb(), c.base.bg.toArgb())
+            if (display.showSpots) SpotLayer.set(s, spots.filter { it.kind.name !in display.hiddenSpots }, density, c.base.text.toArgb(), c.base.bg.toArgb())
             else SpotLayer.clear(s)
         }
         // Η κίνηση φαίνεται μόνο ως χρώμα πάνω στη γραμμή της διαδρομής· καθόλου γραμμές δίπλα στους δρόμους.
@@ -928,7 +928,7 @@ fun MapScreen(
             if (a != null && a.first.id !in announcedCams) {
                 announcedCams += a.first.id
                 if (display.cameraVoice) {
-                    session.announce("${a.first.title} σε ${Phrases.distance(a.second)}" + (a.first.maxspeed?.let { ", όριο $it" } ?: ""))
+                    session.announce(Phrases.L("${a.first.title} σε ", "${a.first.titleEn} in ") + Phrases.distance(a.second) + (a.first.maxspeed?.let { Phrases.L(", όριο $it", ", limit $it") } ?: ""))
                 }
             }
             announcedCams.retainAll { id ->
@@ -1044,7 +1044,7 @@ fun MapScreen(
             hazardAlert = a
             if (a != null && a.first.id !in announcedHazards && now - a.first.createdAtMs > 60_000) {
                 announcedHazards += a.first.id
-                session.announce("Προσοχή, ${a.first.kind.label.lowercase(Locale("el", "GR"))} σε ${Phrases.distance(a.second)}.")
+                session.announce(Phrases.L("Προσοχή, ${a.first.kind.label.lowercase(Locale("el", "GR"))} σε ", "Caution, ${a.first.kind.labelEn} in ") + Phrases.distance(a.second) + ".")
             }
             announcedHazards.retainAll { id -> hazards.firstOrNull { it.id == id }?.let { Geo.distance(here, it.position) < 900 } ?: false }
         }
@@ -1090,7 +1090,7 @@ fun MapScreen(
             kotlinx.coroutines.delay(3_000)
             if (overspeedSaidFor != speedLimitNow) {
                 overspeedSaidFor = speedLimitNow
-                session.announce("Όριο $speedLimitNow.")
+                session.announce(Phrases.L("Όριο $speedLimitNow.", "Speed limit $speedLimitNow."))
             }
         }
         // Κακός καιρός στα επόμενα 10 km: μία φορά φωνή ανά σημείο.
@@ -1102,7 +1102,7 @@ fun MapScreen(
                 ?: return@LaunchedEffect
             val key = (bad.atMeters / 5_000).toLong()
             if (announcedWeather.add(key)) {
-                session.announce("Προσοχή, ${weatherPhrase(bad)} σε ${Phrases.distance(bad.atMeters - progressNow)}.")
+                session.announce(Phrases.L("Προσοχή, ${weatherPhrase(bad)} σε ", "Caution, ${weatherPhraseEn(bad)} in ") + Phrases.distance(bad.atMeters - progressNow) + ".")
             }
         }
         val report: (HazardKind) -> Unit = { kind ->
@@ -2524,6 +2524,15 @@ private fun StatusPill(text: String, onClick: (() -> Unit)? = null) {
 // ---------------------------------------------------------------- μορφοποίηση
 
 private val el = Locale("el", "GR")
+
+private fun weatherPhraseEn(p: WeatherPoint): String = when {
+    p.sky == Sky.STORM -> "storm"
+    p.sky == Sky.SNOW -> "snow"
+    p.rainProb >= 50 -> "rain"
+    p.windKmh >= 45 -> "strong wind"
+    p.tempC <= 2 -> "freezing"
+    else -> "bad weather"
+}
 
 private fun weatherPhrase(p: WeatherPoint): String = when {
     p.sky == Sky.STORM -> "καταιγίδα"

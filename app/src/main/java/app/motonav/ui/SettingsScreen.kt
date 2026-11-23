@@ -164,8 +164,32 @@ fun SettingsScreen(
                         SwitchRow("Χωματόδρομοι", "Καφέ διακεκομμένη γραμμή, από ζουμ 10", display.showDirt) {
                             onDisplayChange(display.copy(showDirt = it))
                         }
-                        SwitchRow("Μέρη για μηχανόβιους", "Θέες, νερό, αυχένες, στέκια, μαγαζιά μηχανών, πλυντήρια, από ζουμ 11", display.showSpots) {
+                        SwitchRow("Μέρη για μηχανόβιους", "Διάλεξε παρακάτω τι θες να φαίνεται, από ζουμ 11", display.showSpots) {
                             onDisplayChange(display.copy(showSpots = it))
+                        }
+                        // Μενού: ποια είδη φαίνονται στον χάρτη (πάτημα = εμφάνιση/απόκρυψη).
+                        if (display.showSpots) {
+                            Column(
+                                Modifier.padding(horizontal = Space.lg, vertical = Space.xs),
+                                verticalArrangement = Arrangement.spacedBy(Space.sm),
+                            ) {
+                                app.motonav.spots.SpotKind.entries.chunked(2).forEach { row ->
+                                    Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+                                        row.forEach { k ->
+                                            val on = k.name !in display.hiddenSpots
+                                            TextChoice(
+                                                "${k.emoji} ${k.label}",
+                                                selected = on,
+                                                onClick = {
+                                                    onDisplayChange(display.copy(hiddenSpots = if (on) display.hiddenSpots + k.name else display.hiddenSpots - k.name))
+                                                },
+                                                modifier = Modifier.weight(1f),
+                                            )
+                                        }
+                                        if (row.size == 1) Spacer(Modifier.weight(1f))
+                                    }
+                                }
+                            }
                         }
                         SwitchRow("Ανάγλυφο βουνών", "Σκίαση στα βουνά και κορυφές με υψόμετρο", display.showRelief) {
                             onDisplayChange(display.copy(showRelief = it))
