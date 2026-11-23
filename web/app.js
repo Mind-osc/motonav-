@@ -53,7 +53,7 @@
   // και ξαναγυρίζει μόνος του 10″ μετά το τελευταίο άγγιγμα (ή αμέσως με ένα πάτημα στην πυξίδα).
   let touchT = 0, resumeTimer = 0;
   function pauseFollow() {
-    if (!S.nav) return;
+    if (!S.nav) { S.lockMe = false; return; }
     S.follow = false; touchT = Date.now();
     clearTimeout(resumeTimer);
     resumeTimer = setTimeout(function chk() {
@@ -66,8 +66,9 @@
     clearTimeout(resumeTimer);
     S.follow = true; zNow = map.getZoom(); S.followIn = performance.now();
   }
-  ["touchstart", "mousedown", "wheel"].forEach((ev) => map.getCanvasContainer().addEventListener(ev, pauseFollow, { passive: true }));
-  map.on("dragstart", pauseFollow);
+  ["touchstart", "mousedown", "wheel"].forEach((ev) => map.getCanvasContainer().addEventListener(ev, () => { if (S.nav) pauseFollow(); }, { passive: true }));
+  // Εκτός πλοήγησης: ένα απλό πάτημα δεν σταματάει το «σε ακολουθεί», μόνο το σύρσιμο/ζουμ/στροφή με το δάχτυλο.
+  ["dragstart", "zoomstart", "rotatestart", "pitchstart"].forEach((ev) => map.on(ev, (e) => { if (e.originalEvent) pauseFollow(); }));
   const empty = { type: "FeatureCollection", features: [] };
   // Ίδια αντίθεση με τον σκούρο χάρτη της Android εφαρμογής (MapContrast.kt): γεμάτοι γκρι δρόμοι, ανοιχτά ονόματα.
   const CONTRAST_LINES = { highway_path: "#454A53", highway_minor: "#5A606B", highway_major_subtle: "#555B66", highway_major_casing: "#1B1D22",
@@ -245,10 +246,43 @@
     const rose = document.getElementById("rose");
     if (rose) rose.setAttribute("transform", `rotate(${-h} 60 60)`);
   }
+  // ---------- Κάμερα εκτός πλοήγησης (όπως centerOnMe της Android) ----------
+  // Ανοίγει κεντραρισμένη στο βελάκι και σε ακολουθεί (ζουμ 16, η κατεύθυνσή σου πάνω ή βορράς πάνω)
+  // μέχρι να σύρεις τον χάρτη. Πάτημα στην πυξίδα: ξανά σε σένα. Παρατεταμένο πάτημα: βορράς πάνω ↔ κατεύθυνση πάνω.
+  S.lockMe = true;
+  let northUp = store.get("northUp", false), lastCam = 0;
+  function camBearing() { return northUp ? 0 : (S.heading || 0); }
+  function centerOnMe() {
+    S.lockMe = true;
+    if (!S.me) { startGps(); return; }
+    map.easeTo({ center: [S.me.lon, S.me.lat], zoom: 16, bearing: camBearing(), pitch: 0,
+      padding: { top: 0, bottom: 0, left: 0, right: 0 }, duration: 900 });
+    lastCam = performance.now() + 900;
+  }
+  function followMe() {
+    if (S.nav || !S.lockMe || !S.me) return;
+    const t = performance.now();
+    if (t < lastCam) return; // όσο κρατάει η μετάβαση
+    lastCam = t + 120;
+    map.easeTo({ center: [S.me.lon, S.me.lat], bearing: camBearing(), duration: 300, easing: (k) => k });
+  }
+  let gaugeLong = 0, gaugeWasLong = false;
+  $("gauge").addEventListener("pointerdown", () => {
+    gaugeWasLong = false;
+    gaugeLong = setTimeout(() => {
+      gaugeWasLong = true;
+      northUp = !northUp; store.set("northUp", northUp);
+      toast(northUp ? "Βορράς πάνω" : "Η κατεύθυνσή σου πάνω");
+      if (navigator.vibrate) navigator.vibrate(30);
+      if (!S.nav) centerOnMe();
+    }, 650);
+  });
+  ["pointerup", "pointerleave", "pointercancel"].forEach((ev) => $("gauge").addEventListener(ev, () => clearTimeout(gaugeLong)));
+  $("gauge").addEventListener("contextmenu", (e) => e.preventDefault());
   $("gauge").onclick = () => {
+    if (gaugeWasLong) { gaugeWasLong = false; return; }
     if (S.nav) { if (S.follow) showOverview(); else resumeFollow(); return; }
-    if (S.me) map.easeTo({ center: [S.me.lon, S.me.lat], zoom: Math.max(map.getZoom(), 15), bearing: 0, pitch: 0 });
-    else { wantCenter = true; startGps(); }
+    centerOnMe();
   };
 
   // ---------- GPS ----------
@@ -276,7 +310,8 @@
     else {
       const moving = S.me.speed > 2;
       puck.setLngLat([S.me.lon, S.me.lat]).setRotation((moving ? S.me.heading : S.heading) || 0).addTo(map);
-      if (wantCenter) { wantCenter = false; map.easeTo({ center: [S.me.lon, S.me.lat], zoom: Math.max(map.getZoom(), 14) }); }
+      if (!prev && S.lockMe) centerOnMe(); // πρώτη θέση: κέντρο στο βελάκι
+      else followMe();
     }
   }
   function showSpeed() {
@@ -373,7 +408,7 @@
     }
     setHeading(h);
     // Σταματημένος: το βελάκι γυρίζει με την πυξίδα (όπως στην Android εφαρμογή).
-    if (!S.nav && S.me) puck.setRotation(h);
+    if (!S.nav && S.me) { puck.setRotation(h); if (!northUp) followMe(); }
   }
 
   // ---------- Αναζήτηση ----------
@@ -652,6 +687,7 @@
     const land = innerWidth > innerHeight && innerHeight < 600;
     const cardH = land ? 0 : Math.min($("card").offsetHeight || 320, innerHeight * 0.62);
     const pad = land ? { top: 40, bottom: 30, left: 470, right: 150 } : { top: 70, bottom: cardH + 30, left: 40, right: 40 };
+    S.lockMe = false;
     try { map.fitBounds(b, { padding: pad, bearing: 0, pitch: 0, duration: 700, maxZoom: 16 }); } catch (e) { /* μικρή οθόνη */ }
   }
 
@@ -948,7 +984,8 @@
     ["instr", "navLeft", "navPills", "simPill", "report", "stopBtn"].forEach((id) => $(id).classList.add("hidden"));
     ["recBtn", "searchBtn", "settingsBtn"].forEach((id) => $(id).classList.remove("hidden"));
     $("glow").classList.add("hidden"); $("limit").classList.add("hidden"); $("gauge").classList.remove("over");
-    map.easeTo({ pitch: 0, bearing: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 }, duration: 500 });
+    if (S.me && $("card").classList.contains("hidden")) centerOnMe();
+    else map.easeTo({ pitch: 0, bearing: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 }, duration: 500 });
     if (S.rec && !wasSim && P.autoRecord) stopRecording();
     drawFuel();
     if (user && S.route) { showCard(); drawRoute(S.route.points); fitRoute(S.route); }
