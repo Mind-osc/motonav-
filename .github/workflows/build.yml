@@ -3,6 +3,12 @@ name: Build APK
 on:
   push:
     branches: [main]
+    # Η web έκδοση (iPhone) δεν χτίζει νέο APK.
+    paths-ignore:
+      - 'web/**'
+      - '.github/workflows/pages.yml'
+      - 'README.md'
+      - 'docs/**'
   workflow_dispatch: {}
 
 permissions:

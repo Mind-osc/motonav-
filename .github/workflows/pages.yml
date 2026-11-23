@@ -1,0 +1,49 @@
+name: Web (iPhone) στο GitHub Pages
+
+# Η web έκδοση (PWA) για iPhone/υπολογιστή. Ανεβαίνει μόνο από το δημόσιο repo.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'app/src/main/assets/brouter/moto-dirt.brf'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: github.repository == 'Mind-osc/motonav-'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Αρχεία που μοιράζεται με την Android εφαρμογή
+        run: |
+          mkdir -p web/fonts
+          cp app/src/main/assets/brouter/moto-dirt.brf web/
+          cp app/src/main/res/font/barlow_condensed_semibold.ttf web/fonts/
+      - name: Έλεγχος BRouter/Photon από browser (CORS)
+        continue-on-error: true
+        run: |
+          curl -s -D - -o /dev/null -H "Origin: https://mind-osc.github.io" "https://brouter.de/brouter?lonlats=23.72,37.98|23.75,37.99&profile=car-fast&alternativeidx=0&format=geojson&timode=2&profile:vmax=110" | grep -i -E "^HTTP|access-control" || true
+          curl -s -H "Origin: https://mind-osc.github.io" "https://brouter.de/brouter?lonlats=23.72,37.98|23.75,37.99&profile=car-fast&alternativeidx=0&format=geojson&timode=2&profile:vmax=110" | head -c 300; echo
+          curl -s -D - -o /tmp/p.json -H "Origin: https://mind-osc.github.io" -X POST --data-binary @web/moto-dirt.brf "https://brouter.de/brouter/profile" | grep -i -E "^HTTP|access-control" || true
+          cat /tmp/p.json; echo
+          curl -s -D - -o /dev/null -H "Origin: https://mind-osc.github.io" "https://photon.komoot.io/api/?q=Athens&limit=1" | grep -i -E "^HTTP|access-control" || true
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+      - id: deploy
+        uses: actions/deploy-pages@v4

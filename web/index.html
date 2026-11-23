@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <title>Moto Nav</title>
+  <meta name="description" content="Πλοήγηση για μηχανή: διαδρομές με στροφές, χωματόδρομοι, φωνή στα ελληνικά. Δωρεάν.">
+  <meta name="theme-color" content="#0E0F13">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Moto Nav">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="map" aria-label="Χάρτης"></div>
+
+  <!-- Αναζήτηση (όταν δεν πλοηγείς) -->
+  <div id="top" class="safe-top">
+    <div class="search">
+      <input id="q" type="search" placeholder="Πού πάμε;" autocomplete="off" enterkeyhint="search" aria-label="Αναζήτηση">
+      <button id="menuBtn" class="icon-btn" aria-label="Μενού">☰</button>
+    </div>
+    <div id="results" class="results hidden" role="listbox"></div>
+  </div>
+
+  <!-- Οδηγία στην πλοήγηση -->
+  <div id="instr" class="instr hidden safe-top">
+    <div class="instr-main">
+      <div id="instrIcon" class="instr-icon"></div>
+      <div>
+        <div id="instrDist" class="instr-dist"></div>
+        <div id="instrText" class="instr-text"></div>
+      </div>
+    </div>
+    <div id="instrThen" class="instr-then hidden"></div>
+  </div>
+
+  <!-- Κουμπιά χάρτη -->
+  <div id="fabs" class="fabs">
+    <button id="locBtn" class="fab" aria-label="Η θέση μου">◎</button>
+  </div>
+
+  <!-- Κάρτα διαδρομής -->
+  <div id="card" class="card hidden safe-bottom">
+    <div class="card-head">
+      <div>
+        <div id="cardTitle" class="card-title"></div>
+        <div id="cardSub" class="card-sub"></div>
+      </div>
+      <button id="cardClose" class="icon-btn" aria-label="Κλείσιμο">✕</button>
+    </div>
+    <div id="cardStops" class="stops"></div>
+    <div class="types" role="radiogroup" aria-label="Τύπος διαδρομής">
+      <button data-type="fast" class="type on" title="Γρήγορη">⚡<span>Γρήγορη</span></button>
+      <button data-type="twisty" class="type" title="Στροφές">〰<span>Στροφές</span></button>
+      <button data-type="dirt" class="type" title="Χώμα">⛰<span>Χώμα</span></button>
+    </div>
+    <div class="toggles">
+      <label><input id="avMoto" type="checkbox"> Χωρίς αυτοκινητόδρομους</label>
+      <label><input id="avToll" type="checkbox"> Χωρίς διόδια</label>
+    </div>
+    <canvas id="elev" class="elev" height="60"></canvas>
+    <div id="cardMsg" class="card-msg hidden"></div>
+    <div class="card-actions">
+      <button id="saveBtn" class="btn sec" aria-label="Αποθήκευση">★</button>
+      <button id="shareBtn" class="btn sec" aria-label="Κοινοποίηση">⇪</button>
+      <button id="gpxBtn" class="btn sec" aria-label="GPX">GPX</button>
+      <button id="startBtn" class="btn pri">Ξεκίνα</button>
+    </div>
+  </div>
+
+  <!-- Κάτω μπάρα στην πλοήγηση -->
+  <div id="navbar" class="navbar hidden safe-bottom">
+    <button id="muteBtn" class="fab small" aria-label="Σίγαση">🔊</button>
+    <div class="trip">
+      <div><span class="flag">🏁</span><b id="eta"></b></div>
+      <div><b id="remT" class="green"></b></div>
+      <div><b id="remD"></b></div>
+    </div>
+    <div class="speed"><b id="speed">0</b><span>km/h</span></div>
+    <button id="stopBtn" class="fab small danger" aria-label="Τέλος πλοήγησης">✕</button>
+  </div>
+
+  <!-- Μενού -->
+  <div id="menu" class="sheet hidden" role="dialog" aria-label="Μενού">
+    <div class="sheet-head"><b>Moto Nav</b><button id="menuClose" class="icon-btn" aria-label="Κλείσιμο">✕</button></div>
+    <div class="sheet-body">
+      <h3>Αποθηκευμένες διαδρομές</h3>
+      <div id="savedList" class="list"></div>
+      <h3>Εργαλεία</h3>
+      <button id="importBtn" class="row-btn">📂 Άνοιγμα GPX</button>
+      <input id="gpxFile" type="file" accept=".gpx,application/gpx+xml,application/xml,text/xml" class="hidden">
+      <label class="row-btn"><input id="voiceOn" type="checkbox" checked> Φωνή πλοήγησης</label>
+      <a class="row-btn" href="https://paypal.me/STAVROSMALAGARDIS" target="_blank" rel="noopener">☕ Κέρασέ με έναν καφέ</a>
+      <a class="row-btn" href="https://github.com/Mind-osc/motonav-" target="_blank" rel="noopener">ℹ️ Για το Android: η πλήρης εφαρμογή</a>
+      <p class="muted">Έκδοση web (PWA) για iPhone και υπολογιστή. Οι διαδρομές υπολογίζονται online από το
+        <a href="https://brouter.de" target="_blank" rel="noopener">BRouter</a>, ο χάρτης από το OpenFreeMap (© OpenStreetMap).
+        Στο iPhone η πλοήγηση δουλεύει όσο η οθόνη είναι ανοιχτή και η εφαρμογή μπροστά.</p>
+    </div>
+  </div>
+
+  <!-- Μενού παρατεταμένου πατήματος -->
+  <div id="pop" class="pop hidden">
+    <div id="popTitle" class="pop-title"></div>
+    <button id="popGo" class="btn pri">Πήγαινε εδώ</button>
+    <button id="popStop" class="btn sec">+ Στάση</button>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- Οδηγία εγκατάστασης στο iPhone -->
+  <div id="install" class="install hidden">
+    <div>Για εγκατάσταση: πάτα <b>Κοινοποίηση</b> <span class="ios-share">⇪</span> και μετά <b>«Προσθήκη στην οθόνη Αφετηρίας»</b>.</div>
+    <button id="installClose" class="icon-btn" aria-label="Κλείσιμο">✕</button>
+  </div>
+
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="nav.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,133 @@
+/* Moto Nav web: ίδια χρώματα με το σκούρο θέμα της Android εφαρμογής. */
+@font-face {
+  font-family: "Barlow Condensed";
+  src: url("fonts/barlow_condensed_semibold.ttf") format("truetype");
+  font-weight: 600;
+  font-display: swap;
+}
+:root {
+  --bg: #0E0F13; --surface: #17191F; --surface2: #20232B; --surface3: #2A2E38;
+  --border: #2E323C; --text: #F2F3F5; --muted: #A4AAB6;
+  --accent: #A78BFA; --on-accent: #0E0F13; --danger: #FF6B6B; --stop: #8B1E2D;
+  --green: #4ADE80; --r: 14px;
+  --st: env(safe-area-inset-top, 0px); --sb: env(safe-area-inset-bottom, 0px);
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+  font-family: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; overflow: hidden; overscroll-behavior: none; }
+#map { position: fixed; inset: 0; }
+.hidden { display: none !important; }
+.safe-top { padding-top: calc(var(--st) + 8px); }
+.safe-bottom { padding-bottom: calc(var(--sb) + 10px); }
+.muted { color: var(--muted); font-size: 14px; line-height: 1.4; }
+a { color: var(--accent); }
+button { font: inherit; color: inherit; cursor: pointer; }
+.num { font-family: "Barlow Condensed", system-ui, sans-serif; font-weight: 600; }
+
+/* Αναζήτηση */
+#top { position: fixed; top: 0; left: 0; right: 0; padding-left: 10px; padding-right: 10px; z-index: 5; }
+.search { display: flex; gap: 8px; }
+.search input { flex: 1; height: 48px; border-radius: var(--r); border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); padding: 0 14px; font-size: 17px; outline: none; }
+.search input:focus { border-color: var(--accent); }
+.icon-btn { width: 48px; height: 48px; border-radius: var(--r); border: 1px solid var(--border);
+  background: var(--surface); font-size: 20px; flex: none; }
+.results { margin-top: 6px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
+  max-height: 55vh; overflow: auto; }
+.results button { display: block; width: 100%; text-align: left; padding: 12px 14px; background: none; border: 0;
+  border-bottom: 1px solid var(--border); }
+.results button:last-child { border-bottom: 0; }
+.results small { display: block; color: var(--muted); margin-top: 2px; }
+
+/* Κουμπιά χάρτη */
+.fabs { position: fixed; right: 10px; bottom: calc(var(--sb) + 20px); z-index: 4; display: flex; flex-direction: column; gap: 10px; }
+.fab { width: 56px; height: 56px; border-radius: var(--r); border: 1px solid var(--border); background: var(--surface);
+  font-size: 24px; display: grid; place-items: center; }
+.fab.small { width: 52px; height: 52px; font-size: 20px; flex: none; }
+.fab.danger { background: var(--stop); border-color: #C2465A; color: #fff; }
+
+/* Κάρτα διαδρομής */
+.card { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--surface); border-top: 1px solid var(--border);
+  border-radius: 18px 18px 0 0; padding: 14px 14px 0; max-height: 75vh; overflow: auto; }
+.card-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+.card-title { font-size: 26px; font-weight: 700; }
+.card-title .green { color: var(--green); }
+.card-sub { color: var(--muted); margin-top: 2px; font-size: 15px; }
+.stops { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
+.stops span { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 4px 8px; font-size: 14px; }
+.stops span b { color: var(--accent); margin-right: 4px; }
+.stops span button { background: none; border: 0; color: var(--muted); padding: 0 0 0 6px; }
+.types { display: flex; gap: 8px; margin-top: 12px; }
+.type { flex: 1; height: 52px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface2);
+  font-size: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.type span { font-size: 12px; color: var(--muted); }
+.type.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.type.on span { color: var(--on-accent); }
+.toggles { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 10px; color: var(--muted); font-size: 15px; }
+.toggles input { accent-color: var(--accent); width: 18px; height: 18px; vertical-align: -3px; }
+.elev { width: 100%; height: 60px; margin-top: 10px; display: block; }
+.card-msg { margin-top: 8px; color: var(--muted); font-size: 14px; }
+.card-msg.err { color: var(--danger); }
+.card-actions { display: flex; gap: 8px; margin-top: 12px; position: sticky; bottom: 0; background: var(--surface);
+  padding-bottom: calc(var(--sb) + 10px); padding-top: 4px; }
+.btn { height: 52px; border-radius: 12px; border: 1px solid var(--border); font-size: 17px; font-weight: 600; }
+.btn.pri { flex: 1; background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.btn.sec { min-width: 52px; background: var(--surface2); padding: 0 12px; }
+.btn:disabled { opacity: .5; }
+
+/* Οδηγία πλοήγησης */
+.instr { position: fixed; top: 0; left: 8px; right: 8px; z-index: 5; }
+.instr-main { display: flex; gap: 14px; align-items: center; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 18px; padding: 12px 16px; }
+.instr-icon { width: 64px; height: 64px; flex: none; }
+.instr-icon svg { width: 64px; height: 64px; }
+.instr-dist { font-family: "Barlow Condensed", system-ui; font-weight: 600; font-size: 44px; line-height: 1; }
+.instr-text { font-size: 20px; margin-top: 4px; }
+.instr-then { margin-top: -6px; padding: 14px 16px 8px; background: var(--surface2); border: 1px solid var(--border); border-top: 0;
+  border-radius: 0 0 18px 18px; font-size: 17px; color: var(--muted); }
+
+/* Κάτω μπάρα */
+.navbar { position: fixed; left: 8px; right: 8px; bottom: 0; z-index: 5; display: flex; gap: 8px; align-items: flex-end; }
+.trip { flex: 1; height: 56px; display: flex; justify-content: space-around; align-items: center; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--r); font-family: "Barlow Condensed", system-ui; font-size: 25px; white-space: nowrap; }
+.trip .flag { font-size: 16px; margin-right: 4px; }
+.green { color: var(--green); }
+.speed { width: 64px; height: 64px; border-radius: 50%; background: var(--surface); border: 2px solid var(--border);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; flex: none; }
+.speed b { font-family: "Barlow Condensed", system-ui; font-size: 28px; line-height: 1; }
+.speed span { font-size: 10px; color: var(--muted); }
+.speed.over { border-color: var(--danger); color: var(--danger); }
+
+/* Μενού (φύλλο) */
+.sheet { position: fixed; inset: 0; z-index: 10; background: var(--bg); display: flex; flex-direction: column; padding-top: var(--st); }
+.sheet-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; font-size: 20px;
+  border-bottom: 1px solid var(--border); }
+.sheet-body { overflow: auto; padding: 0 14px calc(var(--sb) + 20px); }
+.sheet h3 { color: var(--muted); font-size: 14px; text-transform: uppercase; letter-spacing: .04em; margin: 20px 0 8px; }
+.list .item { display: flex; gap: 8px; align-items: center; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; }
+.list .item div { flex: 1; }
+.list .item small { color: var(--muted); display: block; }
+.list .item button { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; height: 40px; padding: 0 12px; }
+.row-btn { display: flex; gap: 10px; align-items: center; width: 100%; text-align: left; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 8px; font-size: 16px; color: var(--text);
+  text-decoration: none; }
+.row-btn input { accent-color: var(--accent); width: 20px; height: 20px; }
+
+/* Παρατεταμένο πάτημα */
+.pop { position: fixed; z-index: 7; left: 10px; right: 10px; bottom: calc(var(--sb) + 20px); background: var(--surface);
+  border: 1px solid var(--border); border-radius: 16px; padding: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pop-title { grid-column: 1 / -1; color: var(--muted); font-size: 15px; }
+
+.toast { position: fixed; z-index: 20; left: 50%; transform: translateX(-50%); bottom: calc(var(--sb) + 110px);
+  background: var(--surface3); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; max-width: 90vw; font-size: 15px; }
+.install { position: fixed; z-index: 8; left: 10px; right: 10px; top: calc(var(--st) + 66px); display: flex; gap: 10px; align-items: center;
+  background: var(--surface2); border: 1px solid var(--accent); border-radius: 14px; padding: 10px 12px; font-size: 15px; }
+.install .icon-btn { width: 36px; height: 36px; font-size: 16px; }
+.ios-share { color: var(--accent); }
+
+/* Βελάκι θέσης */
+.puck { width: 44px; height: 44px; pointer-events: none; }
+.puck svg { width: 44px; height: 44px; filter: drop-shadow(0 2px 3px rgba(0,0,0,.6)); }
+.dot { width: 18px; height: 18px; border-radius: 50%; background: var(--accent); border: 3px solid #fff; box-shadow: 0 0 0 6px rgba(167,139,250,.25); }
+.maplibregl-ctrl-attrib { font-size: 10px; }
