@@ -728,7 +728,7 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
         if (followingTrack) {
             // Έτοιμη διαδρομή: δεν βγάζουμε άλλη ως το τέλος, σε ξαναφέρνουμε πάνω της.
             if (s.offRoute && !rerouting && now - lastRerouteAt > 8_000) rejoinTrack(loc)
-        } else if (s.offRoute && !rerouting && now - lastRerouteAt > 5_000) reroute(loc)
+        } else if (s.offRoute && !rerouting && now - lastRerouteAt > 3_000) reroute(loc)
     }
 
     private fun reroute(loc: Location, offline: Boolean = false, phrase: String = Phrases.L("Υπολογίζω νέα διαδρομή.", "Recalculating.")) {

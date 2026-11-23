@@ -93,6 +93,18 @@ class RoutingTest {
     }
 
     @Test
+    fun sideStreetIsCaughtByHeading() {
+        val r = BRouterJson.parse(sample)
+        val e = NavigationEngine(r)
+        e.update(LatLon(39.0, 22.001), 5f)
+        // Στενό κάθετα (βόρεια), ~20 m από τη διαδρομή: μέσα στο όριο απόστασης, αλλά λάθος κατεύθυνση.
+        val side = LatLon(39.00018, 22.001)
+        val north = 0f
+        assertFalse(e.update(side, 5f, north, 7f).offRoute)
+        assertTrue(e.update(side, 5f, north, 7f).offRoute)
+    }
+
+    @Test
     fun parallelGpsDriftWaitsLonger() {
         val r = BRouterJson.parse(sample)
         val e = NavigationEngine(r)

@@ -62,11 +62,15 @@ class NavigationEngine(val route: Route) {
 
         // Πιο σφιχτά από πριν (35 m / 3 στίγματα): στα στενά της πόλης η γειτονική οδός είναι 30–40 m μακριά.
         val tolerance = max(25.0, accuracyM * 1.2)
-        if (bestD > tolerance) {
+        // Μπήκες σε άλλο δρόμο (π.χ. στενό δεξιά): η κατεύθυνσή σου δεν ταιριάζει με κανένα κομμάτι της διαδρομής
+        // εκεί κοντά και έχεις ήδη φύγει ≥ 15 m. Το πιάνουμε πριν φτάσεις στο όριο απόστασης (όπως κάνουν
+        // Google/TomTom με το «σε ποιον δρόμο είσαι», όχι μόνο «πόσο μακριά από τη γραμμή»).
+        val turnedOff = bearingDeg != null && speedMps > 3f && bestD > TURN_OFF_M && bestD <= tolerance &&
+            !headingFitsNearby(bestI, bearingDeg.toDouble())
+        if (bestD > tolerance || turnedOff) {
             offCount++
-            // Πόσα στίγματα χρειάζονται: 2 αν είσαι πολύ μακριά ή πας αλλού, 3 αν πας παράλληλα (μάλλον GPS).
-            val segBearing = Geo.bearing(pts[bestI], pts[bestI + 1])
-            val wrongWay = bearingDeg != null && speedMps > 3f && angleDiff(bearingDeg.toDouble(), segBearing) > 50.0
+            // Πόσα στίγματα χρειάζονται: 2 αν είσαι πολύ μακριά ή πας αλλού, 4 αν πας παράλληλα (μάλλον GPS).
+            val wrongWay = bearingDeg != null && speedMps > 3f && !headingFitsNearby(bestI, bearingDeg.toDouble())
             offNeeded = if (bestD > FAR_M || wrongWay) OFF_ROUTE_FIXES else OFF_ROUTE_FIXES_PARALLEL
         } else {
             offCount = 0
@@ -102,7 +106,23 @@ class NavigationEngine(val route: Route) {
         )
     }
 
+    /** Ταιριάζει η κατεύθυνσή σου με κάποιο κομμάτι της διαδρομής ±40 m γύρω σου; (στροφές της ίδιας διαδρομής δεν μετράνε ως «αλλού»). */
+    private fun headingFitsNearby(i: Int, bearing: Double): Boolean {
+        val pts = route.points
+        val cum = route.cumulative
+        val here = cum[i]
+        var j = i
+        while (j > 0 && here - cum[j - 1] <= 40.0) j--
+        while (j < pts.size - 1 && cum[j] - here <= 40.0) {
+            if (cum[j + 1] - cum[j] > 3.0 && angleDiff(bearing, Geo.bearing(pts[j], pts[j + 1])) <= 50.0) return true
+            j++
+        }
+        return false
+    }
+
     companion object {
+        /** Από τόσα μέτρα και πάνω, με λάθος κατεύθυνση, είσαι σε άλλο δρόμο. */
+        const val TURN_OFF_M = 15.0
         /** Πόσα συνεχόμενα στίγματα εκτός διαδρομής (1/s) πριν τη νέα διαδρομή: μακριά ή σε άλλη κατεύθυνση. */
         const val OFF_ROUTE_FIXES = 2
         /** Κοντά και παράλληλα με τη διαδρομή (συχνά GPS που πετάγεται στην πόλη). */
