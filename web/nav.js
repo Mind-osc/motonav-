@@ -53,6 +53,13 @@
     return { points, elevations, cum, maneuvers, length, duration: durationS || length / (60 / 3.6), limits: limits || [], source: source || "brouter" };
   }
 
+  const UNPAVED = ["unpaved", "gravel", "fine_gravel", "compacted", "dirt", "ground", "earth", "grass", "sand", "mud", "pebblestone", "rock"];
+  /** Είδος δρόμου στο σημείο m (για το χρώμα της ταμπέλας). */
+  function kindAt(route, m) {
+    for (const l of route.limits) if (m <= l.end) return l.kind || "OTHER";
+    return "OTHER";
+  }
+
   /** Όριο ταχύτητας στο σημείο m (από τα «messages» του BRouter: maxspeed ανά κομμάτι). */
   function limitAt(route, m) {
     for (const l of route.limits) if (m <= l.end) return l.kmh;
@@ -68,8 +75,12 @@
     let end = 0;
     for (let i = 1; i < messages.length; i++) {
       end += parseFloat(messages[i][iD]) || 0;
-      const m = /(?:^|\s)maxspeed=(\d+)/.exec(messages[i][iT] || "");
-      out.push({ end, kmh: m ? parseInt(m[1], 10) : null });
+      const tags = messages[i][iT] || "";
+      const m = /(?:^|\s)maxspeed=(\d+)/.exec(tags);
+      const hw = (/(?:^|\s)highway=([a-z_]+)/.exec(tags) || [])[1] || "";
+      const sf = (/(?:^|\s)surface=([a-z_]+)/.exec(tags) || [])[1] || "";
+      const kind = hw === "track" || UNPAVED.includes(sf) ? "DIRT" : /^motorway/.test(hw) ? "MOTORWAY" : /^(trunk|primary)/.test(hw) ? "MAIN" : "OTHER";
+      out.push({ end, kmh: m ? parseInt(m[1], 10) : null, kind });
     }
     return out;
   }
@@ -389,6 +400,6 @@
     return best;
   }
 
-  root.MotoNav = { Geo, parseBRouter, parseTomTom, makeRoute, limitAt, twistiness, pickTwisty, pointAt, remaining, Engine, Phrases, Gpx,
+  root.MotoNav = { Geo, parseBRouter, parseTomTom, makeRoute, limitAt, kindAt, twistiness, pickTwisty, pointAt, remaining, Engine, Phrases, Gpx,
     greeklish, loopPoints, destPoint, nearestOnRoute };
 })(typeof window !== "undefined" ? window : globalThis);

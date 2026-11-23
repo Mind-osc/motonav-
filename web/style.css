@@ -222,3 +222,20 @@ button { font: inherit; color: inherit; cursor: pointer; }
 body.nav .sim { top: auto; bottom: calc(var(--sb) + 136px); left: calc(var(--sl) + 70px); transform: none; }
 body.nav #simPill:not(.hidden) ~ #recPill { display: none !important; }
 .card-actions { position: sticky; bottom: calc(-1 * var(--sb) - 12px); background: var(--surface); padding-bottom: 4px; }
+
+/* Ταμπέλα με χρώμα ανά δρόμο */
+.instr.signed .instr-main { background: var(--sign); border-color: transparent; color: #fff; }
+.instr.signed .instr-then { background: var(--sign2); border-color: transparent; color: #fff; }
+/* Εικονίδια (ίδια με την Android) */
+.fab svg, .sq svg, .type svg, .btn svg { width: 28px; height: 28px; display: block; }
+.sq svg { width: 24px; height: 24px; margin: auto; }
+.btn.sq-lg svg { margin: auto; }
+#recBtn { color: #ff4d4d; }
+#recBtn svg { width: 34px; height: 34px; }
+.trip-row .ico svg { width: 20px; height: 20px; vertical-align: -2px; margin-right: 4px; }
+.camm svg { width: 16px; height: 16px; color: #fff; }
+.then-icon svg { width: 34px; height: 34px; }
+/* Μέγεθος κουμπιών και κειμένων (Ρυθμίσεις → Εμφάνιση) */
+:root { --ui: 1; }
+.pills, .right-col, .gauge, .nav-left, .instr, .nav-pills, .card, .sim { zoom: var(--ui); }
+.puck img { display: block; }

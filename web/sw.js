@@ -1,7 +1,7 @@
 // Moto Nav web: κρατάει την εφαρμογή (όχι τον χάρτη) για γρήγορο άνοιγμα. Νέα έκδοση → αλλάζει το VERSION.
-const VERSION = "motonav-web-2";
-const SHELL = ["./", "index.html", "style.css", "nav.js", "services.js", "app.js", "settings.js", "manifest.webmanifest", "moto-dirt.brf", "cameras.json",
-  "fonts/barlow_condensed_semibold.ttf", "icons/icon-192.png", "icons/apple-touch-icon.png"];
+const VERSION = "motonav-web-3";
+const SHELL = ["./", "index.html", "style.css", "icons.js", "nav.js", "services.js", "app.js", "settings.js", "manifest.webmanifest", "moto-dirt.brf", "cameras.json",
+  "fonts/barlow_condensed_semibold.ttf", "icons/icon-192.png", "icons/apple-touch-icon.png", "icons/puck_red.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

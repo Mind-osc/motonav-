@@ -7,7 +7,7 @@
   const A = window.App, SV = window.MotoServices, N = window.MotoNav;
   const { P, store, setPref, toast, esc } = A;
   const $ = (id) => document.getElementById(id);
-  const VERSION = 2;
+  const VERSION = 3;
   // Είχε ανοίξει την εφαρμογή πριν; (πρώτη φορά: δεν δείχνουμε «Τι νέο»)
   const existingUser = store.get("center", null) != null || store.get("saved", null) != null;
 
@@ -16,11 +16,12 @@
   const LIST_COLORS = ["#F59E0B", "#EF4444", "#22C55E", "#3B82F6", "#A855F7", "#EC4899", "#14B8A6", "#F97316"];
 
   let page = "main";
-  const TITLES = { main: "Ρυθμίσεις", look: "Εμφάνιση", map: "Χάρτης", gauges: "Όργανα", cameras: "Κάμερες και ειδοποιήσεις", voice: "Φωνή πλοήγησης",
+  const TITLES = { main: "Ρυθμίσεις", look: "Εμφάνιση", theme: "Θέμα και χρώματα", marker: "Βελάκι και γραμμή", map: "Χάρτης", gauges: "Όργανα", cameras: "Κάμερες και ειδοποιήσεις", voice: "Φωνή πλοήγησης",
     trips: "Ημερολόγιο διαδρομών", bookmarks: "Σελιδοδείκτες και διαδρομές", keys: "Κλειδιά", backup: "Αντίγραφο ασφαλείας", about: "Πηγές και άδειες" };
 
   $("settingsBtn").onclick = () => open("main");
-  $("setBack").onclick = () => { if (page === "main") $("settings").classList.add("hidden"); else open("main"); };
+  const PARENT = { theme: "look", marker: "look" };
+  $("setBack").onclick = () => { if (page === "main") $("settings").classList.add("hidden"); else open(PARENT[page] || "main"); };
   function open(p) {
     page = p;
     $("settings").classList.remove("hidden");
@@ -67,7 +68,7 @@
   const PAGES = {
     main(body) {
       let g = group(body);
-      link(g, "Εμφάνιση", "Θέμα, χρώματα", () => open("look"));
+      link(g, "Εμφάνιση", "Θέμα, χρώματα, βελάκι, γραμμή, μέγεθος, ώρα και μπαταρία", () => open("look"));
       link(g, "Χάρτης", "Εναλλακτικές, στροφές, αποφυγές, μέρη για μηχανόβιους", () => open("map"));
       link(g, "Όργανα", "Κλισιόμετρο, πυξίδα", () => open("gauges"));
       link(g, "Κάμερες και ειδοποιήσεις", "Κάμερες, φωτισμός ορίου, φωνή ορίου, βενζίνη, καιρός", () => open("cameras"));
@@ -89,6 +90,104 @@
     },
 
     look(body) {
+      let g = group(body);
+      link(g, "Θέμα και χρώματα", "Σκούρο / μαύρο / ανοιχτό / αυτόματο, χρώμα εφαρμογής", () => open("theme"));
+      link(g, "Βελάκι και γραμμή", "Σχήμα, μέγεθος, χρώματα, περίγραμμα, δική σου εικόνα", () => open("marker"));
+      g = group(body);
+      const d = pad(g, `<div>Μέγεθος κουμπιών και κειμένων: <b id="uiv">${Math.round(P.uiScale * 100)}%</b></div><input type="range" min="0.75" max="1.4" step="0.05" style="width:100%;accent-color:var(--accent)">`);
+      const r = d.querySelector("input");
+      r.value = P.uiScale;
+      r.oninput = () => { d.querySelector("#uiv").textContent = Math.round(r.value * 100) + "%"; };
+      r.onchange = () => setPref("uiScale", +r.value);
+      sw(g, "Χρώμα ταμπέλας ανά δρόμο", "Πράσινη: αυτοκινητόδρομος · Μπλε: εθνική/κύρια · Πορτοκαλί: χώμα · Μπορντό: τελευταία στροφή/άφιξη", "roadColors");
+      sw(g, "Δική μας ώρα και μπαταρία", "Πάνω πάνω: ώρα, υψόμετρο, καιρός, GPS, μπαταρία", "customStatus");
+    },
+
+    marker(body) {
+      const m = Object.assign({}, P.marker);
+      const save = () => { setPref("marker", Object.assign({}, m)); preview(); };
+      const pv = document.createElement("div");
+      pv.style.cssText = "display:grid;place-items:center;height:150px;background:var(--surface2);border-radius:20px;margin:12px 0;position:relative;overflow:hidden";
+      body.appendChild(pv);
+      function preview() {
+        const fill = m.fill || A.darker(A.accentNow(), 0.4);
+        const sz = Math.round(Math.max(30, Math.min(140, m.size)) * 0.9);
+        pv.innerHTML = `<div style="position:absolute;left:50%;top:0;bottom:0;width:${10 + m.lineOutline * 3}px;transform:translateX(-50%);background:${m.lineOutlineColor || A.accentNow()};border-radius:8px"></div>
+          <div style="position:absolute;left:50%;top:0;bottom:0;width:10px;transform:translateX(-50%);background:${m.lineColor || "#fff"};border-radius:6px"></div>
+          <div style="position:relative;width:${sz}px;height:${sz}px">${window.MotoIcons.puck(Object.assign({}, m, { fill }))}</div>`;
+      }
+      preview();
+      let g = group(body);
+      let d = pad(g, "<div>Σχήμα</div>");
+      choices(d, [["Κλασικό", "CLASSIC"], ["Γυαλιστερό", "GLOSSY"], ["Μυτερό", "SHARP"], ["Κύκλος", "CIRCLE"], ["Σιρίτι", "CHEVRON"], ["Κόκκινο (εικόνα)", "RED_IMAGE"], ["Δική σου εικόνα", "CUSTOM"]],
+        m.shape, (v) => {
+          if (v === "CUSTOM" && !m.image) { pick.click(); return; }
+          m.shape = v; save();
+        });
+      const pick = document.createElement("input");
+      pick.type = "file"; pick.accept = "image/*"; pick.className = "hidden";
+      pick.onchange = () => {
+        const f = pick.files[0];
+        if (!f) return;
+        const img = new Image();
+        img.onload = () => {
+          const c = document.createElement("canvas");
+          const k = 160 / Math.max(img.width, img.height);
+          c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+          c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+          m.image = c.toDataURL("image/png"); m.shape = "CUSTOM"; save(); open("marker");
+        };
+        img.src = URL.createObjectURL(f);
+      };
+      d.appendChild(pick);
+      if (m.image) { const b = document.createElement("button"); b.className = "chip"; b.style.marginTop = "8px"; b.textContent = "Άλλη εικόνα…"; b.onclick = () => pick.click(); d.appendChild(b); }
+      d = pad(g, `<div>Μέγεθος: <b id="mv">${m.size}</b></div><input type="range" min="30" max="140" step="2" style="width:100%;accent-color:var(--accent)">`);
+      const rs = d.querySelector("input");
+      rs.value = m.size;
+      rs.oninput = () => { m.size = +rs.value; d.querySelector("#mv").textContent = m.size; preview(); };
+      rs.onchange = save;
+      const colors = (label, key, def) => {
+        const dd = pad(g, `<div>${label}</div><div class="swatches"></div>`);
+        const box = dd.querySelector(".swatches");
+        [[def, null]].concat(["#E11D48", "#F97316", "#FACC15", "#22C55E", "#06B6D4", "#3B82F6", "#8B5CF6", "#EC4899", "#FFFFFF", "#111318"].map((c) => [c, c])).forEach(([c, v], i) => {
+          const b = document.createElement("button");
+          b.className = "swatch" + (m[key] === v ? " on" : "");
+          b.style.background = c; b.title = i === 0 ? "Του θέματος" : c;
+          if (i === 0) b.style.outline = "2px dashed var(--muted)";
+          b.onclick = () => { m[key] = v; save(); box.querySelectorAll(".swatch").forEach((x) => x.classList.remove("on")); b.classList.add("on"); };
+          box.appendChild(b);
+        });
+      };
+      colors("Χρώμα βελακιού", "fill", A.darker(A.accentNow(), 0.4));
+      g = group(body);
+      const ol = document.createElement("label");
+      ol.className = "row";
+      ol.innerHTML = `<span class="t">Περίγραμμα βελακιού</span><input type="checkbox"${m.outline ? " checked" : ""}>`;
+      ol.querySelector("input").onchange = (e) => { m.outline = e.target.checked; save(); };
+      g.appendChild(ol);
+      const dd = pad(g, '<div>Χρώμα περιγράμματος</div><div class="swatches"></div>');
+      ["#FFFFFF", "#111318", "#FACC15", "#E11D48", "#22C55E", "#3B82F6"].forEach((c) => {
+        const b = document.createElement("button");
+        b.className = "swatch" + (m.outlineColor === c ? " on" : "");
+        b.style.background = c;
+        b.onclick = () => { m.outlineColor = c; save(); dd.querySelectorAll(".swatch").forEach((x) => x.classList.remove("on")); b.classList.add("on"); };
+        dd.querySelector(".swatches").appendChild(b);
+      });
+      g = group(body);
+      colors("Χρώμα γραμμής", "lineColor", "#FFFFFF");
+      colors("Περίγραμμα γραμμής", "lineOutlineColor", A.accentNow());
+      d = pad(g, `<div>Πάχος περιγράμματος γραμμής: <b id="lo">${m.lineOutline}</b></div><input type="range" min="0" max="5" step="0.5" style="width:100%;accent-color:var(--accent)">`);
+      const lo = d.querySelector("input");
+      lo.value = m.lineOutline;
+      lo.oninput = () => { m.lineOutline = +lo.value; d.querySelector("#lo").textContent = m.lineOutline; preview(); };
+      lo.onchange = save;
+      const reset = document.createElement("button");
+      reset.className = "chip"; reset.textContent = "Επαναφορά";
+      reset.onclick = () => { setPref("marker", Object.assign({}, A.DEF.marker)); open("marker"); };
+      body.appendChild(reset);
+    },
+
+    theme(body) {
       const g = group(body);
       const d = pad(g, '<div>Θέμα</div>');
       choices(d, [["Σκούρο", "dark"], ["Μαύρο", "black"], ["Ανοιχτό", "light"], ["Αυτόματο", "auto"]], P.theme, (v) => setPref("theme", v));
@@ -98,7 +197,7 @@
         const b = document.createElement("button");
         b.className = "swatch" + (P.accent === c ? " on" : "");
         b.style.background = c; b.title = name; b.setAttribute("aria-label", name);
-        b.onclick = () => { setPref("accent", c); sw2.querySelectorAll(".swatch").forEach((x) => x.classList.remove("on")); b.classList.add("on"); };
+        b.onclick = () => { setPref("accent", c); A.drawPuck(); sw2.querySelectorAll(".swatch").forEach((x) => x.classList.remove("on")); b.classList.add("on"); };
         sw2.appendChild(b);
       });
     },
@@ -378,6 +477,13 @@
 
   // ---------- «Τι νέο υπάρχει» (μία φορά μετά από αλλαγή) ----------
   const NEWS = [
+    { id: 3, title: "Ακόμα πιο ίδια με την Android", added: [
+      "Τα ίδια εικονίδια και τα ίδια βέλη στροφών με την εφαρμογή",
+      "Εμφάνιση → Βελάκι και γραμμή: σχήμα, μέγεθος, χρώματα, περίγραμμα, δική σου εικόνα",
+      "Μέγεθος κουμπιών και κειμένων, χρώμα ταμπέλας ανά δρόμο, ώρα και μπαταρία",
+      "Οι πηγές του χάρτη (το λευκό ⓘ κάτω δεξιά) πήγαν στις Ρυθμίσεις → Πηγές και άδειες",
+      "Πυξίδα: γυρίζει και όταν το κινητό είναι όρθιο στη βάση",
+    ] },
     { id: 2, title: "Ίδια με την Android εφαρμογή", added: [
       "Ίδια μενού και ίδια διάταξη: ώρα/υψόμετρο, καιρός, ταχύτητα με πυξίδα, κάρτα διαδρομής, Ρυθμίσεις",
       "Τύποι Γρήγορη / Στροφές / Χώμα / Κίνηση (TomTom), εναλλακτικές, περιοχές αποφυγής, κυκλική βόλτα",

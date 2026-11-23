@@ -19,8 +19,12 @@
     moreCurves: false, showSpots: true, hiddenSpots: [], alternatives: true, cameras: true, limitVoice: true, overGlow: true, fuelAlert: true,
     weatherAlert: true, voice: true, english: false, voiceEngine: "phone", elevenKey: "", elevenVoice: "", ttKey: "", lean: false, compass: true,
     autoRecord: true, startPhrase: "Πάμε.", showFavs: true,
+    uiScale: 1, roadColors: true, customStatus: true,
+    marker: { shape: "CLASSIC", size: 84, fill: null, outline: true, outlineColor: "#FFFFFF", lineColor: null, lineOutlineColor: null, lineOutline: 2, image: null },
   };
   const P = Object.assign({}, DEF, store.get("prefs", {}));
+  P.marker = Object.assign({}, DEF.marker, P.marker || {});
+  const I = window.MotoIcons;
   function setPref(k, v) { P[k] = v; store.set("prefs", P); applyPrefs(k); }
 
   // ---------- Κατάσταση ----------
@@ -34,7 +38,9 @@
   const STYLE_DARK = "https://tiles.openfreemap.org/styles/dark", STYLE_LIGHT = "https://tiles.openfreemap.org/styles/liberty";
   const map = new maplibregl.Map({
     container: "map", style: P.theme === "light" ? STYLE_LIGHT : STYLE_DARK,
-    center: store.get("center", [23.7275, 37.9838]), zoom: store.get("zoom", 11), attributionControl: { compact: true },
+    center: store.get("center", [23.7275, 37.9838]), zoom: store.get("zoom", 11),
+    // Οι πηγές του χάρτη (© OpenStreetMap, OpenFreeMap) είναι στις Ρυθμίσεις → Πηγές και άδειες, όπως στην Android.
+    attributionControl: false,
   });
   map.on("moveend", () => {
     if (S.nav) return;
@@ -61,6 +67,7 @@
     map.addLayer({ id: "pts", type: "circle", source: "pts", paint: { "circle-radius": 11, "circle-color": accentNow(), "circle-stroke-color": "#0E0F13", "circle-stroke-width": 3 } });
     map.addLayer({ id: "pts-n", type: "symbol", source: "pts", filter: ["has", "n"],
       layout: { "text-field": ["get", "n"], "text-font": ["Noto Sans Bold"], "text-size": 12, "text-allow-overlap": true }, paint: { "text-color": "#0E0F13" } });
+    setTimeout(drawPuck, 0);
     map.on("click", "alts", (e) => { const i = e.features[0].properties.i; if (S.alts[i]) pickAlt(i); });
     map.on("click", "nogo-fill", (e) => {
       const i = e.features[0].properties.i;
@@ -78,7 +85,24 @@
 
   const puckEl = document.createElement("div");
   puckEl.className = "puck";
-  puckEl.innerHTML = '<svg viewBox="0 0 26 26"><path d="M13 2.5 L21.5 22.5 Q21.8 23.4 20.9 23 L13 18.8 L5.1 23 Q4.2 23.4 4.5 22.5 Z" fill="#E11D48" stroke="#120F1A" stroke-width="1.4" stroke-linejoin="round"/></svg>';
+  function darker(hex, f) {
+    const n = parseInt(hex.slice(1), 16);
+    const c = (v) => Math.round(v * (1 - f)).toString(16).padStart(2, "0");
+    return "#" + c(n >> 16) + c((n >> 8) & 255) + c(n & 255);
+  }
+  /** Το βελάκι θέσης και η γραμμή, όπως τα διάλεξες (Ρυθμίσεις → Εμφάνιση → Βελάκι και γραμμή). */
+  function drawPuck() {
+    const m = P.marker;
+    const px = Math.round(Math.max(30, Math.min(140, m.size)) * 0.55);
+    puckEl.style.width = puckEl.style.height = px + "px";
+    puckEl.innerHTML = I.puck(Object.assign({}, m, { fill: m.fill || darker(accentNow(), 0.4) }));
+    if (map.getLayer("route-line")) {
+      map.setPaintProperty("route-line", "line-color", m.lineColor || "#FFFFFF");
+      map.setPaintProperty("route-casing", "line-color", m.lineOutlineColor || accentNow());
+      const o = m.lineOutline || 0;
+      map.setPaintProperty("route-casing", "line-width", ["interpolate", ["linear"], ["zoom"], 10, 4 + o * 1.5, 16, 12 + o * 2.5]);
+    }
+  }
   const puck = new maplibregl.Marker({ element: puckEl, rotationAlignment: "map", pitchAlignment: "map" });
 
   // ---------- Μηνύματα ----------
@@ -107,6 +131,9 @@
       map.setPaintProperty("pts", "circle-color", accentNow());
     }
     Phrases.en = !!P.english;
+    drawPuck();
+    document.documentElement.style.setProperty("--ui", P.uiScale);
+    document.querySelector(".pills").classList.toggle("hidden", !P.customStatus);
     $("lean").classList.toggle("hidden", !P.lean);
     if (k === "showSpots" || k === "hiddenSpots") drawSpots();
     if (k === "cameras") drawCameras();
@@ -186,7 +213,7 @@
     const prev = S.me;
     const here = { lat: c.latitude, lon: c.longitude };
     let heading = c.heading != null && !isNaN(c.heading) && (c.speed || 0) > 1 ? c.heading : null;
-    if (heading == null && prev && Geo.distance(prev, here) > 4) heading = Geo.bearing(prev, here);
+    if (heading == null && prev && (c.speed || 0) > 2 && Geo.distance(prev, here) > 4) heading = Geo.bearing(prev, here);
     S.me = Object.assign(here, { acc: c.accuracy || 20, heading: heading != null ? heading : prev && prev.heading,
       speed: c.speed != null && c.speed >= 0 ? c.speed : 0, alt: c.altitude, t: Date.now() });
     if (heading != null) setHeading(heading);
@@ -246,13 +273,34 @@
     $("leanR").style.setProperty("--w", `${Math.min(100, Math.max(0, v) / 50 * 100)}%`);
   }
   let sensorsOn = false;
+  /**
+   * Πού κοιτάει το κινητό (μοίρες από τον βορρά), με διόρθωση της κλίσης:
+   * όρθιο στη βάση της μηχανής → η κατεύθυνση της πλάτης του· ξαπλωμένο → η κατεύθυνση της πάνω άκρης της οθόνης.
+   */
+  function deviceHeading(e) {
+    const r = Math.PI / 180, a = e.alpha * r, b = (e.beta || 0) * r, g = (e.gamma || 0) * r;
+    const cA = Math.cos(a), sA = Math.sin(a), cB = Math.cos(b), sB = Math.sin(b), cG = Math.cos(g), sG = Math.sin(g);
+    const zUp = cB * cG; // πόσο «κοιτάει πάνω» η οθόνη
+    let x, y;
+    if (Math.abs(zUp) > 0.7) {
+      // Ξαπλωμένο: η πάνω άκρη της οθόνης (με τη γωνία της οθόνης για το οριζόντιο).
+      const ang = ((screen.orientation && screen.orientation.angle) || window.orientation || 0) * r;
+      const tx = -sA * cB, ty = cA * cB;
+      const rx = cA * cG - sA * sB * sG, ry = sA * cG + cA * sB * sG;
+      x = tx * Math.cos(ang) + rx * Math.sin(ang);
+      y = ty * Math.cos(ang) + ry * Math.sin(ang);
+    } else {
+      // Όρθιο: η πλάτη του κινητού (προς τα εκεί που πας).
+      x = -(cA * sG + sA * sB * cG);
+      y = -(sA * sG - cA * sB * cG);
+    }
+    return (Math.atan2(x, y) * 180 / Math.PI + 360) % 360;
+  }
   function onOrient(e) {
     const moving = S.me && S.me.speed > 2;
     if (moving || S.sim) return;
-    let h = e.webkitCompassHeading != null ? e.webkitCompassHeading : e.alpha != null && e.absolute ? 360 - e.alpha : null;
-    if (h == null) return;
-    // Η γωνία της οθόνης (οριζόντια/κάθετη) αλλάζει πού «κοιτάει» το κινητό.
-    if (e.webkitCompassHeading == null) h = (h + ((screen.orientation && screen.orientation.angle) || 0)) % 360;
+    let h = e.webkitCompassHeading != null ? e.webkitCompassHeading : e.alpha != null && e.absolute !== false ? deviceHeading(e) : null;
+    if (h == null || isNaN(h)) return;
     // Λίγο εξομάλυνση (η πυξίδα του κινητού «τρέμει»).
     if (S.heading != null) { let d = ((h - S.heading + 540) % 360) - 180; h = (S.heading + d * 0.3 + 360) % 360; }
     setHeading(h);
@@ -742,7 +790,7 @@
     if (!P.cameras) return;
     cameras.forEach((c) => {
       const el = document.createElement("div");
-      el.className = "camm"; el.textContent = "📷"; el.title = c.label || "Κάμερα";
+      el.className = "camm"; el.innerHTML = I.camera; el.title = c.label || "Κάμερα";
       camMarkers.push(new maplibregl.Marker({ element: el }).setLngLat([c.lo, c.la]).addTo(map));
     });
   }
@@ -767,7 +815,7 @@
   $("stopBtn").onclick = () => stopNav(true);
   $("muteBtn").onclick = () => {
     S.muted = !S.muted;
-    $("muteBtn").textContent = S.muted ? "🔇" : "🔊";
+    $("muteBtn").innerHTML = S.muted ? I.voice_off : I.voice;
     $("muteBtn").classList.toggle("pri", !S.muted);
     if (S.muted) { speechSynthesis.cancel(); if (audio) audio.pause(); }
   };
@@ -990,13 +1038,22 @@
     const r = S.route;
     if (!r) return;
     const s = st || { next: r.maneuvers[0], distToNext: r.maneuvers[0].at, remaining: r.length, progress: 0, then: null };
-    $("instrIcon").innerHTML = arrowSvg(s.next.turn);
+    // Χρώμα ταμπέλας ανά δρόμο (όπως στην Android): πράσινη αυτοκινητόδρομος, μπλε κύρια, πορτοκαλί χώμα, μπορντό άφιξη.
+    let sign = null;
+    if (P.roadColors && !S.rerouting) {
+      if (s.next.turn === "ARRIVE" || (s.then && s.then.turn === "ARRIVE")) sign = "#66023C";
+      else sign = { MOTORWAY: "#24A046", MAIN: "#377DF6", DIRT: "#F58142" }[N.kindAt(r, s.next.at + 30)] || null;
+    }
+    $("instr").classList.toggle("signed", !!sign);
+    $("instr").style.setProperty("--sign", sign || "var(--surface)");
+    $("instr").style.setProperty("--sign2", sign ? (sign === "#377DF6" ? "#316BCE" : darker(sign, 0.14)) : "var(--surface2)");
+    $("instrIcon").innerHTML = arrowSvg(s.next.turn, sign ? "#FFFFFF" : null);
     $("instrDist").textContent = Phrases.short(s.distToNext);
     $("instrText").textContent = (s.next.street ? Phrases.title(s.next) + " · " + s.next.street : Phrases.title(s.next));
     const then = $("instrThen");
     if (s.then) {
       $("instrThenTxt").textContent = `Έπειτα μετά από ${Phrases.short(s.then.at - s.next.at)}`;
-      $("instrThenIcon").innerHTML = arrowSvg(s.then.turn);
+      $("instrThenIcon").innerHTML = arrowSvg(s.then.turn, sign ? "#FFFFFF" : null);
       then.classList.remove("hidden");
     } else then.classList.add("hidden");
     const left = r.length > 0 ? r.duration * (s.remaining / r.length) : 0;
@@ -1005,19 +1062,7 @@
     $("remD").textContent = Phrases.short(s.remaining);
     $("prog").style.width = `${Math.round((s.progress / r.length) * 100)}%`;
   }
-  function arrowSvg(turn) {
-    const c = accentNow();
-    const rot = { STRAIGHT: 0, SLIGHT_LEFT: -40, LEFT: -90, SHARP_LEFT: -135, SLIGHT_RIGHT: 40, RIGHT: 90, SHARP_RIGHT: 135,
-      KEEP_LEFT: -25, KEEP_RIGHT: 25, EXIT_LEFT: -45, EXIT_RIGHT: 45, UTURN: 180 }[turn] || 0;
-    if (turn === "ARRIVE") return `<svg viewBox="0 0 64 64"><path d="M18 58V8l30 11-30 11" fill="none" stroke="${c}" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
-    if (turn === "ROUNDABOUT" || turn === "ROUNDABOUT_LEFT") return `<svg viewBox="0 0 64 64"><circle cx="32" cy="28" r="12" fill="none" stroke="${c}" stroke-width="7"/><path d="M32 60V40" stroke="${c}" stroke-width="7" stroke-linecap="round"/></svg>`;
-    if (turn === "LEFT" || turn === "RIGHT") {
-      const f = turn === "LEFT" ? 1 : -1;
-      return `<svg viewBox="0 0 64 64"><g transform="${f === 1 ? "" : "translate(64 0) scale(-1 1)"}"><path d="M40 60V30q0-8-8-8H14" fill="none" stroke="${c}" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 10L10 22l14 12" fill="none" stroke="${c}" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></g></svg>`;
-    }
-    return `<svg viewBox="0 0 64 64"><g transform="rotate(${rot} 32 36)"><path d="M32 60V14" stroke="${c}" stroke-width="9" stroke-linecap="round"/><path d="M17 27L32 10 47 27" fill="none" stroke="${c}" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></g></svg>`;
-  }
-
+  function arrowSvg(turn, color) { return I.maneuver(turn, color || accentNow()); }
   // ---------- Προσομοίωση ----------
   async function simLoop() {
     let along = 0, r = null;
@@ -1153,6 +1198,7 @@
     resetLean() { leanZero = leanZero + leanNow; leanNow = 0; store.set("leanZero", leanZero); leanMax = { l: 0, r: 0 }; },
     lists() { return store.get("lists", [{ name: "Αγαπημένα", color: "#F59E0B", items: [] }]); },
     saveLists(l) { store.set("lists", l); drawFavs(); },
+    drawPuck, darker, accentNow: () => accentNow(),
     addFavorite(p) { window.Settings.addFavorite(p); },
     followTrack(points, name) {
       if (points.length < 2) return;
@@ -1178,6 +1224,13 @@
     },
     closeSheets() { $("search").classList.add("hidden"); $("settings").classList.add("hidden"); },
   };
+  // Τα ίδια εικονίδια με την Android εφαρμογή.
+  const setIcon = (id, name) => { const el = $(id); if (el && I[name]) el.innerHTML = I[name]; };
+  [["searchBtn", "search"], ["settingsBtn", "settings"], ["stopBtn", "close"], ["reportBtn", "warning"], ["muteBtn", "voice"], ["favBtn", "star"],
+    ["addStopBtn", "add"], ["cardClose", "close"], ["avMotoBtn", "motorway"], ["avTollBtn", "toll"], ["recBtn", "rec"], ["searchBack", "back"],
+    ["setBack", "back"], ["installClose", "close"]].forEach(([id, n]) => setIcon(id, n));
+  document.querySelectorAll(".type[data-type]").forEach((b) => { b.innerHTML = I["route_" + b.dataset.type] || b.innerHTML; });
+  document.querySelector(".trip-row span").firstChild.replaceWith(Object.assign(document.createElement("i"), { className: "ico", innerHTML: I.flag }));
   applyPrefs("_init");
   // Android/υπολογιστής: οι αισθητήρες δεν θέλουν άδεια, ανοίγουν αμέσως. iPhone: από Ρυθμίσεις → Όργανα (ή μόνα τους αν έχεις δώσει άδεια).
   const needsPermission = window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === "function";
