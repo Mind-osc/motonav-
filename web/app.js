@@ -1374,6 +1374,17 @@
   else if (store.get("sensorsGranted", false)) document.addEventListener("click", function once() {
     document.removeEventListener("click", once); enableSensors();
   });
+  // Πλήρης οθόνη στο Android (χωρίς μπάρες, και στο οριζόντιο). Το iPhone δεν το επιτρέπει σε web εφαρμογές:
+  // εκεί, από την αρχική οθόνη, ανοίγει ήδη χωρίς τη μπάρα του Safari.
+  if (/android/i.test(navigator.userAgent)) {
+    document.documentElement.classList.add("android");
+    const goFull = () => {
+      if (document.fullscreenElement || !document.documentElement.requestFullscreen) return;
+      document.documentElement.requestFullscreen({ navigationUI: "hide" }).catch(() => {});
+    };
+    // Χρειάζεται άγγιγμα: με το πρώτο άγγιγμα (και ξανά αν βγει από πλήρη οθόνη).
+    addEventListener("pointerup", goFull, { passive: true });
+  }
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
   startGps();
 })();
