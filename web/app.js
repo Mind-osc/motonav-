@@ -71,7 +71,17 @@
       set(id, "text-halo-width", 1.6);
     });
   }
-  const firstLabel = () => LABELS.find((id) => map.getLayer(id));
+  /** Η διαδρομή μπαίνει πάνω από όλους τους δρόμους/γέφυρες και κάτω από τα ονόματα (όπως στην Android). */
+  const firstLabel = () => {
+    const ls = (map.getStyle() && map.getStyle().layers) || [];
+    let lastRoad = -1;
+    ls.forEach((l, i) => { if (l.type === "line" && /highway|road|bridge|tunnel|transportation|railway|aeroway|building/.test(l.id)) lastRoad = i; });
+    for (let i = lastRoad + 1; i < ls.length; i++) {
+      const l = ls[i];
+      if (l.type === "symbol" && !/^(route|alts|pts|nogo)/.test(l.id)) return l.id;
+    }
+    return undefined;
+  };
   function addLayers() {
     applyContrast();
     if (map.getSource("route")) return;
@@ -334,7 +344,7 @@
   }
   function onOrient(e) {
     const moving = S.me && S.me.speed > 2;
-    if (moving || S.sim) return;
+    if (moving || S.sim || S.nav) return; // στην πλοήγηση το βελάκι ακολουθεί μόνο τη διαδρομή
     let h = e.webkitCompassHeading != null ? e.webkitCompassHeading : e.alpha != null && e.absolute !== false ? deviceHeading(e) : null;
     if (h == null || isNaN(h)) return;
     // Λίγο εξομάλυνση (η πυξίδα του κινητού «τρέμει»).
@@ -875,7 +885,7 @@
     showLean();
     if (P.lean) enableSensors();
     S.engine = new Engine(S.route);
-    S.stage = {}; S.said = {}; S.follow = true; S.anim = null; S.state = null; S.lastLimit = null;
+    S.stage = {}; S.said = {}; S.follow = true; S.anim = null; S.lastAlong = null; S.navBearing = null; S.state = null; S.lastLimit = null;
     S.alts = []; drawAlts();
     $("card").classList.add("hidden");
     $("rightCol").classList.remove("hidden");
@@ -938,7 +948,12 @@
     if (st.offRoute && !S.rerouting && performance.now() - S.lastReroute > 3000) reroute();
     const now = performance.now();
     const cur = currentAnim(now);
-    S.anim = { from: cur, to: st.onRoute ? { along: st.progress } : { p: { lat: me.lat, lon: me.lon } }, t0: now, dur: 950 };
+    // Σταματημένος/αργός: το GPS «χορεύει» λίγα μέτρα – το βελάκι δεν πάει πίσω και δεν τρέμει.
+    let along = st.progress;
+    if (st.onRoute && S.lastAlong != null && along < S.lastAlong && S.lastAlong - along < 25) along = S.lastAlong;
+    if (st.onRoute && S.lastAlong != null && (me.speed || 0) < 1.5 && Math.abs(along - S.lastAlong) < 6) along = S.lastAlong;
+    if (st.onRoute) S.lastAlong = along;
+    S.anim = { from: cur, to: st.onRoute ? { along } : { p: { lat: me.lat, lon: me.lon } }, t0: now, dur: 950 };
     announce(st);
     alerts(st);
     render(st);
@@ -961,10 +976,13 @@
     let p, bearing;
     if (cur.along != null) {
       p = pointAt(S.route, cur.along);
-      const ahead = pointAt(S.route, Math.min(S.route.length, cur.along + 15));
+      const ahead = pointAt(S.route, Math.min(S.route.length, cur.along + 25));
       bearing = Geo.distance(p, ahead) > 1 ? Geo.bearing(p, ahead) : (S.me && S.me.heading) || 0;
       if (now - lastTrim > 90) { drawRoute(remaining(S.route, cur.along)); lastTrim = now; }
     } else { p = cur.p; bearing = (S.me && S.me.heading) || 0; }
+    // Ομαλή στροφή (χωρίς τρεμόπαιγμα από το GPS)
+    if (S.navBearing != null) { const d = ((bearing - S.navBearing + 540) % 360) - 180; bearing = (S.navBearing + d * (Math.abs(d) > 60 ? 0.25 : 0.12) + 360) % 360; }
+    S.navBearing = bearing;
     puck.setLngLat([p.lon, p.lat]).setRotation(bearing).addTo(map);
     setHeading(bearing);
     if (S.follow) {
@@ -1010,7 +1028,7 @@
       if (!S.nav) return;
       S.route = r;
       S.engine = new Engine(r);
-      S.stage = {}; S.anim = null;
+      S.stage = {}; S.anim = null; S.lastAlong = null;
       drawRoute(r.points);
       SV.fuelOnRoute(r).then((f) => { if (S.route === r) { S.fuel = f; drawFuel(); } }).catch(() => {});
     } catch (e) { toast(e.message); }

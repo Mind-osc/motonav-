@@ -266,3 +266,11 @@ body.lean-on .right-col { bottom: calc(var(--sb) + 184px); }
   .btn { height: 50px; }
   .card-actions { position: static; }
 }
+/* Ταμπέλα αναλογική: όσο χρειάζεται το περιεχόμενο, μεγαλώνει με το κείμενο (αναδιπλώνεται αντί να κόβεται) */
+.instr, .instr { width: fit-content !important; min-width: 0; max-width: calc(100vw - 16px - var(--sl) - var(--sr)); }
+@media (orientation: landscape) { .instr { max-width: min(520px, 46vw); } }
+.instr-main { width: auto; }
+.instr-txt { min-width: 0; }
+.instr-text { white-space: normal; overflow-wrap: anywhere; overflow: visible; text-overflow: clip; }
+.instr-then { gap: 14px; justify-content: flex-start; }
+.instr-then #instrThenTxt { white-space: normal; }
