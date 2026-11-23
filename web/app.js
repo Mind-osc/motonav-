@@ -51,19 +51,41 @@
   });
   map.on("dragstart", () => { if (S.nav) S.follow = false; });
   const empty = { type: "FeatureCollection", features: [] };
+  // Ίδια αντίθεση με τον σκούρο χάρτη της Android εφαρμογής (MapContrast.kt): γεμάτοι γκρι δρόμοι, ανοιχτά ονόματα.
+  const CONTRAST_LINES = { highway_path: "#454A53", highway_minor: "#5A606B", highway_major_subtle: "#555B66", highway_major_casing: "#1B1D22",
+    highway_major_inner: "#878D98", highway_motorway_subtle: "#6A707B", highway_motorway_casing: "#1B1D22", highway_motorway_inner: "#A6ACB6",
+    railway: "#3A3E46", railway_minor: "#3A3E46", railway_transit: "#3A3E46" };
+  const LABELS = ["water_name", "highway_name_other", "highway_name_motorway", "place_other", "place_suburb", "place_village", "place_town",
+    "place_city", "place_city_large", "place_state", "place_country_other", "place_country_minor", "place_country_major"];
+  function applyContrast() {
+    if (document.documentElement.dataset.theme === "light") return;
+    const set = (id, k, v) => { try { if (map.getLayer(id)) map.setPaintProperty(id, k, v); } catch (e) { /* */ } };
+    set("background", "background-color", "#07080B");
+    Object.entries(CONTRAST_LINES).forEach(([id, c]) => {
+      set(id, "line-color", c);
+      if (/path|minor|casing/.test(id)) set(id, "line-opacity", 1);
+    });
+    LABELS.forEach((id) => {
+      set(id, "text-color", id.startsWith("highway") ? "#E3E6EB" : "#C9CDD4");
+      set(id, "text-halo-color", "#07080B");
+      set(id, "text-halo-width", 1.6);
+    });
+  }
+  const firstLabel = () => LABELS.find((id) => map.getLayer(id));
   function addLayers() {
+    applyContrast();
     if (map.getSource("route")) return;
     ["alts", "route", "pts", "nogo"].forEach((id) => map.addSource(id, { type: "geojson", data: empty }));
-    map.addLayer({ id: "nogo-fill", type: "fill", source: "nogo", paint: { "fill-color": "#FF4D4D", "fill-opacity": 0.18 } });
-    map.addLayer({ id: "nogo-line", type: "line", source: "nogo", paint: { "line-color": "#FF4D4D", "line-width": 2, "line-dasharray": [2, 2] } });
+    map.addLayer({ id: "nogo-fill", type: "fill", source: "nogo", paint: { "fill-color": "#FF4D4D", "fill-opacity": 0.18 } }, firstLabel());
+    map.addLayer({ id: "nogo-line", type: "line", source: "nogo", paint: { "line-color": "#FF4D4D", "line-width": 2, "line-dasharray": [2, 2] } }, firstLabel());
     map.addLayer({ id: "alts", type: "line", source: "alts", layout: { "line-cap": "round", "line-join": "round" },
-      paint: { "line-color": "#8A8F9C", "line-width": ["interpolate", ["linear"], ["zoom"], 10, 5, 16, 11], "line-opacity": 0.85 } });
+      paint: { "line-color": "#8A8F9C", "line-width": ["interpolate", ["linear"], ["zoom"], 10, 5, 16, 11], "line-opacity": 0.85 } }, firstLabel());
     map.addLayer({ id: "alts-label", type: "symbol", source: "alts", layout: { "symbol-placement": "line-center", "text-field": ["get", "label"],
       "text-font": ["Noto Sans Bold"], "text-size": 14 }, paint: { "text-color": "#fff", "text-halo-color": "#111", "text-halo-width": 2 } });
     map.addLayer({ id: "route-casing", type: "line", source: "route", layout: { "line-cap": "round", "line-join": "round" },
-      paint: { "line-color": accentNow(), "line-width": ["interpolate", ["linear"], ["zoom"], 10, 7, 16, 17] } });
+      paint: { "line-color": accentNow(), "line-width": ["interpolate", ["linear"], ["zoom"], 10, 7, 16, 17] } }, firstLabel());
     map.addLayer({ id: "route-line", type: "line", source: "route", layout: { "line-cap": "round", "line-join": "round" },
-      paint: { "line-color": "#FFFFFF", "line-width": ["interpolate", ["linear"], ["zoom"], 10, 4, 16, 12] } });
+      paint: { "line-color": "#FFFFFF", "line-width": ["interpolate", ["linear"], ["zoom"], 10, 4, 16, 12] } }, firstLabel());
     map.addLayer({ id: "pts", type: "circle", source: "pts", paint: { "circle-radius": 11, "circle-color": accentNow(), "circle-stroke-color": "#0E0F13", "circle-stroke-width": 3 } });
     map.addLayer({ id: "pts-n", type: "symbol", source: "pts", filter: ["has", "n"],
       layout: { "text-field": ["get", "n"], "text-font": ["Noto Sans Bold"], "text-size": 12, "text-allow-overlap": true }, paint: { "text-color": "#0E0F13" } });
