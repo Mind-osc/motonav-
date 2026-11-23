@@ -126,6 +126,9 @@ fun SettingsScreen(
                         SwitchRow("Δική μας ώρα και μπαταρία", "Πάνω πάνω, αντί για τη γραμμή του κινητού (σύρε από πάνω για να τη δεις)", display.customStatus) {
                             onDisplayChange(display.copy(customStatus = it))
                         }
+                        SwitchRow("Πληκτρολόγιο με το άνοιγμα αναζήτησης", "Ανοιχτό: βγαίνει αμέσως · Κλειστό: μόνο όταν πατήσεις εκεί που γράφεις", display.searchKeyboard) {
+                            onDisplayChange(display.copy(searchKeyboard = it))
+                        }
                     }
                 }
                 "map" -> {

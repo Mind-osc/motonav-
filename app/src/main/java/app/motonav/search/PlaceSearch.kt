@@ -151,6 +151,10 @@ class PlaceSearch(private val tomtomKey: String = "") {
             }.getOrNull()
             if (!found.isNullOrEmpty()) return@withContext found
         }
+        // Χωρίς κλειδί TomTom: πρώτα τα σημεία που έχει μέσα η εφαρμογή (όλη η Ελλάδα, από OpenStreetMap, άμεσα).
+        // Το Overpass είναι συχνά «γεμάτο» (502/504 ή δεν απαντά), και τότε ο κόσμος έβλεπε «τίποτα».
+        val offline = OfflineGazetteer.category(cat, near, radiusM)
+        if (offline.size >= 3) return@withContext offline
         val query = String.format(
             Locale.US,
             "[out:json][timeout:15];nwr(around:%d,%.5f,%.5f)%s;out center 60;",
@@ -162,7 +166,7 @@ class PlaceSearch(private val tomtomKey: String = "") {
             val call = kotlinx.coroutines.GlobalScope.async(Dispatchers.IO) { app.motonav.net.Overpass.query(query, 15_000) }
             val json = kotlinx.coroutines.withTimeoutOrNull(40_000) { call.await() }
                 ?: throw java.net.SocketTimeoutException("Overpass")
-            PlaceParsers.overpass(json, near, cat.fallbackName)
+            PlaceParsers.overpass(json, near, cat.fallbackName).ifEmpty { offline }
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {

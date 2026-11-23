@@ -1520,6 +1520,7 @@ fun MapScreen(
                 speedKmh = gps.value.speedKmh,
                 recents = recents,
                 tomtomKey = display.tomtomKey,
+                autoKeyboard = display.searchKeyboard,
                 onPick = { place ->
                     showSearch = false
                     scope.launch { repo.addRecent(place) }

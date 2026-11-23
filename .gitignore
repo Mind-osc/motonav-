@@ -13,3 +13,4 @@ captures/
 *.keystore
 *.jks
 !app/release.keystore
+__pycache__/

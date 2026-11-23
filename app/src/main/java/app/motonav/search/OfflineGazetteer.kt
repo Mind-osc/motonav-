@@ -67,6 +67,9 @@ object OfflineGazetteer {
     private class Poi(val name: String, val lat: Double, val lon: Double, val kind: String)
     @Volatile private var pois: List<Poi>? = null
 
+    /** Υπάρχουν offline σημεία μέσα στην εφαρμογή; */
+    fun hasPois(): Boolean = loadPois().isNotEmpty()
+
     private fun loadPois(): List<Poi> {
         pois?.let { return it }
         val ctx = appContext ?: return emptyList()
@@ -104,7 +107,7 @@ object OfflineGazetteer {
             .filter { it.second <= radiusM }
             .sortedBy { it.second }
             .take(60)
-            .map { (p, _) -> Place(p.name.ifBlank { cat.fallbackName }, "χωρίς internet", p.lat, p.lon, p.kind) }
+            .map { (p, _) -> Place(p.name.ifBlank { cat.fallbackName }, if (p.name.isBlank()) "" else cat.fallbackName, p.lat, p.lon, p.kind) }
             .toList()
     }
 

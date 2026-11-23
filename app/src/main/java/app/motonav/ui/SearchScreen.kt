@@ -103,6 +103,8 @@ fun SearchScreen(
     onPick: (Place) -> Unit,
     onBack: () -> Unit,
     tomtomKey: String = "",
+    /** true: το πληκτρολόγιο ανοίγει μόλις ανοίξει η αναζήτηση. false: μόνο όταν πατήσεις στο πεδίο. */
+    autoKeyboard: Boolean = false,
     home: Place? = null,
     work: Place? = null,
     favorites: List<Place> = emptyList(),
@@ -176,7 +178,7 @@ fun SearchScreen(
     // Πληκτρολόγιο: εστίαση και ρητό άνοιγμα. Μόνο η εστίαση δεν το ανοίγει πάντα,
     // και μετά ένα πάτημα στο ήδη εστιασμένο πεδίο δεν έκανε τίποτα.
     LaunchedEffect(Unit) {
-        if (!moving) {
+        if (!moving && autoKeyboard) {
             delay(250)
             runCatching { focus.requestFocus() }
             keyboard?.show()
