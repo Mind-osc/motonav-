@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="el">
+<html lang="el" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
@@ -18,109 +18,155 @@
 </head>
 <body>
   <div id="map" aria-label="Χάρτης"></div>
+  <div id="glow" class="glow hidden"></div>
 
-  <!-- Αναζήτηση (όταν δεν πλοηγείς) -->
-  <div id="top" class="safe-top">
-    <div class="search">
-      <input id="q" type="search" placeholder="Πού πάμε;" autocomplete="off" enterkeyhint="search" aria-label="Αναζήτηση">
-      <button id="menuBtn" class="icon-btn" aria-label="Μενού">☰</button>
-    </div>
-    <div id="results" class="results hidden" role="listbox"></div>
+  <!-- Πάνω: ώρα/υψόμετρο και καιρός/GPS/μπαταρία (όπως στην Android) -->
+  <div class="pills safe-top">
+    <div class="pill num"><span id="clock">--:--</span><span class="sep">▲</span><span id="alt">–</span></div>
+    <div class="pill num"><span id="wx"></span><span id="gps" title="Ακρίβεια GPS">◎ –</span><span id="batt" class="batt hidden"><i></i></span></div>
   </div>
 
   <!-- Οδηγία στην πλοήγηση -->
-  <div id="instr" class="instr hidden safe-top">
+  <div id="instr" class="instr hidden">
     <div class="instr-main">
       <div id="instrIcon" class="instr-icon"></div>
-      <div>
-        <div id="instrDist" class="instr-dist"></div>
+      <div class="instr-txt">
+        <div id="instrDist" class="instr-dist num"></div>
         <div id="instrText" class="instr-text"></div>
       </div>
     </div>
-    <div id="instrThen" class="instr-then hidden"></div>
+    <div id="instrThen" class="instr-then hidden"><span id="instrThenTxt"></span><span id="instrThenIcon" class="then-icon"></span></div>
+  </div>
+  <div id="navPills" class="nav-pills hidden"></div>
+
+  <!-- Δεξιά: αναφορά, αναζήτηση, ρυθμίσεις (εκτός πλοήγησης) / ✕ (στην πλοήγηση) -->
+  <div id="rightCol" class="right-col">
+    <button id="recBtn" class="fab" aria-label="Καταγραφή">⏺</button>
+    <button id="searchBtn" class="fab" aria-label="Αναζήτηση"><svg viewBox="0 0 24 24"><circle cx="10" cy="10" r="6.5" fill="none" stroke="currentColor" stroke-width="2.6"/><path d="M15 15l6 6" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></svg></button>
+    <button id="settingsBtn" class="fab" aria-label="Ρυθμίσεις">⚙</button>
+    <button id="stopBtn" class="fab stop hidden" aria-label="Τέλος πλοήγησης">✕</button>
   </div>
 
-  <!-- Κουμπιά χάρτη -->
-  <div id="fabs" class="fabs">
-    <button id="locBtn" class="fab" aria-label="Η θέση μου">◎</button>
+  <!-- Κάτω δεξιά: ταχύτητα με πυξίδα, σήμα ορίου, κλισιόμετρο -->
+  <div id="gauge" class="gauge" role="button" aria-label="Κέντρο στη θέση μου">
+    <div id="lean" class="lean hidden"><i id="leanL"></i><b id="leanV" class="num">0°</b><i id="leanR"></i></div>
+    <div id="limit" class="limit hidden num"></div>
+    <svg id="compass" viewBox="0 0 120 120" class="compass"></svg>
+    <div class="speed-num num" id="speed">0</div>
   </div>
 
-  <!-- Κάρτα διαδρομής -->
-  <div id="card" class="card hidden safe-bottom">
-    <div class="card-head">
-      <div>
-        <div id="cardTitle" class="card-title"></div>
-        <div id="cardSub" class="card-sub"></div>
+  <!-- Κάτω αριστερά στην πλοήγηση -->
+  <div id="navLeft" class="nav-left hidden">
+    <button id="reportBtn" class="fab small" aria-label="Κλειστός δρόμος / νέα διαδρομή">⚠</button>
+    <div class="nav-bottom">
+      <button id="muteBtn" class="fab small pri" aria-label="Σίγαση">🔊</button>
+      <div id="trip" class="trip">
+        <div class="trip-row num"><span>🏁 <b id="eta"></b></span><b id="remT" class="green"></b><b id="remD"></b></div>
+        <div class="progress"><i id="prog"></i></div>
       </div>
-      <button id="cardClose" class="icon-btn" aria-label="Κλείσιμο">✕</button>
+    </div>
+  </div>
+
+  <!-- Κάρτα προορισμού / διαδρομής -->
+  <div id="card" class="card hidden">
+    <div class="handle" id="cardHandle"></div>
+    <div class="card-head">
+      <div class="card-title"><span id="cardTime" class="green"></span><span id="cardDist"></span></div>
+      <button id="favBtn" class="sq" aria-label="Αγαπημένο">★</button>
+      <button id="addStopBtn" class="sq" aria-label="Στάση">+</button>
+    </div>
+    <div id="cardName" class="card-name"></div>
+    <div class="card-row">
+      <span id="cardCoords" class="muted small"></span>
+      <span class="row-actions">
+        <button id="revBtn" class="link hidden">⇅ Ανάποδα</button>
+        <button id="saveRouteBtn" class="link" title="Αποθήκευση διαδρομής">💾</button>
+        <button id="shareBtn" class="link" title="Κοινοποίηση">⇪</button>
+        <button id="gpxBtn" class="link" title="Εξαγωγή GPX">GPX</button>
+        <button id="altBtn" class="link" title="Εναλλακτικές">⇄</button>
+        <button id="nogoBtn" class="link" title="Περιοχή αποφυγής">⊘</button>
+        <span id="stars" class="stars"></span>
+      </span>
+    </div>
+    <div id="nogoRow" class="chips hidden">
+      <span class="muted small">Αποφυγή γύρω από το σημείο:</span>
+      <button data-r="300">300 m</button><button data-r="1000">1 km</button><button data-r="3000">3 km</button>
     </div>
     <div id="cardStops" class="stops"></div>
-    <div class="types" role="radiogroup" aria-label="Τύπος διαδρομής">
-      <button data-type="fast" class="type on" title="Γρήγορη">⚡<span>Γρήγορη</span></button>
-      <button data-type="twisty" class="type" title="Στροφές">〰<span>Στροφές</span></button>
-      <button data-type="dirt" class="type" title="Χώμα">⛰<span>Χώμα</span></button>
-    </div>
-    <div class="toggles">
-      <label><input id="avMoto" type="checkbox"> Χωρίς αυτοκινητόδρομους</label>
-      <label><input id="avToll" type="checkbox"> Χωρίς διόδια</label>
-    </div>
-    <canvas id="elev" class="elev" height="60"></canvas>
+    <canvas id="elev" class="elev"></canvas>
+    <div id="cardInfo" class="card-info"></div>
     <div id="cardMsg" class="card-msg hidden"></div>
+    <div class="types">
+      <button data-type="fast" class="type" aria-label="Γρήγορη"><svg viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z" fill="currentColor"/></svg></button>
+      <button data-type="twisty" class="type" aria-label="Στροφές"><svg viewBox="0 0 24 24"><path d="M17 3C11 3 7 5 7 8s10 3 10 7-5 6-10 6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></button>
+      <button data-type="dirt" class="type" aria-label="Χώμα"><svg viewBox="0 0 24 24"><path d="M2 20l7-11 4 6 3-4 6 9z" fill="currentColor"/></svg></button>
+      <button data-type="traffic" class="type" aria-label="Κίνηση"><svg viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="20" rx="3" fill="currentColor"/><circle cx="12" cy="7" r="1.8" fill="var(--surface)"/><circle cx="12" cy="12" r="1.8" fill="var(--surface)"/><circle cx="12" cy="17" r="1.8" fill="var(--surface)"/></svg></button>
+      <span class="spacer"></span>
+      <button id="avMotoBtn" class="type tog" aria-label="Χωρίς αυτοκινητόδρομους"><svg viewBox="0 0 24 24"><path d="M9 2L4 22M15 2l5 20M12 4v3M12 10v3M12 16v3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
+      <button id="avTollBtn" class="type tog" aria-label="Χωρίς διόδια">€</button>
+    </div>
     <div class="card-actions">
-      <button id="saveBtn" class="btn sec" aria-label="Αποθήκευση">★</button>
-      <button id="shareBtn" class="btn sec" aria-label="Κοινοποίηση">⇪</button>
-      <button id="gpxBtn" class="btn sec" aria-label="GPX">GPX</button>
       <button id="startBtn" class="btn pri">Ξεκίνα</button>
+      <button id="cardClose" class="btn sq-lg" aria-label="Κλείσιμο">✕</button>
     </div>
   </div>
 
-  <!-- Κάτω μπάρα στην πλοήγηση -->
-  <div id="navbar" class="navbar hidden safe-bottom">
-    <button id="muteBtn" class="fab small" aria-label="Σίγαση">🔊</button>
-    <div class="trip">
-      <div><span class="flag">🏁</span><b id="eta"></b></div>
-      <div><b id="remT" class="green"></b></div>
-      <div><b id="remD"></b></div>
+  <!-- Αναζήτηση -->
+  <div id="search" class="sheet hidden" role="dialog" aria-label="Αναζήτηση">
+    <div class="sheet-head">
+      <button id="searchBack" class="sq" aria-label="Πίσω">←</button>
+      <input id="q" type="search" placeholder="Πού πάμε;" autocomplete="off" enterkeyhint="search" aria-label="Αναζήτηση">
     </div>
-    <div class="speed"><b id="speed">0</b><span>km/h</span></div>
-    <button id="stopBtn" class="fab small danger" aria-label="Τέλος πλοήγησης">✕</button>
-  </div>
-
-  <!-- Μενού -->
-  <div id="menu" class="sheet hidden" role="dialog" aria-label="Μενού">
-    <div class="sheet-head"><b>Moto Nav</b><button id="menuClose" class="icon-btn" aria-label="Κλείσιμο">✕</button></div>
     <div class="sheet-body">
-      <h3>Αποθηκευμένες διαδρομές</h3>
-      <div id="savedList" class="list"></div>
-      <h3>Εργαλεία</h3>
-      <button id="importBtn" class="row-btn">📂 Άνοιγμα GPX</button>
-      <input id="gpxFile" type="file" accept=".gpx,application/gpx+xml,application/xml,text/xml" class="hidden">
-      <label class="row-btn"><input id="voiceOn" type="checkbox" checked> Φωνή πλοήγησης</label>
-      <a class="row-btn" href="https://paypal.me/STAVROSMALAGARDIS" target="_blank" rel="noopener">☕ Κέρασέ με έναν καφέ</a>
-      <a class="row-btn" href="https://github.com/Mind-osc/motonav-" target="_blank" rel="noopener">ℹ️ Για το Android: η πλήρης εφαρμογή</a>
-      <p class="muted">Έκδοση web (PWA) για iPhone και υπολογιστή. Οι διαδρομές υπολογίζονται online από το
-        <a href="https://brouter.de" target="_blank" rel="noopener">BRouter</a>, ο χάρτης από το OpenFreeMap (© OpenStreetMap).
-        Στο iPhone η πλοήγηση δουλεύει όσο η οθόνη είναι ανοιχτή και η εφαρμογή μπροστά.</p>
+      <div id="cats" class="chips wrap"></div>
+      <div id="results" class="list"></div>
+      <div id="searchHome"></div>
     </div>
   </div>
 
-  <!-- Μενού παρατεταμένου πατήματος -->
+  <!-- Ρυθμίσεις -->
+  <div id="settings" class="sheet hidden" role="dialog" aria-label="Ρυθμίσεις">
+    <div class="sheet-head">
+      <button id="setBack" class="sq" aria-label="Πίσω">←</button>
+      <b id="setTitle" class="sheet-title">Ρυθμίσεις</b>
+    </div>
+    <div id="setBody" class="sheet-body"></div>
+  </div>
+
+  <!-- Παρατεταμένο πάτημα -->
   <div id="pop" class="pop hidden">
     <div id="popTitle" class="pop-title"></div>
-    <button id="popGo" class="btn pri">Πήγαινε εδώ</button>
-    <button id="popStop" class="btn sec">+ Στάση</button>
+    <div class="pop-row">
+      <button id="popGo" class="btn pri">Πήγαινε εδώ</button>
+      <button id="popStop" class="btn sec">+ Στάση</button>
+      <button id="popFav" class="btn sec" aria-label="Αγαπημένο">★</button>
+    </div>
   </div>
 
-  <div id="toast" class="toast hidden"></div>
+  <!-- Στην πλοήγηση: κλειστός δρόμος / νέα διαδρομή -->
+  <div id="report" class="pop hidden">
+    <div class="pop-title">Τι συμβαίνει;</div>
+    <div class="pop-row">
+      <button id="closedBtn" class="btn sec big">⛔ Κλειστός δρόμος μπροστά</button>
+      <button id="rerouteBtn" class="btn sec big">↻ Νέα διαδρομή από εδώ</button>
+    </div>
+    <button id="reportClose" class="btn sec">Κλείσιμο</button>
+  </div>
 
-  <!-- Οδηγία εγκατάστασης στο iPhone -->
+  <div id="simPill" class="sim hidden"><span>▶ Προσομοίωση</span><button id="simSpeed" class="chip on">1×</button><button id="simStop" class="chip">Τέλος</button></div>
+  <div id="recPill" class="sim hidden"><span id="recTxt">⏺ Καταγραφή</span><button id="recPause" class="chip">⏸</button><button id="recStop" class="chip">■</button></div>
+  <div id="toast" class="toast hidden"></div>
+  <div id="whatsNew" class="overlay hidden"></div>
+
   <div id="install" class="install hidden">
-    <div>Για εγκατάσταση: πάτα <b>Κοινοποίηση</b> <span class="ios-share">⇪</span> και μετά <b>«Προσθήκη στην οθόνη Αφετηρίας»</b>.</div>
-    <button id="installClose" class="icon-btn" aria-label="Κλείσιμο">✕</button>
+    <div>Για εγκατάσταση: πάτα <b>Κοινοποίηση</b> <span class="accent">⇪</span> και μετά <b>«Προσθήκη στην οθόνη Αφετηρίας»</b>.</div>
+    <button id="installClose" class="sq small" aria-label="Κλείσιμο">✕</button>
   </div>
 
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
   <script src="nav.js"></script>
+  <script src="services.js"></script>
   <script src="app.js"></script>
+  <script src="settings.js"></script>
 </body>
 </html>

@@ -41,16 +41,37 @@
     8: "KEEP_LEFT", 9: "KEEP_RIGHT", 10: "UTURN", 11: "UTURN", 15: "UTURN", 13: "ROUNDABOUT", 14: "ROUNDABOUT_LEFT",
     17: "EXIT_LEFT", 18: "EXIT_RIGHT" };
 
-  function makeRoute(points, elevations, maneuversRaw, durationS) {
+  function makeRoute(points, elevations, maneuversRaw, durationS, limits, source) {
     const cum = new Float64Array(points.length);
     for (let i = 1; i < points.length; i++) cum[i] = cum[i - 1] + Geo.distance(points[i - 1], points[i]);
     const maneuvers = maneuversRaw
       .filter((m) => m.index >= 0 && m.index < points.length)
-      .map((m) => ({ index: m.index, turn: m.turn, exit: m.exit || 0, at: cum[m.index] }))
+      .map((m) => ({ index: m.index, turn: m.turn, exit: m.exit || 0, at: m.at != null ? m.at : cum[m.index], street: m.street || null }))
       .sort((a, b) => a.at - b.at);
     maneuvers.push({ index: points.length - 1, turn: "ARRIVE", exit: 0, at: cum[points.length - 1] });
     const length = cum[points.length - 1];
-    return { points, elevations, cum, maneuvers, length, duration: durationS || length / (60 / 3.6) };
+    return { points, elevations, cum, maneuvers, length, duration: durationS || length / (60 / 3.6), limits: limits || [], source: source || "brouter" };
+  }
+
+  /** Όριο ταχύτητας στο σημείο m (από τα «messages» του BRouter: maxspeed ανά κομμάτι). */
+  function limitAt(route, m) {
+    for (const l of route.limits) if (m <= l.end) return l.kmh;
+    return null;
+  }
+
+  function parseLimits(messages) {
+    if (!messages || messages.length < 2) return [];
+    const h = messages[0];
+    const iD = h.indexOf("Distance"), iT = h.indexOf("WayTags");
+    if (iD < 0 || iT < 0) return [];
+    const out = [];
+    let end = 0;
+    for (let i = 1; i < messages.length; i++) {
+      end += parseFloat(messages[i][iD]) || 0;
+      const m = /(?:^|\s)maxspeed=(\d+)/.exec(messages[i][iT] || "");
+      out.push({ end, kmh: m ? parseInt(m[1], 10) : null });
+    }
+    return out;
   }
 
   /** GeoJSON του BRouter → διαδρομή. */
@@ -66,7 +87,42 @@
       .map((h) => ({ index: h[0], turn: TURN[h[1]], exit: h[2] }))
       .filter((h) => h.turn);
     const time = parseFloat(props["total-time"]);
-    return makeRoute(points, elevations, hints, isFinite(time) ? time : null);
+    return makeRoute(points, elevations, hints, isFinite(time) ? time : null, parseLimits(props.messages), "brouter");
+  }
+
+  // TomTom (κίνηση): ίδια ονόματα στροφών με την Android εφαρμογή.
+  function ttTurn(m) {
+    const map = { TURN_LEFT: "LEFT", TURN_RIGHT: "RIGHT", BEAR_LEFT: "SLIGHT_LEFT", BEAR_RIGHT: "SLIGHT_RIGHT", SHARP_LEFT: "SHARP_LEFT",
+      SHARP_RIGHT: "SHARP_RIGHT", KEEP_LEFT: "KEEP_LEFT", KEEP_RIGHT: "KEEP_RIGHT", MAKE_UTURN: "UTURN", TRY_MAKE_UTURN: "UTURN",
+      ROUNDABOUT_LEFT: "ROUNDABOUT", ROUNDABOUT_RIGHT: "ROUNDABOUT", ROUNDABOUT_CROSS: "ROUNDABOUT", ROUNDABOUT_BACK: "ROUNDABOUT",
+      MOTORWAY_EXIT_LEFT: "EXIT_LEFT", MOTORWAY_EXIT_RIGHT: "EXIT_RIGHT", TAKE_EXIT: "EXIT_RIGHT", STRAIGHT: "STRAIGHT" };
+    if (map[m]) return map[m];
+    if (/^(DEPART|ARRIVE|FOLLOW|WAYPOINT)/.test(m)) return null;
+    if (/LEFT/.test(m)) return "KEEP_LEFT";
+    if (/RIGHT/.test(m)) return "KEEP_RIGHT";
+    return null;
+  }
+  function parseTomTom(json) {
+    const out = [];
+    (json.routes || []).forEach((r) => {
+      const points = [];
+      (r.legs || []).forEach((l) => (l.points || []).forEach((p) => {
+        const q = { lat: p.latitude, lon: p.longitude };
+        const last = points[points.length - 1];
+        if (!last || last.lat !== q.lat || last.lon !== q.lon) points.push(q);
+      }));
+      if (points.length < 2) return;
+      const ins = ((r.guidance && r.guidance.instructions) || []).map((o) => ({
+        index: Math.min(points.length - 1, o.pointIndex || 0), turn: ttTurn(o.maneuver || ""), exit: o.roundaboutExitNumber || 0,
+        at: o.routeOffsetInMeters, street: o.street || (o.roadNumbers && o.roadNumbers[0]) || null,
+      })).filter((x) => x.turn);
+      const s = r.summary || {};
+      const route = makeRoute(points, points.map(() => null), ins, s.travelTimeInSeconds, [], "tomtom");
+      route.noTraffic = s.noTrafficTravelTimeInSeconds || null;
+      out.push(route);
+    });
+    if (!out.length) throw new Error("Το TomTom δεν βρήκε διαδρομή.");
+    return out;
   }
 
   /** Στροφές ανά χλμ (ίδιο με το Twistiness της Android): δείγμα ανά 25 m, άθροισμα αλλαγών κατεύθυνσης. */
@@ -175,8 +231,39 @@
   }
 
   const ORD = ["", "πρώτη", "δεύτερη", "τρίτη", "τέταρτη", "πέμπτη", "έκτη"];
+  const ORD_EN = ["", "first", "second", "third", "fourth", "fifth", "sixth"];
+  const EN = { STRAIGHT: "continue straight", LEFT: "turn left", SLIGHT_LEFT: "bear left", SHARP_LEFT: "turn sharp left",
+    RIGHT: "turn right", SLIGHT_RIGHT: "bear right", SHARP_RIGHT: "turn sharp right", KEEP_LEFT: "keep left", KEEP_RIGHT: "keep right",
+    UTURN: "make a U-turn", EXIT_LEFT: "take the exit on the left", EXIT_RIGHT: "take the exit on the right", ARRIVE: "you are arriving at your destination" };
+  const GR_PAIRS = [["ου", "ou"], ["Ου", "Ou"], ["ού", "ou"], ["αι", "ai"], ["ει", "ei"], ["οι", "oi"], ["μπ", "b"], ["Μπ", "B"], ["ντ", "d"], ["Ντ", "D"],
+    ["γκ", "g"], ["Γκ", "G"], ["γγ", "ng"], ["αυ", "av"], ["ευ", "ev"]];
+  const GR = { α: "a", ά: "a", β: "v", γ: "g", δ: "d", ε: "e", έ: "e", ζ: "z", η: "i", ή: "i", θ: "th", ι: "i", ί: "i", ϊ: "i", ΐ: "i", κ: "k",
+    λ: "l", μ: "m", ν: "n", ξ: "x", ο: "o", ό: "o", π: "p", ρ: "r", σ: "s", ς: "s", τ: "t", υ: "y", ύ: "y", ϋ: "y", φ: "f", χ: "ch", ψ: "ps", ω: "o", ώ: "o" };
+  function greeklish(s) {
+    if (!/[\u0370-\u03FF\u1F00-\u1FFF]/.test(s)) return s;
+    let t = s;
+    GR_PAIRS.forEach(([g, l]) => { t = t.split(g).join(l); });
+    return Array.from(t).map((ch) => {
+      const lo = ch.toLowerCase(), m = GR[lo];
+      if (!m) return ch;
+      return ch !== lo ? m.charAt(0).toUpperCase() + m.slice(1) : m;
+    }).join("");
+  }
   const Phrases = {
+    en: false,
+    L(gr, en) { return Phrases.en ? en : gr; },
+    name(s) { return Phrases.en ? greeklish(s) : s; },
     action(m) {
+      if (Phrases.en) {
+        if (m.turn === "ROUNDABOUT" || m.turn === "ROUNDABOUT_LEFT") {
+          const o = ORD_EN[m.exit];
+          return o ? `at the roundabout, take the ${o} exit` : m.exit > 0 ? `at the roundabout, take exit ${m.exit}` : "enter the roundabout";
+        }
+        return EN[m.turn] || "continue";
+      }
+      return Phrases.actionGr(m);
+    },
+    actionGr(m) {
       switch (m.turn) {
         case "STRAIGHT": return "συνέχισε ευθεία";
         case "LEFT": return "στρίψε αριστερά";
@@ -201,6 +288,11 @@
       return a.charAt(0).toUpperCase() + a.slice(1);
     },
     distance(m) {
+      if (Phrases.en) {
+        if (m < 1000) return `${Math.max(50, Math.round(m / 50) * 50)} metres`;
+        const k = Math.round(m / 100) / 10;
+        return k === 1 ? "1 kilometre" : `${k} kilometres`;
+      }
       if (m < 1000) return `${Math.max(50, Math.round(m / 50) * 50)} μέτρα`;
       const km = Math.round(m / 100) / 10;
       if (km === 1) return "1 χιλιόμετρο";
@@ -225,6 +317,33 @@
       const nameNode = doc.getElementsByTagName("name")[0];
       return { name: nameNode ? nameNode.textContent.trim() : "Διαδρομή GPX", points: pts };
     },
+    /** GPX, KML ή GeoJSON (ό,τι ανοίγει και η Android εφαρμογή). */
+    parseAny(text, filename) {
+      const t = text.trim();
+      if (/\.(geo)?json$/i.test(filename || "") || t[0] === "{") {
+        const j = JSON.parse(t);
+        const feats = j.type === "FeatureCollection" ? j.features : [j.type === "Feature" ? j : { geometry: j, properties: {} }];
+        let pts = [], name = null;
+        feats.forEach((f) => {
+          const g = f.geometry || {};
+          name = name || (f.properties && f.properties.name);
+          const lines = g.type === "LineString" ? [g.coordinates] : g.type === "MultiLineString" ? g.coordinates : [];
+          lines.forEach((l) => l.forEach((c) => pts.push({ lat: c[1], lon: c[0] })));
+        });
+        return { name: name || "Διαδρομή", points: pts };
+      }
+      if (/<kml/i.test(t)) {
+        const doc = new DOMParser().parseFromString(t, "application/xml");
+        const pts = [];
+        Array.from(doc.getElementsByTagName("coordinates")).forEach((n) => n.textContent.trim().split(/\s+/).forEach((c) => {
+          const [lon, lat] = c.split(",").map(Number);
+          if (isFinite(lat) && isFinite(lon)) pts.push({ lat, lon });
+        }));
+        const nm = doc.getElementsByTagName("name")[0];
+        return { name: nm ? nm.textContent.trim() : "Διαδρομή KML", points: pts };
+      }
+      return Gpx.parse(t);
+    },
     write(name, points) {
       const esc = (s) => String(s).replace(/[<&>"]/g, (c) => ({ "<": "&lt;", "&": "&amp;", ">": "&gt;", '"': "&quot;" }[c]));
       const pts = points.map((p) => `<trkpt lat="${p.lat.toFixed(6)}" lon="${p.lon.toFixed(6)}"/>`).join("");
@@ -247,5 +366,29 @@
     },
   };
 
-  root.MotoNav = { Geo, parseBRouter, makeRoute, twistiness, pickTwisty, pointAt, remaining, Engine, Phrases, Gpx };
+  /** Κυκλική βόλτα (όπως στην Android): σημεία σε κύκλο προς μια κατεύθυνση. */
+  function loopPoints(start, lengthM, dirDeg) {
+    const r = lengthM / (2 * Math.PI) / 1.25;
+    const c = destPoint(start, r, dirDeg);
+    const back = (dirDeg + 180) % 360;
+    return [60, 120, 180, 240, 300].map((a) => destPoint(c, r, (back + a) % 360));
+  }
+  function destPoint(p, d, brg) {
+    const δ = d / R, θ = rad(brg), φ1 = rad(p.lat), λ1 = rad(p.lon);
+    const φ2 = Math.asin(Math.sin(φ1) * Math.cos(δ) + Math.cos(φ1) * Math.sin(δ) * Math.cos(θ));
+    const λ2 = λ1 + Math.atan2(Math.sin(θ) * Math.sin(δ) * Math.cos(φ1), Math.cos(δ) - Math.sin(φ1) * Math.sin(φ2));
+    return { lat: deg(φ2), lon: deg(λ2) };
+  }
+  /** Απόσταση σημείου από τη διαδρομή και πού πέφτει πάνω της (μέτρα από την αρχή). */
+  function nearestOnRoute(route, p) {
+    let best = { d: Infinity, along: 0 };
+    for (let i = 0; i < route.points.length - 1; i++) {
+      const [t, d] = Geo.project(p, route.points[i], route.points[i + 1]);
+      if (d < best.d) best = { d, along: route.cum[i] + t * (route.cum[i + 1] - route.cum[i]) };
+    }
+    return best;
+  }
+
+  root.MotoNav = { Geo, parseBRouter, parseTomTom, makeRoute, limitAt, twistiness, pickTwisty, pointAt, remaining, Engine, Phrases, Gpx,
+    greeklish, loopPoints, destPoint, nearestOnRoute };
 })(typeof window !== "undefined" ? window : globalThis);

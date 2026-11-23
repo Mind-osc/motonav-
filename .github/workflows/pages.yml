@@ -7,6 +7,7 @@ on:
     paths:
       - 'web/**'
       - 'app/src/main/assets/brouter/moto-dirt.brf'
+      - 'app/src/main/assets/cameras_attica.json'
       - '.github/workflows/pages.yml'
   workflow_dispatch: {}
 
@@ -33,6 +34,7 @@ jobs:
           mkdir -p web/fonts
           cp app/src/main/assets/brouter/moto-dirt.brf web/
           cp app/src/main/res/font/barlow_condensed_semibold.ttf web/fonts/
+          cp app/src/main/assets/cameras_attica.json web/cameras.json
       - name: Έλεγχος BRouter/Photon από browser (CORS)
         continue-on-error: true
         run: |
