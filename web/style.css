@@ -239,3 +239,30 @@ body.nav #simPill:not(.hidden) ~ #recPill { display: none !important; }
 :root { --ui: 1; }
 .pills, .right-col, .gauge, .nav-left, .instr, .nav-pills, .card, .sim { zoom: var(--ui); }
 .puck img { display: block; }
+
+/* Καταγραφή: τελεία δίπλα στην ώρα, και μικρό μενού από κάτω όταν την πατάς */
+.rec-dot { color: #ff4d4d; font-size: 16px; animation: pulse 1.2s infinite alternate; }
+.rec-dot.paused { color: var(--warn); animation: none; }
+#recPill, body.nav #recPill { top: calc(var(--st) + 50px); bottom: auto; left: calc(var(--sl) + 8px); transform: none; }
+/* Ταμπέλα πιο μικρή (όπως στην Android) */
+.instr { width: min(360px, calc(100vw - 16px)); }
+.instr-main { padding: 10px 14px; gap: 12px; }
+.instr-icon, .instr-icon svg { width: 60px; height: 60px; }
+.instr-dist { font-size: 48px; }
+.instr-text { font-size: 19px; }
+.instr-then { font-size: 17px; padding: 18px 16px 8px; }
+.then-icon svg { width: 28px; height: 28px; }
+/* Με κλισιόμετρο: τα κουμπιά δεξιά ανεβαίνουν, για να μην τα σκεπάζει η μπάρα κλίσης */
+body.lean-on .right-col { bottom: calc(var(--sb) + 184px); }
+@media (orientation: landscape) and (max-height: 600px) {
+  .instr { width: 330px; }
+  .instr-dist { font-size: 40px; }
+  .instr-icon, .instr-icon svg { width: 52px; height: 52px; }
+  .card-title { font-size: 24px; }
+  .card-name { font-size: 17px; margin-top: 2px; }
+  .elev { height: 62px; margin-top: 6px; }
+  .type { width: 46px; height: 46px; }
+  .type svg { width: 24px; height: 24px; }
+  .btn { height: 50px; }
+  .card-actions { position: static; }
+}

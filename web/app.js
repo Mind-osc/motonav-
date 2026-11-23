@@ -19,7 +19,7 @@
     moreCurves: false, showSpots: true, hiddenSpots: [], alternatives: true, cameras: true, limitVoice: true, overGlow: true, fuelAlert: true,
     weatherAlert: true, voice: true, english: false, voiceEngine: "phone", elevenKey: "", elevenVoice: "", ttKey: "", lean: false, compass: true,
     autoRecord: true, startPhrase: "Πάμε.", showFavs: true,
-    uiScale: 1, roadColors: true, customStatus: true,
+    uiScale: 0.9, roadColors: true, customStatus: true,
     marker: { shape: "CLASSIC", size: 84, fill: null, outline: true, outlineColor: "#FFFFFF", lineColor: null, lineOutlineColor: null, lineOutline: 2, image: null },
   };
   const P = Object.assign({}, DEF, store.get("prefs", {}));
@@ -134,7 +134,7 @@
     drawPuck();
     document.documentElement.style.setProperty("--ui", P.uiScale);
     document.querySelector(".pills").classList.toggle("hidden", !P.customStatus);
-    $("lean").classList.toggle("hidden", !P.lean);
+    showLean();
     if (k === "showSpots" || k === "hiddenSpots") drawSpots();
     if (k === "cameras") drawCameras();
     if (k === "showFavs") drawFavs();
@@ -241,6 +241,13 @@
     if (lim && P.limitVoice && S.lastLimit !== lim) { if (S.lastLimit != null) say(Phrases.L(`Όριο ${lim}.`, `Speed limit ${lim}.`)); S.lastLimit = lim; }
   }
 
+  // Το κλισιόμετρο φαίνεται μόνο στην πλοήγηση (αν είναι ανοιχτό στις Ρυθμίσεις → Όργανα).
+  function showLean() {
+    const on = !!P.lean && S.nav;
+    $("lean").classList.toggle("hidden", !on);
+    document.body.classList.toggle("lean-on", on);
+  }
+  const IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   // ---------- Κλισιόμετρο και πυξίδα συσκευής (iPhone: θέλει άδεια) ----------
   let leanZero = store.get("leanZero", 0), leanMax = { l: 0, r: 0 }, leanNow = 0;
   async function enableSensors() {
@@ -261,13 +268,20 @@
     const g = e.accelerationIncludingGravity;
     if (!g || g.x == null) return;
     const ang = (screen.orientation && screen.orientation.angle) || window.orientation || 0;
-    let x = g.x, y = g.y;
+    // Το iPhone δίνει τη βαρύτητα με αντίθετο πρόσημο από το Android.
+    let x = IOS ? -g.x : g.x, y = IOS ? -g.y : g.y;
     if (ang === 90) [x, y] = [-y, x]; else if (ang === -90 || ang === 270) [x, y] = [y, -x]; else if (ang === 180) [x, y] = [-x, -y];
-    const roll = Math.atan2(x, -y) * 180 / Math.PI;
-    leanNow = leanNow * 0.8 + (roll - leanZero) * 0.2;
+    // 0° όρθιο, θετικό = κλίση δεξιά.
+    // Κινητό σχεδόν ξαπλωμένο: η κλίση δεν βγαίνει σωστά (πηδάει) → δεν την αλλάζουμε.
+    if (Math.hypot(x, y) < 5) return;
+    const roll = Math.atan2(-x, y) * 180 / Math.PI;
+    // Πιο σταθερό: εξομάλυνση ~0,5″ και «νεκρή ζώνη» 2° γύρω από το όρθιο.
+    const target = roll - leanZero;
+    leanNow = leanNow * 0.93 + target * 0.07;
     if (S.me && S.me.speed > 5) { if (leanNow < 0) leanMax.l = Math.max(leanMax.l, -leanNow); else leanMax.r = Math.max(leanMax.r, leanNow); }
     if (!P.lean) return;
-    const v = Math.round(leanNow);
+    let v = Math.max(-70, Math.min(70, Math.round(leanNow)));
+    if (Math.abs(v) <= 2) v = 0;
     $("leanV").textContent = `${Math.abs(v)}°`;
     $("leanL").style.setProperty("--w", `${Math.min(100, Math.max(0, -v) / 50 * 100)}%`);
     $("leanR").style.setProperty("--w", `${Math.min(100, Math.max(0, v) / 50 * 100)}%`);
@@ -711,7 +725,7 @@
   function drawElevation(r) {
     const cv = $("elev");
     const ctx = cv.getContext("2d");
-    const w = cv.clientWidth || 300, h = 86, dpr = devicePixelRatio || 1;
+    const w = cv.clientWidth || 300, h = cv.clientHeight || 86, dpr = devicePixelRatio || 1;
     cv.width = w * dpr; cv.height = h * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
@@ -836,6 +850,8 @@
     S.nav = true;
     S.sim = !!sim;
     document.body.classList.add("nav");
+    showLean();
+    if (P.lean) enableSensors();
     S.engine = new Engine(S.route);
     S.stage = {}; S.said = {}; S.follow = true; S.anim = null; S.state = null; S.lastLimit = null;
     S.alts = []; drawAlts();
@@ -866,6 +882,7 @@
     const wasSim = S.sim;
     S.nav = false; S.sim = false; S.engine = null; S.state = null;
     document.body.classList.remove("nav");
+    showLean();
     S.tempNogos = []; drawNogos();
     if (S.wake) { try { S.wake.release(); } catch (e) { /* */ } S.wake = null; }
     speechSynthesis.cancel();
@@ -1123,7 +1140,7 @@
   // ---------- Καταγραφή διαδρομής (ημερολόγιο) ----------
   function startRecording() {
     S.rec = { start: Date.now(), points: [], paused: false, maxKmh: 0, dist: 0 };
-    $("recPill").classList.remove("hidden");
+    $("recDot").classList.remove("hidden");
     $("recBtn").classList.add("rec-on");
     updateRecPill();
   }
@@ -1140,13 +1157,16 @@
   function updateRecPill() {
     if (!S.rec) return;
     const min = Math.round((Date.now() - S.rec.start) / 60000);
-    $("recTxt").textContent = `${S.rec.paused ? "⏸" : "⏺"} ${Phrases.short(S.rec.dist)} · ${min}′`;
+    $("recTxt").textContent = `${Phrases.short(S.rec.dist)} · ${min}′`;
+    $("recDot").textContent = S.rec.paused ? "⏸" : "●";
+    $("recDot").classList.toggle("paused", S.rec.paused);
     $("recPause").textContent = S.rec.paused ? "▶" : "⏸";
   }
   function stopRecording() {
     const r = S.rec;
     S.rec = null;
     $("recPill").classList.add("hidden");
+    $("recDot").classList.add("hidden");
     $("recBtn").classList.remove("rec-on");
     if (!r || r.points.length < 5 || r.dist < 300) return;
     const trips = store.get("trips", []);
@@ -1158,6 +1178,8 @@
   }
   $("recBtn").onclick = () => { if (S.rec) stopRecording(); else { startGps(); startRecording(); toast("Καταγραφή: ξεκίνησε."); } };
   $("recPause").onclick = () => { if (S.rec) { S.rec.paused = !S.rec.paused; updateRecPill(); } };
+  // Η καταγραφή φαίνεται ως κόκκινη τελεία δίπλα στην ώρα· πάτημα → παύση / τέλος.
+  document.querySelector(".pills .pill").onclick = () => { if (S.rec) $("recPill").classList.toggle("hidden"); };
   $("recStop").onclick = stopRecording;
 
   // ---------- Κοινοποίηση με σύνδεσμο ----------

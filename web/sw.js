@@ -1,5 +1,5 @@
 // Moto Nav web: κρατάει την εφαρμογή (όχι τον χάρτη) για γρήγορο άνοιγμα. Νέα έκδοση → αλλάζει το VERSION.
-const VERSION = "motonav-web-3";
+const VERSION = "motonav-web-4";
 const SHELL = ["./", "index.html", "style.css", "icons.js", "nav.js", "services.js", "app.js", "settings.js", "manifest.webmanifest", "moto-dirt.brf", "cameras.json",
   "fonts/barlow_condensed_semibold.ttf", "icons/icon-192.png", "icons/apple-touch-icon.png", "icons/puck_red.png"];
 
