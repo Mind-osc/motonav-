@@ -237,6 +237,34 @@ object RouteLayers {
         src.setGeoJson(Feature.fromGeometry(LineString.fromLngLats(pts.map { Point.fromLngLat(it.lon, it.lat) })))
     }
 
+    /**
+     * Η γραμμή ξεκινάει ακριβώς εκεί που είναι το βελάκι ([alongM] μέτρα από την αρχή), για να μην
+     * «ξεκολλάει» το βελάκι από τη γραμμή (μπροστά ή πίσω της) όσο προχωράει ανάμεσα στα στίγματα.
+     */
+    fun setRemainingAlong(style: Style, route: Route, alongM: Double) {
+        val src = style.getSource(SRC_ROUTE) as? GeoJsonSource ?: return
+        val cum = route.cumulative
+        if (route.points.size < 2) return
+        val a = alongM.coerceIn(0.0, route.lengthM)
+        // Πρώτο σημείο ΜΕΤΑ από το βελάκι.
+        var lo = 0
+        var hi = cum.size - 1
+        while (lo < hi) {
+            val mid = (lo + hi) / 2
+            if (cum[mid] <= a) lo = mid + 1 else hi = mid
+        }
+        val head = route.pointAt(a)
+        val pts = buildList {
+            add(head)
+            if (cum[lo] > a) addAll(route.points.subList(lo, route.points.size))
+        }
+        if (pts.size < 2) {
+            src.setGeoJson(FeatureCollection.fromFeatures(emptyList<Feature>()))
+            return
+        }
+        src.setGeoJson(Feature.fromGeometry(LineString.fromLngLats(pts.map { Point.fromLngLat(it.lon, it.lat) })))
+    }
+
     private const val SRC_ALT = "moto-alt"
     private const val SRC_ALT_LABEL = "moto-alt-label"
     const val L_ALT = "moto-alt-line"

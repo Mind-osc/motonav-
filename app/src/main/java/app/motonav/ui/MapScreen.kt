@@ -635,6 +635,12 @@ fun MapScreen(
             val now = session.route?.takeIf { session.navigating && wasSnapped }
                 ?.let { extrapolateOnRoute(it, snapInfo, SystemClock.elapsedRealtimeNanos(), loc) }
             m.locationComponent.forceLocationUpdate(now ?: withCompassWhenStopped(loc, if (hasMoved) lastMovingBearing else instruments.headingDeg))
+            // Η γραμμή ξεκινάει από το ίδιο σημείο με το βελάκι (όχι από το στίγμα): δεν ξεκολλάνε.
+            if (session.navigating && wasSnapped && !keep) {
+                val r = session.route
+                val along = extrapolatedAlong(snapInfo, SystemClock.elapsedRealtimeNanos()) ?: snapInfo.alongM
+                if (r != null && along != null) RouteLayers.setRemainingAlong(style!!, r, along)
+            }
             if (!centered) {
                 centered = true
                 m.locationComponent.cameraMode = CameraMode.TRACKING_GPS
@@ -653,8 +659,10 @@ fun MapScreen(
                 if (style == null || !m.locationComponent.isLocationComponentActivated || !wasSnapped) continue
                 val r = session.route ?: continue
                 val base = shownLoc ?: continue
-                val p = extrapolateOnRoute(r, snapInfo, SystemClock.elapsedRealtimeNanos(), base) ?: continue
+                val t = SystemClock.elapsedRealtimeNanos()
+                val p = extrapolateOnRoute(r, snapInfo, t, base) ?: continue
                 m.locationComponent.forceLocationUpdate(p)
+                extrapolatedAlong(snapInfo, t)?.let { a -> style?.let { RouteLayers.setRemainingAlong(it, r, a) } }
             }
         }
         LaunchedEffect(display.showAlternatives) { session.showAlternatives = display.showAlternatives }
@@ -868,7 +876,8 @@ fun MapScreen(
             val s = style ?: return@LaunchedEffect
             val r = session.route ?: return@LaunchedEffect
             val st = session.state ?: return@LaunchedEffect
-            if (session.navigating) RouteLayers.setRemaining(s, r, st.segIndex, st.snapped)
+            // Κολλημένο στη γραμμή: το κόψιμο το κάνει η θέση του βελακιού (πιο πάνω). Εδώ μόνο όταν δεν είναι.
+            if (session.navigating && (!wasSnapped || snapInfo.alongM == null)) RouteLayers.setRemaining(s, r, st.segIndex, st.snapped)
         }
         // Αν μετακινήσεις τον χάρτη στην πλοήγηση, επιστρέφει στο κέντρο μόνος του μετά από 7 s.
         LaunchedEffect(style, hasLocation) {
@@ -2600,12 +2609,17 @@ class SnapInfo {
  * από τη στιγμή που μετρήθηκε το στίγμα ως τώρα (έως 1,5″). Έτσι στις στροφές μένει πάνω στον δρόμο
  * (αντί να «κόβει» ευθεία από στίγμα σε στίγμα) και δεν μένει πίσω λόγω καθυστέρησης του GPS.
  */
-internal fun extrapolateOnRoute(route: Route, info: SnapInfo, nowNanos: Long, base: Location): Location? {
+/** Πού είναι τώρα το βελάκι πάνω στη γραμμή (μέτρα από την αρχή), με την ταχύτητα από το τελευταίο στίγμα. */
+internal fun extrapolatedAlong(info: SnapInfo, nowNanos: Long): Double? {
     val along0 = info.alongM ?: return null
     if (info.speedMps < 5.5f) return null // < 20 km/h
     val dt = (nowNanos - info.fixNanos) / 1e9
     if (dt < 0 || dt > 1.5) return null
-    val along = (along0 + info.speedMps * dt).coerceAtMost(route.lengthM)
+    return along0 + info.speedMps * dt
+}
+
+internal fun extrapolateOnRoute(route: Route, info: SnapInfo, nowNanos: Long, base: Location): Location? {
+    val along = (extrapolatedAlong(info, nowNanos) ?: return null).coerceAtMost(route.lengthM)
     val p = route.pointAt(along)
     val ahead = route.pointAt((along + 10.0).coerceAtMost(route.lengthM))
     return Location(base).apply {
