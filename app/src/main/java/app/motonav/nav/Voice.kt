@@ -256,38 +256,52 @@ object Phrases {
 }
 
 /**
- * Αποφασίζει πότε μιλάει. Τρία σημεία για κάθε κίνηση, ανάλογα με την ταχύτητα:
- * μακριά (~30 s πριν), κοντά (~10 s πριν), τώρα (~3 s πριν).
+ * Αποφασίζει πότε μιλάει — λίγα λόγια, όπως το Google Maps:
+ * - «Μακριά» (~40″ πριν) μόνο αν ο δρόμος ως τη στροφή είναι μεγάλος (≥ 2 km). Στην πόλη δεν λέγεται.
+ * - «Κοντά» (~12″ πριν): απόσταση, κίνηση, δρόμος. Αν η επόμενη κίνηση είναι πολύ κοντά, «και μετά …».
+ * - «Τώρα»: μόνο η κίνηση, χωρίς «Τώρα,» και χωρίς ξανά το «και μετά».
+ * - Κίνηση που ειπώθηκε ήδη ως «και μετά» δεν ξαναλέγεται ολόκληρη: μόνο η σύντομη «τώρα».
+ * - Το «συνέχισε ευθεία» δεν λέγεται (φαίνεται στην ταμπέλα).
+ * - Κίνηση αμέσως μετά από άλλη (< ~1,3 φορές το «κοντά») παίρνει μόνο τη «τώρα».
  */
 class Announcer(private val voice: VoiceGuide) {
     private val stage = HashMap<Int, Int>()
+    /** Πόσο μακριά ήταν η κίνηση όταν έγινε «επόμενη» (≈ μήκος του δρόμου ως εκεί). */
+    private val firstSeen = HashMap<Int, Double>()
     private var arrivedSaid = false
 
     fun reset() {
         stage.clear()
+        firstSeen.clear()
     }
 
     fun onState(s: NavState, speedMps: Float) {
         val m = s.next ?: return
+        if (m.turn == Turn.STRAIGHT) return
         val v = max(speedMps.toDouble(), 8.0)
-        val far = max(500.0, v * 30.0)
-        val near = max(120.0, v * 10.0)
+        val far = max(1200.0, v * 40.0)
+        val near = max(150.0, v * 12.0)
         val now = max(30.0, v * 3.0)
         val done = stage[m.pointIndex] ?: 0
         val d = s.distToNextM
-        val thenText = s.then?.let { Phrases.L(", και μετά ", ", then ") + Phrases.action(it) } ?: ""
+        val leg = firstSeen.getOrPut(m.pointIndex) { d }
+        // «και μετά»: το engine το δίνει μόνο όταν η επόμενη κίνηση έρχεται αμέσως μετά (< 150 m).
+        val soon = s.then?.takeIf { it.turn != Turn.STRAIGHT && it.turn != Turn.ARRIVE }
 
         when {
             d <= now && done < 3 -> {
-                if (m.turn != Turn.ARRIVE) voice.say(Phrases.L("Τώρα, ", "Now, ") + Phrases.action(m) + thenText)
+                if (m.turn != Turn.ARRIVE) voice.say(Phrases.capitalized(Phrases.action(m)) + ".")
                 stage[m.pointIndex] = 3
             }
-            d <= near && done < 2 -> {
+            d <= near && done < 2 && leg > near * 1.3 -> {
                 val road = Phrases.road(m)?.let { ", " + Phrases.name(it) } ?: ""
-                voice.say(Phrases.L("Σε ", "In ") + Phrases.distance(d) + ", " + Phrases.action(m) + road + thenText)
+                val then = soon?.let { Phrases.L(", και μετά ", ", then ") + Phrases.action(it) } ?: ""
+                voice.say(Phrases.L("Σε ", "In ") + Phrases.distance(d) + ", " + Phrases.action(m) + road + then)
                 stage[m.pointIndex] = 2
+                // Η «και μετά» κίνηση δεν ξαναλέγεται ολόκληρη: μόνο η «τώρα» της.
+                if (soon != null) stage[soon.pointIndex] = maxOf(stage[soon.pointIndex] ?: 0, 2)
             }
-            d <= far && d > near * 1.5 && done < 1 -> {
+            d <= far && d > near * 1.5 && done < 1 && leg >= 2000.0 -> {
                 voice.say(Phrases.L("Σε ", "In ") + Phrases.distance(d) + ", " + Phrases.action(m))
                 stage[m.pointIndex] = 1
             }

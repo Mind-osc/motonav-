@@ -290,7 +290,7 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
         val track = trackPoints ?: return
         rerouting = true
         lastRerouteAt = SystemClock.elapsedRealtime()
-        voice.say(Phrases.L("Βγήκες από τη διαδρομή. Σε ξαναφέρνω σε αυτήν.", "You left the route. Taking you back to it."), interrupt = false)
+        voice.say(Phrases.L("Σε γυρίζω στη διαδρομή.", "You left the route. Taking you back to it."), interrupt = false)
         val last = state?.snapped ?: LatLon(loc.latitude, loc.longitude)
         val minIndex = track.indices.minByOrNull { app.motonav.geo.Geo.distance(track[it], last) } ?: 0
         scope.launch {
@@ -731,11 +731,15 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
         } else if (s.offRoute && !rerouting && now - lastRerouteAt > 3_000) reroute(loc)
     }
 
-    private fun reroute(loc: Location, offline: Boolean = false, phrase: String = Phrases.L("Υπολογίζω νέα διαδρομή.", "Recalculating.")) {
+    private var lastRerouteSaidAt = -1_000_000L
+
+    private fun reroute(loc: Location, offline: Boolean = false, phrase: String = Phrases.L("Νέα διαδρομή.", "Recalculating.")) {
         val dest = destination ?: return
         rerouting = true
         lastRerouteAt = SystemClock.elapsedRealtime()
-        voice.say(phrase)
+        // «Νέα διαδρομή» μία φορά: όχι σε κάθε ξαναϋπολογισμό όσο είσαι ακόμα εκτός (κάθε 3″).
+        val custom = phrase != Phrases.L("Νέα διαδρομή.", "Recalculating.")
+        if (custom || lastRerouteAt - lastRerouteSaidAt > 45_000) { voice.say(phrase); lastRerouteSaidAt = lastRerouteAt }
         scope.launch {
             try {
                 val from = LatLon(loc.latitude, loc.longitude)
