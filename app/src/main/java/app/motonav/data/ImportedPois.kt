@@ -209,7 +209,7 @@ object ImportedPois {
 
     /** «Garmin_EL_gpx_Fuel_Stations_4GPS.zip» → «Fuel Stations». */
     private fun groupTitle(fileName: String) = title(fileName)
-        .replace(Regex("(?i)^(garmin|igo|tomtom|sygic|mio|navigon)[ _]?(el|en)?[ _]?(gpx|kml|csv|ov2|asc)?[ _]?"), "")
+        .replace(Regex("(?i)^(garmin|igo|tomtom|mio|navigon)[ _]?(el|en)?[ _]?(gpx|kml|csv|ov2|asc)?[ _]?"), "")
         .replace(Regex("(?i)[ _]?4gps$"), "").trim().ifBlank { title(fileName) }
 
     private val wptRe = Regex("""<wpt\b([^>]*?)(/>|>(.*?)</wpt>)""", RegexOption.DOT_MATCHES_ALL)
