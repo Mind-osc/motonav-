@@ -27,21 +27,22 @@ data class TripMeterData(
     val paused: Boolean = false,
     val pausedAtMs: Long = 0L,
     val lastFixMs: Long = 0L,
+    /** Στάσεις μέσα στη βόλτα (φανάρια, καφές): μόνο έως STOP_WINDOW μετά την τελευταία κίνηση. */
+    val stopS: Double = 0.0,
+    val lastMoveMs: Long = 0L,
 ) {
-    /** Συνολικός χρόνος από το μηδέν, χωρίς τις παύσεις. */
-    fun totalS(nowMs: Long): Double {
-        if (startMs == 0L) return 0.0
-        val end = if (paused) pausedAtMs else nowMs
-        return ((end - startMs) / 1000.0 - pausedS).coerceAtLeast(movingS)
-    }
-    fun stoppedS(nowMs: Long) = (totalS(nowMs) - movingS).coerceAtLeast(0.0)
+    /** Συνολικός χρόνος = κίνηση + στάσεις μέσα στη βόλτα (όχι οι ώρες που το κινητό κάθεται στο σπίτι). */
+    @Suppress("UNUSED_PARAMETER")
+    fun totalS(nowMs: Long): Double = movingS + stopS
+    @Suppress("UNUSED_PARAMETER")
+    fun stoppedS(nowMs: Long) = stopS
     val avgMovingKmh: Double get() = if (movingS > 1) distanceM / movingS * 3.6 else 0.0
     fun avgTotalKmh(nowMs: Long): Double = totalS(nowMs).let { if (it > 1) distanceM / it * 3.6 else 0.0 }
 
     fun toJson(): String = JSONObject()
         .put("start", startMs).put("dist", distanceM).put("moving", movingS).put("pausedS", pausedS)
         .put("vmax", maxKmh).put("up", ascentM).put("down", descentM).put("paused", paused)
-        .put("pausedAt", pausedAtMs).put("last", lastFixMs).toString()
+        .put("pausedAt", pausedAtMs).put("last", lastFixMs).put("stopS", stopS).put("lastMove", lastMoveMs).toString()
 
     companion object {
         fun fromJson(s: String?): TripMeterData = runCatching {
@@ -49,7 +50,7 @@ data class TripMeterData(
             TripMeterData(
                 o.optLong("start"), o.optDouble("dist"), o.optDouble("moving"), o.optDouble("pausedS"),
                 o.optDouble("vmax"), o.optDouble("up"), o.optDouble("down"), o.optBoolean("paused"),
-                o.optLong("pausedAt"), o.optLong("last"),
+                o.optLong("pausedAt"), o.optLong("last"), o.optDouble("stopS", 0.0), o.optLong("lastMove"),
             )
         }.getOrDefault(TripMeterData())
     }
@@ -60,6 +61,8 @@ object TripMeter {
     const val AUTO_RESET_MS = 3 * 3600_000L
     /** Κάτω από αυτό (~9 km/h) δεν μετράει ως κίνηση: θόρυβος του GPS όταν στέκεσαι. */
     const val MOVING_MPS = 2.5
+    /** Στάση έως τόσο μετά την τελευταία κίνηση μετράει ως «διάρκεια στάσης» της βόλτας. */
+    const val STOP_WINDOW_MS = 30 * 60_000L
 
     var a by mutableStateOf(TripMeterData())
         private set
@@ -121,11 +124,15 @@ object TripMeter {
         }
         fun step(m: TripMeterData): TripMeterData {
             if (m.paused) return m
-            val start = if (m.startMs == 0L) now else m.startMs
+            // Το ρολόι ξεκινάει με την πρώτη κίνηση, όχι όταν απλώς ανοίγει η εφαρμογή.
+            val start = if (m.startMs == 0L && moving) now else m.startMs
+            val inRide = m.lastMoveMs > 0 && now - m.lastMoveMs < STOP_WINDOW_MS
             return m.copy(
                 startMs = start,
                 distanceM = m.distanceM + if (moving) d else 0.0,
                 movingS = m.movingS + if (moving) dt else 0.0,
+                stopS = m.stopS + if (!moving && inRide) dt else 0.0,
+                lastMoveMs = if (moving) now else m.lastMoveMs,
                 maxKmh = if (moving && v * 3.6 in m.maxKmh..300.0) v * 3.6 else m.maxKmh,
                 ascentM = m.ascentM + up,
                 descentM = m.descentM + down,
@@ -144,7 +151,7 @@ object TripMeter {
 
     /** «Ξεκίνα» ή έναρξη καταγραφής: το A ξεκινάει από το μηδέν. */
     fun startRide() {
-        a = TripMeterData(startMs = System.currentTimeMillis())
+        a = TripMeterData()
         save(force = true)
     }
 

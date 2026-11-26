@@ -53,7 +53,7 @@ class ImportTest {
 
 class TripMeterTest {
     @Test fun totalsAndStops() {
-        val m = app.motonav.trips.TripMeterData(startMs = 1_000L, distanceM = 30_000.0, movingS = 1800.0)
+        val m = app.motonav.trips.TripMeterData(startMs = 1_000L, distanceM = 30_000.0, movingS = 1800.0, stopS = 1800.0)
         assertEquals(3600.0, m.totalS(3_601_000L), 1e-6)
         assertEquals(1800.0, m.stoppedS(3_601_000L), 1e-6)
         assertEquals(60.0, m.avgMovingKmh, 1e-6)

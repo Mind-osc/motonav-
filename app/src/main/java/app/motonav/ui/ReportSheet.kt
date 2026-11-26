@@ -78,88 +78,53 @@ fun ReportSheet(
         ) {
             Column(Modifier.padding(Space.md), verticalArrangement = Arrangement.spacedBy(Space.sm)) {
                 Text("Τι υπάρχει εδώ;", style = MotoType.title, color = c.base.text)
+                val tap: (() -> Unit) -> Unit = { action -> haptic.performHapticFeedback(HapticFeedbackType.LongPress); action() }
                 if (onRoadClosed != null || onReroute != null) {
                     Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
-                        listOfNotNull(
-                            onRoadClosed?.let { Triple("⛔", "Κλειστός δρόμος μπροστά", it) },
-                            onReroute?.let { Triple("↻", "Νέα διαδρομή από εδώ", it) },
-                        ).forEach { (emoji, label, action) ->
-                            Surface(
-                                shape = RoundedCornerShape(Radius.md),
-                                color = c.base.surface2,
-                                border = BorderStroke(2.dp, c.accent),
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    action()
-                                },
-                                modifier = Modifier.weight(1f).height(64.dp),
-                            ) {
-                                Row(
-                                    Modifier.padding(horizontal = Space.sm),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(Space.sm),
-                                ) {
-                                    Text(emoji, fontSize = 26.sp, color = c.base.text)
-                                    Text(label, style = MotoType.body, color = c.base.text, maxLines = 2)
-                                }
-                            }
-                        }
+                        onRoadClosed?.let { ReportTile({ Text("⛔", fontSize = 20.sp) }, "Κλειστός δρόμος μπροστά", c.accent, Modifier.weight(1f)) { tap(it) } }
+                        onReroute?.let { ReportTile({ Text("↻", fontSize = 22.sp, color = c.accent) }, "Νέα διαδρομή από εδώ", c.accent, Modifier.weight(1f)) { tap(it) } }
                     }
                 }
                 if (onCamera != null) {
-                    Surface(
-                        shape = RoundedCornerShape(Radius.md),
-                        color = c.base.surface2,
-                        border = BorderStroke(2.dp, Color(0xFFFFD23F)),
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onCamera()
-                        },
-                        modifier = Modifier.fillMaxWidth().height(64.dp),
-                    ) {
-                        Row(
-                            Modifier.padding(horizontal = Space.md),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(Space.sm),
-                        ) {
+                    ReportTile(
+                        {
                             androidx.compose.material3.Icon(
-                                ImageVector.vectorResource(app.motonav.R.drawable.ic_camera),
-                                contentDescription = null,
-                                tint = Color(0xFFFFD23F),
-                                modifier = Modifier.size(30.dp),
+                                ImageVector.vectorResource(app.motonav.R.drawable.ic_camera), contentDescription = null,
+                                tint = Color(0xFFFFD23F), modifier = Modifier.size(22.dp),
                             )
-                            Text("Κάμερα ταχύτητας εδώ", style = MotoType.body, color = c.base.text)
-                        }
-                    }
+                        },
+                        "Κάμερα ταχύτητας εδώ", Color(0xFFFFD23F), Modifier.fillMaxWidth(),
+                    ) { tap(onCamera) }
                 }
-                HazardKind.entries.chunked(2).forEach { row ->
+                // Ο «κακός καιρός» δεν μπαίνει πια με το χέρι: τον ξέρει η εφαρμογή από την πρόγνωση στη διαδρομή.
+                HazardKind.entries.filter { it != HazardKind.WEATHER }.chunked(2).forEach { row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
                         row.forEach { k ->
-                            Surface(
-                                shape = RoundedCornerShape(Radius.md),
-                                color = c.base.surface2,
-                                border = BorderStroke(2.dp, Color(k.color)),
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    onPick(k)
-                                },
-                                modifier = Modifier.weight(1f).height(76.dp),
-                            ) {
-                                Row(
-                                    Modifier.padding(horizontal = Space.sm),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(Space.sm),
-                                ) {
-                                    Text(k.emoji, fontSize = 30.sp)
-                                    Text(k.label, style = MotoType.body, color = c.base.text, maxLines = 2)
-                                }
-                            }
+                            ReportTile({ Text(k.emoji, fontSize = 20.sp) }, k.label, Color(k.color), Modifier.weight(1f)) { tap { onPick(k) } }
                         }
                         if (row.size == 1) Box(Modifier.weight(1f))
                     }
                 }
                 TextChoice("Άκυρο", selected = false, onClick = onClose, modifier = Modifier.fillMaxWidth())
             }
+        }
+    }
+}
+
+/** Ήρεμο πλακίδιο (όπως στις Γρήγορες ενέργειες): ουδέτερο φόντο, χρώμα μόνο στον κύκλο του εικονιδίου. Αρκετά ψηλό για γάντια. */
+@Composable
+private fun ReportTile(icon: @Composable () -> Unit, label: String, tint: Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val c = LocalAppColors.current
+    Surface(
+        shape = RoundedCornerShape(Radius.md),
+        color = c.base.surface2,
+        border = BorderStroke(1.dp, c.outline.copy(alpha = 0.6f)),
+        onClick = onClick,
+        modifier = modifier.heightIn(min = 64.dp),
+    ) {
+        Row(Modifier.padding(horizontal = Space.sm, vertical = Space.sm), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+            Box(Modifier.size(40.dp).background(tint.copy(alpha = 0.18f), androidx.compose.foundation.shape.CircleShape), contentAlignment = Alignment.Center) { icon() }
+            Text(label, style = MotoType.label.copy(fontSize = 15.sp), color = c.base.text, maxLines = 2)
         }
     }
 }
