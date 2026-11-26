@@ -111,6 +111,13 @@ object OfflineGazetteer {
             .toList()
     }
 
+    /** Σημεία συγκεκριμένων ειδών μέσα σε ένα ορθογώνιο (για «επόμενα σημεία στη διαδρομή»). */
+    fun poisIn(s: Double, w: Double, n: Double, e: Double, kinds: Set<String>): List<Place> =
+        loadPois().asSequence()
+            .filter { it.kind in kinds && it.lat in s..n && it.lon in w..e }
+            .map { Place(it.name, "", it.lat, it.lon, it.kind) }
+            .toList()
+
     /** Βενζινάδικα κοντά σε σημεία (για «βενζίνη στη διαδρομή» χωρίς internet). */
     fun fuelNear(points: List<LatLon>, maxM: Double): List<Pair<String, LatLon>> {
         if (points.isEmpty()) return emptyList()

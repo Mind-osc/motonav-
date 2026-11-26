@@ -452,6 +452,19 @@ fun MapScreen(
     val hazardStore = remember { HazardStore(context.filesDir) }
     var hazards by remember { mutableStateOf(hazardStore.load()) }
     var reportOpen by remember { mutableStateOf(false) }
+    // Γρήγορες ενέργειες (μετρητής ταξιδιού, πλακίδια, διακόπτες) και αναφορά χάρτη στο OSM
+    var quickOpen by remember { mutableStateOf(false) }
+    var mapReportOpen by remember { mutableStateOf(false) }
+    // Μετρητής ταξιδιού A/B: κάθε στίγμα (με ή χωρίς πλοήγηση)
+    LaunchedEffect(gps.value.location) { gps.value.location?.let { if (!app.motonav.nav.Simulator.active) app.motonav.trips.TripMeter.add(it) } }
+    // Επόμενα σημεία στη διαδρομή (offline): υπολογίζονται μία φορά ανά διαδρομή
+    val routePoiKinds = remember(display.nextPois) { app.motonav.routing.RoutePoiKind.entries.filter { it.name in display.nextPois } }
+    val routePois by androidx.compose.runtime.produceState(emptyList<app.motonav.routing.RoutePoi>(), session.route, routePoiKinds) {
+        val r = session.route
+        value = if (r == null || routePoiKinds.isEmpty()) emptyList()
+        else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { runCatching { app.motonav.routing.RoutePois.along(r, routePoiKinds) }.getOrDefault(emptyList()) }
+    }
+    val nextPois = if (session.navigating) app.motonav.routing.RoutePois.next(routePois, progressNow) else emptyList()
     var reportedAt by remember { mutableStateOf(0L) }
     var hazardAlert by remember { mutableStateOf<Pair<Hazard, Double>?>(null) }
     val announcedHazards = remember { mutableSetOf<String>() }
@@ -746,6 +759,11 @@ fun MapScreen(
             }
             spotsLoading = false
             if (found == null) spotCache.failed(missing, now) else spots = spotCache.all
+        }
+        // Χρώμα κλίσης πάνω στη γραμμή της διαδρομής
+        LaunchedEffect(style, session.route, display.slopeColors) {
+            val s = style ?: return@LaunchedEffect
+            runCatching { SlopeLayer.set(s, session.route, display.slopeColors) }
         }
         // Δικά σου σημεία (εισαγμένα αρχεία POI)
         LaunchedEffect(style, app.motonav.data.ImportedPois.version, c.base.isDark) {
@@ -1325,6 +1343,9 @@ fun MapScreen(
                     size = sizes.button,
                 )
             }
+            val quickButton: @Composable (androidx.compose.ui.unit.Dp) -> Unit = { sz ->
+                RideIconButton(ImageVector.vectorResource(R.drawable.ic_bolt), "Γρήγορες ενέργειες", { quickOpen = true }, size = sz)
+            }
             val browseButtons: @Composable () -> Unit = {
                 RideIconButton(Icons.Filled.Search, "Αναζήτηση", { showSearch = true }, size = sizes.button)
                 RideIconButton(Icons.Filled.Settings, "Ρυθμίσεις", onOpenSettings, size = sizes.button)
@@ -1400,6 +1421,7 @@ fun MapScreen(
                             Modifier.align(Alignment.BottomStart),
                             verticalArrangement = Arrangement.spacedBy(Space.sm),
                         ) {
+                            NextPoisBar(nextPois, progressNow, { p -> session.addStopNow(p.place.latLon, p.place.name) })
                             RideIconButton(
                                 ImageVector.vectorResource(if (session.muted) R.drawable.ic_voice_off else R.drawable.ic_voice),
                                 if (session.muted) "Άνοιγμα φωνής" else "Σίγαση φωνής",
@@ -1419,6 +1441,7 @@ fun MapScreen(
                         Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
                             if (groupActive) TalkButton(sizes.smallButton, { recording = it })
                             RideIconButton(Icons.Filled.Warning, "Αναφορά κινδύνου ή κάμερας", { reportOpen = true }, size = sizes.smallButton)
+                            quickButton(sizes.smallButton)
                             if (!session.navigating) browseButtons()
                         }
                         if (!display.customStatus) WeatherPill(session.weather, session.state?.progressM ?: 0.0)
@@ -1471,7 +1494,11 @@ fun MapScreen(
                                 if (session.navigating) {
                                     // Πυξίδα, από κάτω υψόμετρο, από κάτω η κάμερα.
                                     if (groupActive) TalkButton(sizes.smallButton, { recording = it })
-                                    RideIconButton(Icons.Filled.Warning, "Αναφορά κινδύνου ή κάμερας", { reportOpen = true }, size = sizes.smallButton)
+                                    Row(horizontalArrangement = Arrangement.spacedBy(Space.sm), verticalAlignment = Alignment.CenterVertically) {
+                                        RideIconButton(Icons.Filled.Warning, "Αναφορά κινδύνου ή κάμερας", { reportOpen = true }, size = sizes.smallButton)
+                                        quickButton(sizes.smallButton)
+                                    }
+                                    NextPoisBar(nextPois, progressNow, { p -> session.addStopNow(p.place.latLon, p.place.name) })
                                     // Τέρμα κάτω αριστερά: ηχείο, και δίπλα του άφιξη/χρόνος/απόσταση (το ✕ είναι πάνω από την ταχύτητα).
                                     Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
                                         RideIconButton(
@@ -1490,6 +1517,7 @@ fun MapScreen(
                                     // Πυξίδα, από κάτω υψόμετρο, από κάτω η κάμερα.
                                     if (groupActive) TalkButton(sizes.smallButton, { recording = it })
                                     RideIconButton(Icons.Filled.Warning, "Αναφορά κινδύνου ή κάμερας", { reportOpen = true }, size = sizes.smallButton)
+                                    quickButton(sizes.smallButton)
                                     RideIconButton(Icons.Filled.Search, "Αναζήτηση", { showSearch = true }, size = sizes.smallButton)
                                     RideIconButton(Icons.Filled.Settings, "Ρυθμίσεις", onOpenSettings, size = sizes.smallButton)
                                 }
@@ -1544,6 +1572,35 @@ fun MapScreen(
             onReroute = if (session.navigating) ({ session.rerouteNow(); reportOpen = false }) else null,
         )
         BackHandler(enabled = reportOpen) { reportOpen = false }
+        if (quickOpen && !pip) QuickActionsPanel(
+            landscape = landscape,
+            display = display,
+            onDisplayChange = { d -> scope.launch { repo.saveDisplay(d) } },
+            recording = session.recording,
+            recordingPaused = session.recordingPaused,
+            muted = session.muted,
+            onRecord = { if (!session.recording) session.startRecording() else session.togglePause() },
+            onMute = session::toggleMute,
+            onHazard = { quickOpen = false; reportOpen = true },
+            onMapReport = { quickOpen = false; mapReportOpen = true },
+            onSaveHere = {
+                val l = gps.value.location ?: gps.value.lastKnown
+                if (l == null) {
+                    android.widget.Toast.makeText(context, "Χρειάζεται στίγμα GPS.", android.widget.Toast.LENGTH_SHORT).show()
+                } else {
+                    val name = "Θέση " + java.text.SimpleDateFormat("d/M HH:mm", java.util.Locale("el", "GR")).format(java.util.Date())
+                    scope.launch { repo.saveFavorite(app.motonav.search.Place(name, "", l.latitude, l.longitude, "saved")) }
+                    android.widget.Toast.makeText(context, "Αποθηκεύτηκε στα Αγαπημένα: $name", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            },
+            onClose = { quickOpen = false },
+        )
+        BackHandler(enabled = quickOpen) { quickOpen = false }
+        if (mapReportOpen && !pip) {
+            val l = gps.value.location ?: gps.value.lastKnown
+            MapReportSheet(l?.latitude, l?.longitude, onClose = { mapReportOpen = false })
+        }
+        BackHandler(enabled = mapReportOpen) { mapReportOpen = false }
 
         if (showSearch && !pip) {
             SearchScreen(

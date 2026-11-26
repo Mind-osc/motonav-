@@ -50,6 +50,10 @@ data class DisplayPrefs(
     val powerSave: Boolean = false,
     /** Κλίση του χάρτη στην πλοήγηση: 56° (βλέπεις πιο μακριά, προεπιλογή) ή 40° (λιγότερη). */
     val navTilt: Int = 56,
+    /** Χρώμα της γραμμής ανάλογα με την κλίση του δρόμου. */
+    val slopeColors: Boolean = false,
+    /** «Επόμενα σημεία στη διαδρομή»: ποια είδη (ονόματα του RoutePoiKind). Κενό = κλειστό. */
+    val nextPois: Set<String> = setOf("FUEL", "CAFE", "FOOD", "WATER"),
     /** Αποφυγές: πλοία, κύριοι δρόμοι, πολύ στενοί δρόμοι, χωματόδρομοι. */
     val avoidFerries: Boolean = false,
     val avoidMain: Boolean = false,
@@ -121,6 +125,8 @@ class SettingsRepo(private val context: Context) {
     private val carKey = booleanPreferencesKey("vehicle_car")
     private val powerKey = booleanPreferencesKey("power_save")
     private val tiltKey = intPreferencesKey("nav_tilt")
+    private val slopeKey = booleanPreferencesKey("slope_colors")
+    private val nextPoisKey = stringPreferencesKey("next_pois")
     private val avFerryKey = booleanPreferencesKey("avoid_ferries")
     private val avMainKey = booleanPreferencesKey("avoid_main")
     private val avNarrowKey = booleanPreferencesKey("avoid_narrow")
@@ -156,6 +162,8 @@ class SettingsRepo(private val context: Context) {
             car = p[carKey] ?: false,
             powerSave = p[powerKey] ?: false,
             navTilt = p[tiltKey] ?: 56,
+            slopeColors = p[slopeKey] ?: false,
+            nextPois = p[nextPoisKey]?.split(',')?.filter { it.isNotBlank() }?.toSet() ?: setOf("FUEL", "CAFE", "FOOD", "WATER"),
             avoidFerries = p[avFerryKey] ?: false,
             avoidMain = p[avMainKey] ?: false,
             avoidNarrow = p[avNarrowKey] ?: false,
@@ -231,6 +239,8 @@ class SettingsRepo(private val context: Context) {
             p[carKey] = d.car
             p[powerKey] = d.powerSave
             p[tiltKey] = d.navTilt
+            p[slopeKey] = d.slopeColors
+            p[nextPoisKey] = d.nextPois.joinToString(",")
             p[avFerryKey] = d.avoidFerries
             p[avMainKey] = d.avoidMain
             p[avNarrowKey] = d.avoidNarrow

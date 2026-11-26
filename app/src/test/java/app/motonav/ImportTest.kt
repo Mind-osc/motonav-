@@ -50,3 +50,15 @@ class ImportTest {
         assertNull(OfflineCross.split("Λιοσίων 120"))
     }
 }
+
+class TripMeterTest {
+    @Test fun totalsAndStops() {
+        val m = app.motonav.trips.TripMeterData(startMs = 1_000L, distanceM = 30_000.0, movingS = 1800.0)
+        assertEquals(3600.0, m.totalS(3_601_000L), 1e-6)
+        assertEquals(1800.0, m.stoppedS(3_601_000L), 1e-6)
+        assertEquals(60.0, m.avgMovingKmh, 1e-6)
+        assertEquals(30.0, m.avgTotalKmh(3_601_000L), 1e-6)
+        val back = app.motonav.trips.TripMeterData.fromJson(m.toJson())
+        assertEquals(m, back)
+    }
+}

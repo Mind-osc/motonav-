@@ -100,6 +100,7 @@ class MainActivity : ComponentActivity() {
         MapLibre.getInstance(this)
         app.motonav.search.OfflineGazetteer.init(applicationContext)
         app.motonav.search.OfflineCross.init(applicationContext)
+        app.motonav.trips.TripMeter.init(applicationContext)
         app.motonav.data.ImportedPois.init(applicationContext)
         app.motonav.routing.NoGoAreas.init(applicationContext)
         val repo = SettingsRepo(applicationContext)
