@@ -313,6 +313,7 @@ fun SettingsScreen(
                 InfoRow("Απεικόνιση χάρτη", "MapLibre Native (BSD)")
                 InfoRow("Διαδρομές", "BRouter (MIT), offline στο κινητό")
                 InfoRow("Αναζήτηση", "Photon (komoot) και Overpass API, από OpenStreetMap")
+                InfoRow("Σημεία ενδιαφέροντος", "OpenStreetMap, και POIs 4GPS (pois.4gps.gr) όταν τα εισάγεις, με την άδεια του 4GPS")
                 InfoRow("Καιρός", "Open-Meteo")
                 InfoRow("Κίνηση", "TomTom Routing και Traffic API, με δικό σου κλειδί")
             }
@@ -505,13 +506,16 @@ private fun ImportedPoisSection() {
     Column(Modifier.padding(horizontal = Space.lg, vertical = Space.xs), verticalArrangement = Arrangement.spacedBy(Space.sm)) {
         Text("Δικά σου σημεία", style = MotoType.body, color = c.base.text)
         Text(
-            "Αρχεία σημείων από άλλες πηγές (π.χ. 4GPS, Garmin, TomTom, Google My Maps). Κάθε αρχείο γίνεται κατηγορία στον χάρτη και στην αναζήτηση.",
+            "Αρχεία σημείων από άλλες πηγές (π.χ. 4GPS, Garmin, TomTom, Google My Maps). Βγαίνουν πάντα στην αναζήτηση και στα «επόμενα στη διαδρομή»· πάτημα = στον χάρτη ή όχι (φαίνονται από ζουμ γειτονιάς). Σημεία 4GPS: pois.4gps.gr",
             style = MotoType.label, color = c.base.textMuted,
         )
         app.motonav.data.ImportedPois.collections.forEach { col ->
             Row(horizontalArrangement = Arrangement.spacedBy(Space.sm), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 TextChoice(
-                    "● ${col.name} (${col.count})",
+                    when {
+                        col.cameras -> "📷 ${col.name} (${col.count}) · " + if (col.visible) "ειδοποιήσεις" else "χωρίς ειδοποίηση"
+                        else -> "● ${col.name} (${col.count}) · " + if (col.visible) "στον χάρτη" else "μόνο αναζήτηση"
+                    },
                     selected = col.visible,
                     onClick = { app.motonav.data.ImportedPois.setVisible(col.id, !col.visible) },
                     modifier = Modifier.weight(1f),

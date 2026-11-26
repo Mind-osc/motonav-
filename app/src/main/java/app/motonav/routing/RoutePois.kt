@@ -30,7 +30,7 @@ object RoutePois {
         val n = pts.maxOf { it.lat } + pad
         val w = pts.minOf { it.lon } - pad
         val e = pts.maxOf { it.lon } + pad
-        val all = OfflineGazetteer.poisIn(s, w, n, e, kinds.flatMap { it.kinds }.toSet())
+        val all = OfflineGazetteer.poisIn(s, w, n, e, kinds.flatMap { it.kinds }.toSet()) + imported(kinds, s, w, n, e)
         if (all.isEmpty()) return emptyList()
         // Γρήγορο φίλτρο: κελιά ~550 m γύρω από σημεία της γραμμής ανά 200 m.
         val cell = 0.005
@@ -49,6 +49,23 @@ object RoutePois {
             if (pos.offM <= k.maxOffM) out += RoutePoi(k, pl.copy(name = pl.name.ifBlank { k.label }, detail = k.label), pos.alongM, pos.offM)
         }
         return out.sortedBy { it.alongM }
+    }
+
+    /** Δικά σου σημεία (π.χ. «Πρατήρια Καυσίμων» του 4GPS): κατηγορία από το όνομα της συλλογής. */
+    private fun imported(kinds: Collection<RoutePoiKind>, s: Double, w: Double, n: Double, e: Double): List<Place> {
+        val rules = listOf(
+            RoutePoiKind.FUEL to Regex("(?i)καυσ|βενζιν|fuel|pratiria|πρατήρ"),
+            RoutePoiKind.CAFE to Regex("(?i)καφ|cafe|coffee"),
+            RoutePoiKind.GARAGE to Regex("(?i)συνεργ|garage|service|repair"),
+        ).filter { it.first in kinds }
+        if (rules.isEmpty()) return emptyList()
+        return runCatching {
+            app.motonav.data.ImportedPois.all().mapNotNull { (c, p) ->
+                val k = rules.firstOrNull { it.second.containsMatchIn(c.name) }?.first ?: return@mapNotNull null
+                if (p.lat !in s..n || p.lon !in w..e) return@mapNotNull null
+                Place(p.name, p.detail, p.lat, p.lon, k.kinds.first())
+            }
+        }.getOrDefault(emptyList())
     }
 
     /** Το επόμενο σημείο κάθε είδους μπροστά σου (progressM: πόσα μέτρα της διαδρομής έχεις κάνει). */

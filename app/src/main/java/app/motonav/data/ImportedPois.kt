@@ -26,8 +26,10 @@ import java.util.zip.ZipInputStream
  * Αποθήκευση: filesDir/pois/<id>.tsv (όνομα, lat, lon, περιγραφή) και pois/index.json.
  */
 object ImportedPois {
-    class Pt(val name: String, val lat: Double, val lon: Double, val detail: String)
-    data class Collection(val id: String, val name: String, val color: Int, val visible: Boolean, val count: Int)
+    /** speed: όριο (κάμερες), dir: κατεύθυνση της κάμερας σε μοίρες. */
+    class Pt(val name: String, val lat: Double, val lon: Double, val detail: String, val speed: Int? = null, val dir: Double? = null)
+    /** cameras: κάμερες ταχύτητας → πάνε στις ειδοποιήσεις καμερών (όχι πινέζες στον χάρτη). */
+    data class Collection(val id: String, val name: String, val color: Int, val visible: Boolean, val count: Int, val cameras: Boolean = false)
 
     private val palette = intArrayOf(
         0xFFAB47BC.toInt(), 0xFF26C6DA.toInt(), 0xFFFFCA28.toInt(), 0xFF66BB6A.toInt(),
@@ -52,7 +54,7 @@ object ImportedPois {
             val a = JSONArray(File(d, "index.json").readText())
             (0 until a.length()).map { i ->
                 val o = a.getJSONObject(i)
-                Collection(o.getString("id"), o.getString("name"), o.optInt("color", palette[0]), o.optBoolean("visible", true), o.optInt("count"))
+                Collection(o.getString("id"), o.getString("name"), o.optInt("color", palette[0]), o.optBoolean("visible", true), o.optInt("count"), o.optBoolean("cameras"))
             }
         }.getOrDefault(emptyList())
         collections.forEach { c -> points[c.id] = readPoints(File(d, c.id + ".tsv")) }
@@ -64,7 +66,7 @@ object ImportedPois {
             val p = line.split('\t')
             val lat = p.getOrNull(1)?.toDoubleOrNull() ?: return@mapNotNull null
             val lon = p.getOrNull(2)?.toDoubleOrNull() ?: return@mapNotNull null
-            Pt(p[0], lat, lon, p.getOrElse(3) { "" })
+            Pt(p[0], lat, lon, p.getOrElse(3) { "" }, p.getOrNull(4)?.toIntOrNull(), p.getOrNull(5)?.toDoubleOrNull())
         }
     }.getOrDefault(emptyList())
 
@@ -72,16 +74,36 @@ object ImportedPois {
         val d = dir ?: return
         val a = JSONArray()
         collections.forEach { c ->
-            a.put(JSONObject().put("id", c.id).put("name", c.name).put("color", c.color).put("visible", c.visible).put("count", c.count))
+            a.put(JSONObject().put("id", c.id).put("name", c.name).put("color", c.color).put("visible", c.visible).put("count", c.count).put("cameras", c.cameras))
         }
         File(d, "index.json").writeText(a.toString())
     }
 
     /** Τα ορατά σημεία, με το χρώμα της κατηγορίας τους. */
     fun visible(): List<Triple<Collection, Pt, Int>> =
-        collections.filter { it.visible }.flatMap { c -> points[c.id].orEmpty().mapIndexed { i, p -> Triple(c, p, i) } }
+        collections.filter { it.visible && !it.cameras }.flatMap { c -> points[c.id].orEmpty().mapIndexed { i, p -> Triple(c, p, i) } }
 
     fun point(collectionId: String, index: Int): Pt? = points[collectionId]?.getOrNull(index)
+
+    /** Όλα τα σημεία (και όσα δεν φαίνονται στον χάρτη): για αναζήτηση και «επόμενα στη διαδρομή». */
+    fun all(): List<Pair<Collection, Pt>> =
+        collections.filter { !it.cameras }.flatMap { c -> points[c.id].orEmpty().map { c to it } }
+
+    /** Κάμερες από εισαγμένα αρχεία (π.χ. «Κάμερες Ταχύτητας» του 4GPS), για τις ειδοποιήσεις. */
+    fun cameras(): List<app.motonav.cameras.SpeedCamera> =
+        collections.filter { it.visible && it.cameras }.flatMap { c ->
+            points[c.id].orEmpty().mapIndexed { i, p ->
+                app.motonav.cameras.SpeedCamera(
+                    id = "imp-${c.id}-$i", lat = p.lat, lon = p.lon, maxspeed = p.speed, directionDeg = p.dir,
+                    source = "imported", kind = if (Regex("(?i)red ?light|ερυθρ|σηματοδ").containsMatchIn(p.name + c.name)) "red" else "speed",
+                )
+            }
+        }
+
+    /** Είναι αρχείο καμερών; Από το όνομα, ή αν τα περισσότερα σημεία έχουν όριο/κατεύθυνση. */
+    private fun looksLikeCameras(name: String, pts: List<Pt>): Boolean =
+        Regex("(?i)κάμερ|καμερ|camera|radar|speed ?cam|blitz").containsMatchIn(name) ||
+            (pts.isNotEmpty() && pts.count { it.speed != null } > pts.size / 2)
 
     fun setVisible(id: String, visible: Boolean) {
         collections = collections.map { if (it.id == id) it.copy(visible = visible) else it }
@@ -117,11 +139,13 @@ object ImportedPois {
         val id = "c" + System.currentTimeMillis().toString(36) + collections.size
         File(d, "$id.tsv").writeText(
             pts.joinToString("\n") { p ->
-                listOf(clean(p.name), String.format(Locale.US, "%.6f", p.lat), String.format(Locale.US, "%.6f", p.lon), clean(p.detail)).joinToString("\t")
+                listOf(clean(p.name), String.format(Locale.US, "%.6f", p.lat), String.format(Locale.US, "%.6f", p.lon), clean(p.detail), p.speed?.toString().orEmpty(), p.dir?.toString().orEmpty()).joinToString("\t")
             },
         )
         points[id] = pts
-        collections = collections + Collection(id, name.take(40), palette[collections.size % palette.size], true, pts.size)
+        // Πολλά σημεία (π.χ. 3.755 φαρμακεία): μόνο στην αναζήτηση, όχι στον χάρτη, ώσπου να το ανοίξεις.
+        val cams = looksLikeCameras(name, pts)
+        collections = collections + Collection(id, name.take(40), palette[collections.size % palette.size], cams || pts.size <= 300, pts.size, cams)
         saveIndex(); version++
     }
 
@@ -136,22 +160,35 @@ object ImportedPois {
     private fun title(fileName: String) = fileName.substringAfterLast('/').substringBeforeLast('.')
         .replace('_', ' ').replace(Regex("\\s+"), " ").trim().ifBlank { "Σημεία" }
 
-    /** Ένα αρχείο → μία κατηγορία· ZIP/KMZ → μία κατηγορία για κάθε αρχείο μέσα. */
+    private val dataExt = setOf("gpx", "kml", "csv", "txt", "asc", "ov2", "json", "geojson")
+
+    /**
+     * Ένα αρχείο → μία κατηγορία. ZIP/KMZ → μία κατηγορία για όλο το ZIP (π.χ. «Πρατήρια Καυσίμων» του 4GPS
+     * με ένα αρχείο ανά εταιρεία): η εταιρεία (όνομα αρχείου) μπαίνει στην περιγραφή κάθε σημείου.
+     * Εικονίδια (.bmp/.png) και ό,τι άλλο αγνοούνται.
+     */
     private fun collect(fileName: String, bytes: ByteArray, out: MutableList<Pair<String, List<Pt>>>) {
         val ext = fileName.substringAfterLast('.', "").lowercase(Locale.ROOT)
         val isZip = bytes.size > 4 && bytes[0] == 'P'.code.toByte() && bytes[1] == 'K'.code.toByte()
         if (isZip) {
+            val inner = ArrayList<Pair<String, List<Pt>>>()
+            val images = ArrayList<String>()
             ZipInputStream(bytes.inputStream()).use { z ->
                 while (true) {
                     val e = z.nextEntry ?: break
-                    if (!e.isDirectory) {
-                        val inner = z.readBytes()
-                        // KMZ: το doc.kml παίρνει το όνομα του KMZ
-                        val name = if (ext == "kmz") fileName else e.name
-                        collect(name, inner, out)
-                    }
+                    if (e.isDirectory) continue
+                    val entryExt = e.name.substringAfterLast('.', "").lowercase(Locale.ROOT)
+                    if (entryExt in setOf("bmp", "png", "jpg", "ico")) { images += title(e.name); continue }
+                    if (entryExt !in dataExt && entryExt != "zip" && entryExt != "kmz") continue
+                    // KMZ: το doc.kml παίρνει το όνομα του KMZ
+                    collect(if (ext == "kmz") fileName else e.name, z.readBytes(), inner)
                 }
             }
+            if (inner.size <= 1) { out += inner; return }
+            // Όνομα ομάδας: το εικονίδιο που δεν αντιστοιχεί σε κανένα αρχείο (4GPS: «Πρατήρια Καυσίμων.bmp»), αλλιώς το ZIP.
+            val names = inner.map { it.first }.toSet()
+            val group = images.firstOrNull { it !in names } ?: groupTitle(fileName)
+            out += group to inner.flatMap { (brand, pts) -> pts.map { p -> Pt(p.name, p.lat, p.lon, listOf(brand, p.detail).filter { it.isNotBlank() }.distinct().joinToString(" · "), p.speed, p.dir) } }
             return
         }
         val pts = when {
@@ -160,12 +197,71 @@ object ImportedPois {
             else -> {
                 val text = String(bytes, charset(bytes))
                 val t = text.trimStart()
-                if (t.startsWith("<") || t.startsWith("{")) {
-                    BookmarkFiles.parse(text).map { Pt(it.name, it.lat, it.lon, it.detail) }
-                } else parseCsv(text)
+                when {
+                    t.startsWith("<") && text.contains("<wpt") -> parseGpx(text)
+                    t.startsWith("<") || t.startsWith("{") -> parseKmlOrJson(text)
+                    else -> parseCsv(text)
+                }
             }
         }
         if (pts.isNotEmpty()) out += title(fileName) to pts
+    }
+
+    /** «Garmin_EL_gpx_Fuel_Stations_4GPS.zip» → «Fuel Stations». */
+    private fun groupTitle(fileName: String) = title(fileName)
+        .replace(Regex("(?i)^(garmin|igo|tomtom|sygic|mio|navigon)[ _]?(el|en)?[ _]?(gpx|kml|csv|ov2|asc)?[ _]?"), "")
+        .replace(Regex("(?i)[ _]?4gps$"), "").trim().ifBlank { title(fileName) }
+
+    private val wptRe = Regex("""<wpt\b([^>]*?)(/>|>(.*?)</wpt>)""", RegexOption.DOT_MATCHES_ALL)
+    private fun attr(s: String, n: String) = Regex("""\b$n\s*=\s*["']([-0-9.]+)["']""").find(s)?.groupValues?.get(1)?.toDoubleOrNull()
+    private val tagRe = HashMap<String, Regex>()
+    private fun tag(s: String, n: String) = tagRe.getOrPut(n) { Regex("""<$n>\s*(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?\s*</$n>""", RegexOption.DOT_MATCHES_ALL) }
+        .find(s)?.groupValues?.get(1)?.let(::unesc)?.trim().orEmpty()
+    private fun unesc(s: String) = s.replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"").replace("&apos;", "'").replace("&amp;", "&")
+
+    /** GPX με διεύθυνση και τηλέφωνο από τα Garmin extensions (όπως τα δίνει το 4GPS). */
+    fun parseGpx(text: String): List<Pt> = wptRe.findAll(text).mapNotNull { m ->
+        val lat = attr(m.groupValues[1], "lat") ?: return@mapNotNull null
+        val lon = attr(m.groupValues[1], "lon") ?: return@mapNotNull null
+        val inner = m.groupValues[3]
+        // 4GPS κάμερες: <cmt>όριο,κατευθυντική(0/1),μοίρες</cmt>, π.χ. «50,1,345»
+        val cam = Regex("""^\s*(\d{1,3})\s*,\s*([01])\s*,\s*(\d{1,3})\s*$""").find(tag(inner, "cmt"))
+        val speed = cam?.groupValues?.get(1)?.toIntOrNull()?.takeIf { it in 10..140 }
+        val dir = cam?.takeIf { it.groupValues[2] == "1" }?.groupValues?.get(3)?.toDoubleOrNull()?.takeIf { it in 0.0..360.0 }
+        val street = tag(inner, "gpxx:StreetAddress")
+        val city = tag(inner, "gpxx:City")
+        val phone = tag(inner, "gpxx:PhoneNumber").ifBlank { Regex("""(?:Τηλ|Κιν)[:.]?\s*([0-9 ]{10,})""").find(tag(inner, "cmt") + " " + tag(inner, "desc"))?.groupValues?.get(1)?.trim().orEmpty() }
+        val desc = tag(inner, "desc").takeIf { phone.isBlank() || !it.contains(phone) }.orEmpty()
+        // Σχόλιο του 4GPS: ωράριο, site, ή τιμές διοδίων («… - 1.25-1.80-4.50-6.35,1,350»: μηχανή, ΙΧ, …)
+        val cmt = tag(inner, "cmt")
+        val extra = if (cam != null || cmt.isBlank()) "" else {
+            val toll = Regex("""(\d+[.,]\d{2})\s*-\s*(\d+[.,]\d{2})(?:\s*-\s*\d+[.,]\d{2})*""").find(cmt)
+            if (toll != null) "Διόδια: μηχανή ${toll.groupValues[1].replace('.', ',')} € · ΙΧ ${toll.groupValues[2].replace('.', ',')} €"
+            else cmt.replace(Regex(""",\s*[0-2]\s*,\s*\d{1,3}\s*$"""), "").replace(Regex("""^\s*Site:\s*"""), "")
+                .replace(Regex("""(?:Τηλ|Κιν)[:.]?\s*[0-9 ]{10,}\s*-?"""), "").trim().trimEnd('-').trim()
+        }
+        val detail = listOf(extra.take(90), listOf(street, city).filter { it.isNotBlank() }.joinToString(", "), if (phone.isNotBlank()) "☎ $phone" else "", desc)
+            .filter { it.isNotBlank() }.joinToString(" · ")
+        val name = tag(inner, "name").ifBlank { String.format(Locale.US, "%.4f, %.4f", lat, lon) }
+        val camDetail = if (cam != null) listOfNotNull(speed?.let { "όριο $it" }, street.ifBlank { null }).joinToString(" · ") else detail
+        if (lat in -90.0..90.0 && lon in -180.0..180.0) Pt(name, lat, lon, camDetail.take(160), speed, dir) else null
+    }.toList()
+
+    /** KML (με τηλέφωνο από <phoneNumber>, όπως το iGo του 4GPS) ή GeoJSON. */
+    private fun parseKmlOrJson(text: String): List<Pt> {
+        val pm = Regex("""<Placemark\b.*?</Placemark>""", RegexOption.DOT_MATCHES_ALL)
+        if (!text.contains("<Placemark")) return BookmarkFiles.parse(text).map { Pt(it.name, it.lat, it.lon, it.detail) }
+        return pm.findAll(text).mapNotNull { m ->
+            val s = m.value
+            val c = Regex("""<coordinates>\s*([-0-9.]+)\s*,\s*([-0-9.]+)""").find(s) ?: return@mapNotNull null
+            val lon = c.groupValues[1].toDoubleOrNull() ?: return@mapNotNull null
+            val lat = c.groupValues[2].toDoubleOrNull() ?: return@mapNotNull null
+            val phone = tag(s, "phoneNumber")
+            val desc = tag(s, "description").replace(Regex("<[^>]+>"), " ").trim()
+            val detail = listOf(if (phone.isNotBlank()) "☎ $phone" else "", desc.takeIf { phone.isBlank() || !it.contains(phone) }.orEmpty())
+                .filter { it.isNotBlank() }.joinToString(" · ")
+            Pt(tag(s, "name").ifBlank { String.format(Locale.US, "%.4f, %.4f", lat, lon) }, lat, lon, detail.take(120))
+        }.toList()
     }
 
     /** UTF-8 ή, αν δεν είναι έγκυρο, Windows-1253 (παλιά ελληνικά αρχεία Garmin/iGo). */

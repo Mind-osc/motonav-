@@ -11,8 +11,9 @@ import org.json.JSONObject
 
 /**
  * Μετρητής ταξιδιού A/B, όπως στο ταμπλό της μηχανής (και στο Trip A του DMD2).
- * A: μηδενίζεται μόνο του όταν ξεκινάς ξανά μετά από 3+ ώρες. B: μόνο όταν τον μηδενίσεις εσύ
- * (π.χ. στο γέμισμα: πόσα km με το ρεζερβουάρ). Μετράνε πάντα, με ή χωρίς πλοήγηση· ⏸ σταματάει τον έναν.
+ * A: η τωρινή διαδρομή. Ξεκινάει από το μηδέν μόνο του με κάθε «Ξεκίνα» (ή καταγραφή) και σταματάει στο τέλος της.
+ * B: μετράει ό,τι οδηγείς, ώσπου να τον μηδενίσεις εσύ (π.χ. στο γέμισμα: πόσα km με το ρεζερβουάρ).
+ * Μετράει μόνο όταν κινείσαι (> 9 km/h, στίγμα ≤ 25 m): σταματημένος, το GPS «χορεύει» και έβγαζε ψεύτικα μέτρα και υψόμετρα.
  */
 data class TripMeterData(
     val startMs: Long = 0L,
@@ -57,6 +58,8 @@ data class TripMeterData(
 object TripMeter {
     /** Μετά από τόσο χωρίς στίγμα, το A ξεκινάει από την αρχή. */
     const val AUTO_RESET_MS = 3 * 3600_000L
+    /** Κάτω από αυτό (~9 km/h) δεν μετράει ως κίνηση: θόρυβος του GPS όταν στέκεσαι. */
+    const val MOVING_MPS = 2.5
 
     var a by mutableStateOf(TripMeterData())
         private set
@@ -77,6 +80,8 @@ object TripMeter {
         val p = context.getSharedPreferences("trip_meter", Context.MODE_PRIVATE)
         prefs = p
         a = TripMeterData.fromJson(p.getString("a", null))
+        // Η εφαρμογή ξανανοίγει χωρίς πλοήγηση: το A περιμένει το επόμενο «Ξεκίνα».
+        if (!a.paused && a.startMs != 0L) a = a.copy(paused = true, pausedAtMs = a.lastFixMs.takeIf { it > 0 } ?: System.currentTimeMillis())
         b = TripMeterData.fromJson(p.getString("b", null))
         showB = p.getBoolean("showB", false)
     }
@@ -91,10 +96,8 @@ object TripMeter {
     /** Κάθε στίγμα GPS. */
     fun add(loc: Location) {
         val now = loc.time.takeIf { it > 0 } ?: System.currentTimeMillis()
-        if (loc.hasAccuracy() && loc.accuracy > 40f) return
+        if (loc.hasAccuracy() && loc.accuracy > 25f) return
         val p = LatLon(loc.latitude, loc.longitude)
-        // A: νέα βόλτα μετά από πολλές ώρες
-        if (a.lastFixMs > 0 && now - a.lastFixMs > AUTO_RESET_MS && !a.paused) a = TripMeterData()
         var d = 0.0
         var dt = 0.0
         last?.let { q ->
@@ -109,7 +112,8 @@ object TripMeter {
         // Υψόμετρο εξομαλυμένο, με υστέρηση 3 m (όχι θόρυβος του GPS)
         var up = 0.0
         var down = 0.0
-        if (loc.hasAltitude()) {
+        val moving = d > 0 && v > MOVING_MPS
+        if (loc.hasAltitude() && moving) {
             val s = altSmooth?.let { it + 0.2 * (loc.altitude - it) } ?: loc.altitude
             altSmooth = s
             val ref = altRef ?: s.also { altRef = it }
@@ -118,12 +122,11 @@ object TripMeter {
         fun step(m: TripMeterData): TripMeterData {
             if (m.paused) return m
             val start = if (m.startMs == 0L) now else m.startMs
-            val moving = d > 0 && v > 1.5
             return m.copy(
                 startMs = start,
-                distanceM = m.distanceM + d,
+                distanceM = m.distanceM + if (moving) d else 0.0,
                 movingS = m.movingS + if (moving) dt else 0.0,
-                maxKmh = if (v * 3.6 in m.maxKmh..300.0) v * 3.6 else m.maxKmh,
+                maxKmh = if (moving && v * 3.6 in m.maxKmh..300.0) v * 3.6 else m.maxKmh,
                 ascentM = m.ascentM + up,
                 descentM = m.descentM + down,
                 lastFixMs = now,
@@ -136,6 +139,18 @@ object TripMeter {
 
     private fun update(which: Boolean, f: (TripMeterData) -> TripMeterData) {
         if (which) b = f(b) else a = f(a)
+        save(force = true)
+    }
+
+    /** «Ξεκίνα» ή έναρξη καταγραφής: το A ξεκινάει από το μηδέν. */
+    fun startRide() {
+        a = TripMeterData(startMs = System.currentTimeMillis())
+        save(force = true)
+    }
+
+    /** Τέλος πλοήγησης/καταγραφής: το A σταματάει (κρατάει τα νούμερα της διαδρομής ως την επόμενη). */
+    fun endRide() {
+        if (!a.paused && a.startMs != 0L) a = a.copy(paused = true, pausedAtMs = System.currentTimeMillis())
         save(force = true)
     }
 

@@ -131,6 +131,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -314,6 +315,14 @@ fun MapScreen(
             openSettings() // χωρίς Google Play Services
         }
     }
+    // Trip A: ξεκινάει από το μηδέν με κάθε πλοήγηση/καταγραφή και σταματάει στο τέλος της.
+    var wasRiding by remember { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(session.recording) {
+        val prev = wasRiding
+        wasRiding = session.recording
+        if (prev == false && session.recording) app.motonav.trips.TripMeter.startRide()
+        if (prev == true && !session.recording) app.motonav.trips.TripMeter.endRide()
+    }
     LaunchedEffect(gps.value.location) { gps.value.location?.let(session::onLocation) }
     // Προσομοίωση: «ψεύτικο» GPS πάνω στη διαδρομή, με το όριο του δρόμου (30–90 km/h) × 1/2/4.
     LaunchedEffect(app.motonav.nav.Simulator.active) {
@@ -401,7 +410,11 @@ fun MapScreen(
     val cameraStore = remember { CameraStore(context) }
     val cameraClient = remember { CameraClient() }
     val bundledCameras = remember { cameraStore.loadBundled() }
-    var cameras by remember { mutableStateOf(cameraStore.merge(cameraStore.loadOsm(), cameraStore.loadMine(), bundledCameras)) }
+    var cameras by remember { mutableStateOf(cameraStore.merge(cameraStore.loadOsm(), cameraStore.loadMine(), bundledCameras + app.motonav.data.ImportedPois.cameras())) }
+    // Κάμερες από εισαγμένα αρχεία (π.χ. 4GPS): μπαίνουν/βγαίνουν μόλις αλλάξουν
+    LaunchedEffect(app.motonav.data.ImportedPois.version) {
+        cameras = cameraStore.merge(cameraStore.loadOsm(), cameraStore.loadMine(), bundledCameras + app.motonav.data.ImportedPois.cameras())
+    }
     var camFetchedAt by remember { mutableStateOf<LatLon?>(null) }
     var camFailAt by remember { mutableStateOf(0L) }
     var cameraAlert by remember { mutableStateOf<Pair<SpeedCamera, Double>?>(null) }
@@ -766,9 +779,9 @@ fun MapScreen(
             runCatching { SlopeLayer.set(s, session.route, display.slopeColors) }
         }
         // Δικά σου σημεία (εισαγμένα αρχεία POI)
-        LaunchedEffect(style, app.motonav.data.ImportedPois.version, c.base.isDark) {
+        LaunchedEffect(style, app.motonav.data.ImportedPois.version, c.base.isDark, session.navigating) {
             val s = style ?: return@LaunchedEffect
-            runCatching { PoiLayer.set(s, density, c.base.text.toArgb(), c.base.bg.toArgb()) }
+            runCatching { PoiLayer.set(s, density, c.base.text.toArgb(), c.base.bg.toArgb(), session.navigating) }
         }
         LaunchedEffect(style, spots, display.showSpots, display.hiddenSpots, c.base.isDark) {
             val s = style ?: return@LaunchedEffect
@@ -960,7 +973,7 @@ fun MapScreen(
             try {
                 val osm = cameraClient.around(here)
                 cameraStore.saveOsm(osm)
-                cameras = cameraStore.merge(osm, cameraStore.loadMine(), bundledCameras)
+                cameras = cameraStore.merge(osm, cameraStore.loadMine(), bundledCameras + app.motonav.data.ImportedPois.cameras())
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (_: Exception) {
@@ -1188,13 +1201,13 @@ fun MapScreen(
             val loc = gps.value.location
             if (loc != null) {
                 val heading = if (loc.hasBearing() && loc.speed > 2f) loc.bearing.toDouble() else instruments.headingDeg?.toDouble()
-                cameras = cameraStore.merge(cameraStore.loadOsm(), cameraStore.addMine(LatLon(loc.latitude, loc.longitude), heading), bundledCameras)
+                cameras = cameraStore.merge(cameraStore.loadOsm(), cameraStore.addMine(LatLon(loc.latitude, loc.longitude), heading), bundledCameras + app.motonav.data.ImportedPois.cameras())
                 cameraMarkedAt = SystemClock.elapsedRealtime()
             }
         }
         val deleteCamera = {
             cameraToDelete?.let { id ->
-                cameras = cameraStore.merge(cameraStore.loadOsm(), cameraStore.removeMine(id), bundledCameras)
+                cameras = cameraStore.merge(cameraStore.loadOsm(), cameraStore.removeMine(id), bundledCameras + app.motonav.data.ImportedPois.cameras())
                 if (cameraAlert?.first?.id == id) cameraAlert = null
             }
             cameraToDelete = null
@@ -1572,7 +1585,11 @@ fun MapScreen(
             onReroute = if (session.navigating) ({ session.rerouteNow(); reportOpen = false }) else null,
         )
         BackHandler(enabled = reportOpen) { reportOpen = false }
+        val themeNow by repo.theme.collectAsState(app.motonav.ui.theme.ThemeSettings())
         if (quickOpen && !pip) QuickActionsPanel(
+            themeMode = themeNow.mode,
+            onTheme = { mode -> scope.launch { repo.save(themeNow.copy(mode = mode)) } },
+            onToggleNorth = { toggleNorth() },
             landscape = landscape,
             display = display,
             onDisplayChange = { d -> scope.launch { repo.saveDisplay(d) } },

@@ -62,3 +62,36 @@ class TripMeterTest {
         assertEquals(m, back)
     }
 }
+
+class FourGpsTest {
+    @Test fun garminGpxWithAddressAndPhone() {
+        val gpx = """<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="POIs 4 GPS http://www.4gps.gr"><wpt lat="38.89420" lon="22.44553"><name>BP - ΓΚΙΚΑΣ ΓΕΩΡΓΙΟΣ - Φθιώτιδος-Λαμία</name><extensions><gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3"><gpxx:Address><gpxx:StreetAddress>Θερμοπυλών 87</gpxx:StreetAddress><gpxx:City>Λαμία</gpxx:City></gpxx:Address><gpxx:PhoneNumber>2231012345</gpxx:PhoneNumber></gpxx:WaypointExtension></extensions></wpt><wpt lat="37.97877" lon="23.91553"><name>BP - Σπάτα</name><cmt>Κιν: 6973996019 - </cmt></wpt></gpx>"""
+        val pts = ImportedPois.parseGpx(gpx)
+        assertEquals(2, pts.size)
+        assertEquals("BP - ΓΚΙΚΑΣ ΓΕΩΡΓΙΟΣ - Φθιώτιδος-Λαμία", pts[0].name)
+        assertEquals("Θερμοπυλών 87, Λαμία · ☎ 2231012345", pts[0].detail)
+        assertEquals("☎ 6973996019", pts[1].detail)
+    }
+}
+
+class FourGpsCamerasTest {
+    @Test fun cameraComment() {
+        val gpx = """<gpx><wpt lat="38.71560" lon="21.20750"><name>Κάμερα Ταχύτητας - G0118</name><cmt>50,1,345</cmt><extensions><gpxx:StreetAddress>Ε.Ο. Αγρινίου-Άρτας</gpxx:StreetAddress></extensions></wpt><wpt lat="38.6" lon="21.4"><name>Κάμερα</name><cmt>0,0,0</cmt></wpt></gpx>"""
+        val pts = ImportedPois.parseGpx(gpx)
+        assertEquals(50, pts[0].speed)
+        assertEquals(345.0, pts[0].dir!!, 1e-6)
+        assertEquals("όριο 50 · Ε.Ο. Αγρινίου-Άρτας", pts[0].detail)
+        assertNull(pts[1].speed)
+        assertNull(pts[1].dir)
+    }
+}
+
+class FourGpsExtrasTest {
+    @Test fun tollPricesAndHours() {
+        val gpx = """<gpx><wpt lat="38.5" lon="21.3"><name>Σταθμός Διοδίων Αγγελόκαστρου</name><cmt>Site: www.naodos.gr - 1.25-2.55-6.30-10.10,1,96</cmt></wpt><wpt lat="37.4" lon="23.2"><name>Συνεργείο</name><cmt>Ωράριο: Δευτέρα - Παρασκευή: 08:00-18:00.</cmt></wpt></gpx>"""
+        val pts = ImportedPois.parseGpx(gpx)
+        assertEquals("Διόδια: μηχανή 1,25 € · ΙΧ 2,55 €", pts[0].detail)
+        assertNull(pts[0].dir)
+        assertEquals("Ωράριο: Δευτέρα - Παρασκευή: 08:00-18:00.", pts[1].detail)
+    }
+}

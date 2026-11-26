@@ -25,8 +25,8 @@ enum class EdgeAlert(val color: Color, val periodMs: Int, val topOnly: Boolean =
     CHECKERED(Color.White, 700, topOnly = true),
     /** Κίνδυνος μπροστά (λάδια, ζώο, έργα…). */
     HAZARD(Color(0xFFFF8A1F), 800),
-    /** Κάμερα μπροστά. */
-    CAMERA(Color(0xFFFFD23F), 1000),
+    /** Κάμερα μπροστά: μόνο στο πάνω μέρος. */
+    CAMERA(Color(0xFFFFD23F), 1000, topOnly = true),
 }
 
 /**

@@ -1,6 +1,9 @@
 package app.motonav.ui
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -83,7 +86,7 @@ fun TripMeterCard(modifier: Modifier = Modifier) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
             Text(if (useB) "Trip B" else "Trip A", style = MotoType.title.copy(fontWeight = FontWeight.Bold), color = c.base.text)
             Text(
-                if (useB) "μηδενίζεται μόνο από σένα" else "νέο μετά από 3 ώρες στάση",
+                if (useB) "μηδενίζεται μόνο από σένα" else "η τωρινή διαδρομή · ξεκινά μόνο του με το «Ξεκίνα»",
                 style = MotoType.label.copy(fontWeight = FontWeight.Normal), color = c.base.textMuted,
                 modifier = Modifier.weight(1f),
             )
@@ -112,56 +115,90 @@ fun TripMeterCard(modifier: Modifier = Modifier) {
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            RoundAction(if (m.paused) "▶" else "❚❚", if (m.paused) "Συνέχεια" else "Παύση", ORANGE) { TripMeter.togglePause() }
-            RoundAction("↺", "Μηδενισμός", BLUE) { TripMeter.reset() }
-            RoundAction("⇄", if (useB) "Trip A" else "Trip B", BLUE) { TripMeter.swap() }
+            RoundAction(if (m.paused) Glyph.PLAY else Glyph.PAUSE, if (m.paused) "Συνέχεια" else "Παύση", ORANGE) { TripMeter.togglePause() }
+            RoundAction(Glyph.RESET, "Μηδενισμός", BLUE) { TripMeter.reset() }
+            RoundAction(Glyph.SWAP, if (useB) "Trip A" else "Trip B", BLUE) { TripMeter.swap() }
+        }
+    }
+}
+
+private enum class Glyph { PAUSE, PLAY, RESET, SWAP, DOT }
+
+/** Εικονίδια ζωγραφισμένα με το ίδιο πάχος και μέγεθος (όλα ίδια οπτικά, κανένα «τεράστιο»). */
+@Composable
+private fun GlyphIcon(g: Glyph, color: Color, size: androidx.compose.ui.unit.Dp = 24.dp) {
+    androidx.compose.foundation.Canvas(Modifier.size(size)) {
+        val w = this.size.width
+        val sw = w * 0.11f
+        val stroke = androidx.compose.ui.graphics.drawscope.Stroke(sw, cap = androidx.compose.ui.graphics.StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round)
+        when (g) {
+            Glyph.PAUSE -> {
+                drawLine(color, androidx.compose.ui.geometry.Offset(w * 0.36f, w * 0.22f), androidx.compose.ui.geometry.Offset(w * 0.36f, w * 0.78f), sw * 1.3f, androidx.compose.ui.graphics.StrokeCap.Round)
+                drawLine(color, androidx.compose.ui.geometry.Offset(w * 0.64f, w * 0.22f), androidx.compose.ui.geometry.Offset(w * 0.64f, w * 0.78f), sw * 1.3f, androidx.compose.ui.graphics.StrokeCap.Round)
+            }
+            Glyph.PLAY -> {
+                val p = androidx.compose.ui.graphics.Path().apply { moveTo(w * 0.32f, w * 0.2f); lineTo(w * 0.8f, w * 0.5f); lineTo(w * 0.32f, w * 0.8f); close() }
+                drawPath(p, color, style = stroke)
+            }
+            Glyph.RESET -> {
+                drawArc(color, 40f, 290f, false, androidx.compose.ui.geometry.Offset(w * 0.2f, w * 0.2f), androidx.compose.ui.geometry.Size(w * 0.6f, w * 0.6f), style = stroke)
+                val p = androidx.compose.ui.graphics.Path().apply { moveTo(w * 0.80f, w * 0.18f); lineTo(w * 0.80f, w * 0.42f); lineTo(w * 0.56f, w * 0.42f) }
+                drawPath(p, color, style = stroke)
+            }
+            Glyph.SWAP -> {
+                drawLine(color, androidx.compose.ui.geometry.Offset(w * 0.2f, w * 0.36f), androidx.compose.ui.geometry.Offset(w * 0.8f, w * 0.36f), sw, androidx.compose.ui.graphics.StrokeCap.Round)
+                drawPath(androidx.compose.ui.graphics.Path().apply { moveTo(w * 0.64f, w * 0.2f); lineTo(w * 0.8f, w * 0.36f); lineTo(w * 0.64f, w * 0.52f) }, color, style = stroke)
+                drawLine(color, androidx.compose.ui.geometry.Offset(w * 0.8f, w * 0.66f), androidx.compose.ui.geometry.Offset(w * 0.2f, w * 0.66f), sw, androidx.compose.ui.graphics.StrokeCap.Round)
+                drawPath(androidx.compose.ui.graphics.Path().apply { moveTo(w * 0.36f, w * 0.5f); lineTo(w * 0.2f, w * 0.66f); lineTo(w * 0.36f, w * 0.82f) }, color, style = stroke)
+            }
+            Glyph.DOT -> drawCircle(color, w * 0.3f)
         }
     }
 }
 
 @Composable
-private fun RoundAction(symbol: String, label: String, color: Color, onClick: () -> Unit) {
+private fun RoundAction(glyph: Glyph, label: String, color: Color, onClick: () -> Unit) {
     val c = LocalAppColors.current
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Space.xs)) {
         Surface(
             shape = CircleShape,
-            color = c.base.surface,
-            border = BorderStroke(2.dp, c.outline),
+            color = c.base.surface2,
+            border = BorderStroke(1.dp, c.outline),
             onClick = onClick,
-            modifier = Modifier.size(72.dp),
+            modifier = Modifier.size(60.dp),
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Text(symbol, color = color, fontSize = 30.sp, fontWeight = FontWeight.Black)
-            }
+            Box(contentAlignment = Alignment.Center) { GlyphIcon(glyph, color, 26.dp) }
         }
-        Text(label, style = MotoType.label.copy(fontWeight = FontWeight.Normal), color = c.base.textMuted)
+        Text(label, style = MotoType.label.copy(fontWeight = FontWeight.Normal, fontSize = 13.sp), color = c.base.textMuted)
     }
 }
 
-/** Μεγάλο χρωματιστό πλακίδιο (όπως τα «Καταγραφή / Βελτίωση χάρτη» του DMD2). */
+/** Μικρό, ήρεμο πλακίδιο: ουδέτερο φόντο, μόνο το εικονίδιο έχει χρώμα. */
 @Composable
-private fun ActionTile(emoji: String, title: String, subtitle: String?, tint: Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
+private fun ActionTile(icon: @Composable () -> Unit, title: String, subtitle: String?, tint: Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val c = LocalAppColors.current
     Surface(
-        shape = RoundedCornerShape(Radius.lg),
-        color = tint.copy(alpha = if (c.base.isDark) 0.16f else 0.12f),
-        border = BorderStroke(1.dp, tint.copy(alpha = 0.45f)),
+        shape = RoundedCornerShape(Radius.md),
+        color = c.base.surface2,
+        border = BorderStroke(1.dp, c.outline.copy(alpha = 0.6f)),
         onClick = onClick,
-        modifier = modifier.heightIn(min = 112.dp),
+        modifier = modifier.heightIn(min = 60.dp),
     ) {
-        Column(
-            Modifier.padding(Space.md),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(Space.xs, Alignment.CenterVertically),
-        ) {
-            Box(Modifier.size(52.dp).background(tint.copy(alpha = 0.25f), CircleShape), contentAlignment = Alignment.Center) {
-                Text(emoji, fontSize = 26.sp)
+        Row(Modifier.padding(horizontal = Space.sm, vertical = Space.sm), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+            Box(Modifier.size(36.dp).background(tint.copy(alpha = 0.16f), CircleShape), contentAlignment = Alignment.Center) {
+                androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides tint) { icon() }
             }
-            Text(title.uppercase(Locale("el", "GR")), style = MotoType.label.copy(fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp), color = c.base.text, textAlign = TextAlign.Center)
-            if (subtitle != null) Text(subtitle, style = MotoType.label.copy(fontWeight = FontWeight.Normal), color = c.base.textMuted, textAlign = TextAlign.Center)
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MotoType.label.copy(fontWeight = FontWeight.SemiBold), color = c.base.text, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                if (subtitle != null) Text(subtitle, style = MotoType.label.copy(fontWeight = FontWeight.Normal, fontSize = 12.sp), color = c.base.textMuted, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            }
         }
     }
 }
+
+@Composable
+private fun MIcon(v: androidx.compose.ui.graphics.vector.ImageVector, tint: Color) =
+    androidx.compose.material3.Icon(v, null, tint = tint, modifier = Modifier.size(20.dp))
 
 @Composable
 private fun SectionTitle(text: String) {
@@ -187,6 +224,9 @@ fun QuickActionsPanel(
     onMapReport: () -> Unit,
     onSaveHere: () -> Unit,
     onClose: () -> Unit,
+    themeMode: app.motonav.ui.theme.ThemeMode = app.motonav.ui.theme.ThemeMode.DARK,
+    onTheme: (app.motonav.ui.theme.ThemeMode) -> Unit = {},
+    onToggleNorth: () -> Unit = {},
 ) {
     val c = LocalAppColors.current
     val backdrop = if (landscape) Modifier else Modifier
@@ -218,27 +258,37 @@ fun QuickActionsPanel(
                 ) {
                     TripMeterCard()
                     SectionTitle("Ενέργειες")
+                    val red = Color(0xFFE5534B); val green = Color(0xFF4CAF50); val amber = Color(0xFFE0A23A); val orange = Color(0xFFEF7D32)
                     Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
-                        ActionTile(
-                            "⏺", "Καταγραφή",
-                            when { !recording -> "Χωρίς καταγραφή"; recordingPaused -> "Σε παύση"; else -> "Γράφει…" },
-                            Color(0xFFE53935), Modifier.weight(1f), onRecord,
-                        )
-                        ActionTile("📍", "Αποθήκευση θέσης", "Στα Αγαπημένα", Color(0xFF43A047), Modifier.weight(1f), onSaveHere)
+                        ActionTile({ GlyphIcon(if (recording && !recordingPaused) Glyph.PAUSE else Glyph.DOT, red, 18.dp) }, "Καταγραφή",
+                            when { !recording -> "Έναρξη"; recordingPaused -> "Σε παύση"; else -> "Γράφει…" }, red, Modifier.weight(1f), onRecord)
+                        ActionTile({ MIcon(androidx.compose.material.icons.Icons.Filled.Place, green) }, "Αποθήκευση θέσης", "Στα Αγαπημένα", green, Modifier.weight(1f), onSaveHere)
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
-                        ActionTile("🗺", "Αναφορά χάρτη", "Λείπει δρόμος, λάθος όνομα…", Color(0xFFFFB300), Modifier.weight(1f), onMapReport)
-                        ActionTile("⚠", "Κίνδυνος / κάμερα", "Για όλους τους αναβάτες", Color(0xFFFB8C00), Modifier.weight(1f), onHazard)
+                        ActionTile({ MIcon(androidx.compose.material.icons.Icons.Filled.Edit, amber) }, "Αναφορά χάρτη", "Λείπει δρόμος…", amber, Modifier.weight(1f), onMapReport)
+                        ActionTile({ MIcon(androidx.compose.material.icons.Icons.Filled.Warning, orange) }, "Κίνδυνος / κάμερα", "Για όλους", orange, Modifier.weight(1f), onHazard)
+                    }
+                    SectionTitle("Θέμα")
+                    Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+                        listOf(app.motonav.ui.theme.ThemeMode.DARK to "Σκούρο", app.motonav.ui.theme.ThemeMode.LIGHT to "Φωτεινό", app.motonav.ui.theme.ThemeMode.AUTO to "Αυτόματο").forEach { (mode, label) ->
+                            TextChoice(label, themeMode == mode || (mode == app.motonav.ui.theme.ThemeMode.DARK && themeMode == app.motonav.ui.theme.ThemeMode.AMOLED), { onTheme(mode) }, Modifier.weight(1f))
+                        }
                     }
                     SectionTitle("Γρήγοροι διακόπτες")
                     Surface(shape = RoundedCornerShape(Radius.lg), color = c.base.surface) {
                         Column {
                             SwitchRow("Φωνή πλοήγησης", null, !muted) { onMute() }
-                            SwitchRow("Χρώμα κλίσης στη γραμμή", "Κίτρινο 4–7 %, πορτοκαλί 7–10 %, κόκκινο πάνω από 10 %", display.slopeColors) {
+                            SwitchRow("Φωνή για κάμερες", null, display.cameraVoice) { onDisplayChange(display.copy(cameraVoice = it)) }
+                            SwitchRow("Βορράς πάνω", "Αλλιώς η κατεύθυνσή σου πάνω", CameraPrefs.northUp) { if (it != CameraPrefs.northUp) onToggleNorth() }
+                            SwitchRow("Λιγότερη κλίση χάρτη", "Στην πλοήγηση: 40° αντί για 56°", display.navTilt < 50) { onDisplayChange(display.copy(navTilt = if (it) 40 else 56)) }
+                            SwitchRow("Χρώμα κλίσης στη γραμμή", "Κίτρινο 4–7 %, πορτοκαλί 7–10 %, κόκκινο > 10 %", display.slopeColors) {
                                 onDisplayChange(display.copy(slopeColors = it))
                             }
+                            SwitchRow("Φωτισμός όταν περνάς το όριο", null, display.overspeedGlow) { onDisplayChange(display.copy(overspeedGlow = it)) }
                             SwitchRow("Μέρη για μηχανόβιους", null, display.showSpots) { onDisplayChange(display.copy(showSpots = it)) }
+                            SwitchRow("Ανάγλυφο βουνών", null, display.showRelief) { onDisplayChange(display.copy(showRelief = it)) }
                             SwitchRow("Εξοικονόμηση ενέργειας", null, display.powerSave) { onDisplayChange(display.copy(powerSave = it)) }
+                            SwitchRow("Αυτοκίνητο", "Διαδρομές για αυτοκίνητο", display.car) { onDisplayChange(display.copy(car = it)) }
                         }
                     }
                     SectionTitle("Επόμενα στη διαδρομή")
