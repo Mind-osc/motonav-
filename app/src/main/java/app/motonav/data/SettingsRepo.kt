@@ -48,6 +48,8 @@ data class DisplayPrefs(
     val car: Boolean = false,
     /** Εξοικονόμηση: λιγότερα καρέ, λιγότερη κλίση, χωρίς ανάγλυφο. */
     val powerSave: Boolean = false,
+    /** Κλίση του χάρτη στην πλοήγηση: 56° (βλέπεις πιο μακριά, προεπιλογή) ή 40° (λιγότερη). */
+    val navTilt: Int = 56,
     /** Αποφυγές: πλοία, κύριοι δρόμοι, πολύ στενοί δρόμοι, χωματόδρομοι. */
     val avoidFerries: Boolean = false,
     val avoidMain: Boolean = false,
@@ -118,6 +120,7 @@ class SettingsRepo(private val context: Context) {
     private val curvesKey = booleanPreferencesKey("more_curves")
     private val carKey = booleanPreferencesKey("vehicle_car")
     private val powerKey = booleanPreferencesKey("power_save")
+    private val tiltKey = intPreferencesKey("nav_tilt")
     private val avFerryKey = booleanPreferencesKey("avoid_ferries")
     private val avMainKey = booleanPreferencesKey("avoid_main")
     private val avNarrowKey = booleanPreferencesKey("avoid_narrow")
@@ -152,6 +155,7 @@ class SettingsRepo(private val context: Context) {
             moreCurves = p[curvesKey] ?: false,
             car = p[carKey] ?: false,
             powerSave = p[powerKey] ?: false,
+            navTilt = p[tiltKey] ?: 56,
             avoidFerries = p[avFerryKey] ?: false,
             avoidMain = p[avMainKey] ?: false,
             avoidNarrow = p[avNarrowKey] ?: false,
@@ -226,6 +230,7 @@ class SettingsRepo(private val context: Context) {
             p[curvesKey] = d.moreCurves
             p[carKey] = d.car
             p[powerKey] = d.powerSave
+            p[tiltKey] = d.navTilt
             p[avFerryKey] = d.avoidFerries
             p[avMainKey] = d.avoidMain
             p[avNarrowKey] = d.avoidNarrow

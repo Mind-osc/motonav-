@@ -592,9 +592,16 @@ fun MapScreen(
                 style = loaded
             }
         }
-        LaunchedEffect(style, display.showRelief, display.maptilerKey, display.showContours, display.showDirt, display.powerSave) {
+        LaunchedEffect(style, display.showRelief, display.maptilerKey, display.showContours, display.showDirt, display.powerSave, display.navTilt) {
             CameraPrefs.powerSave = display.powerSave
+            CameraPrefs.navTilt = display.navTilt.toDouble()
             val s = style ?: return@LaunchedEffect
+            // Φωτεινό θέμα (liberty): 3D κτίρια από ζουμ 14. Στην εξοικονόμηση κρύβονται (βαρύ σχέδιο στην κάρτα γραφικών).
+            s.getLayer("building-3d")?.setProperties(
+                org.maplibre.android.style.layers.PropertyFactory.visibility(
+                    if (display.powerSave) org.maplibre.android.style.layers.Property.NONE else org.maplibre.android.style.layers.Property.VISIBLE,
+                ),
+            )
             Terrain.apply(s, c.base.isDark, display.showRelief && !display.powerSave, display.maptilerKey, display.showContours && !display.powerSave, display.showDirt)
         }
         LaunchedEffect(style, hasLocation, c, markerPrefs) {
@@ -1764,11 +1771,14 @@ private fun ManeuverPanel(s: NavState, rerouting: Boolean, signColor: Color? = n
                 // Το βελάκι πιάνει όλο το ύψος της καρτέλας: μετράμε πόσο ψηλά είναι τα κείμενα δίπλα του.
                 val density = androidx.compose.ui.platform.LocalDensity.current
                 var textH by remember { mutableStateOf(0) }
+                // Με όριο: αλλιώς στο οριζόντιο (στενή στήλη 300 dp) το μεγάλο βελάκι στένευε το κείμενο, το κείμενο
+                // έσπαγε σε περισσότερες γραμμές και ψήλωνε, το βελάκι μεγάλωνε ξανά… ώσπου το κείμενο εξαφανιζόταν.
                 val iconSize = maxOf(sizes.maneuverIcon * grow, with(density) { textH.toDp() })
+                    .coerceAtMost(sizes.maneuverIcon * grow * 1.5f)
                 ManeuverIcon(m.turn, c.accent, Modifier.size(iconSize))
                 Spacer(Modifier.width(Space.md))
                 Column(Modifier.onSizeChanged { textH = it.height }) {
-                    Text(formatShortDistance(s.distToNextM), style = bigText.copy(fontWeight = FontWeight.Bold), color = c.base.text)
+                    Text(formatShortDistance(s.distToNextM), style = bigText.copy(fontWeight = FontWeight.Bold), color = c.base.text, maxLines = 1, softWrap = false)
                     Text(
                         Phrases.capitalized(Phrases.action(m)),
                         style = MotoType.body.copy(fontSize = MotoType.body.fontSize * grow, lineHeight = MotoType.body.lineHeight * grow),
@@ -2754,8 +2764,9 @@ private fun correctPuckHeight(map: MapLibreMap, top: Double, attempt: Int) {
 /** Βορράς πάνω (πάτημα στην πυξίδα) ή η κατεύθυνσή σου πάνω (κανονικά). */
 object CameraPrefs {
     var northUp by mutableStateOf(false)
-    /** Εξοικονόμηση: λιγότερη κλίση στην πλοήγηση (λιγότερα πλακίδια χάρτη να ζωγραφιστούν). */
     var powerSave = false
+    /** Κλίση στην πλοήγηση (Ρυθμίσεις → Χάρτης): 56° ή 40°. */
+    var navTilt = 56.0
 }
 
 /** Η πυξίδα ως κουμπί: πάτημα = βορράς πάνω / ξανά = η κατεύθυνσή σου πάνω. Με βορρά πάνω έχει χρωματιστό δαχτυλίδι. */
@@ -2792,7 +2803,7 @@ private fun centerOnMe(map: MapLibreMap, navigating: Boolean) {
         if (navigating) 17.0 else 16.0,
         if (north) 0.0 else null,
         // Λίγο περισσότερη κλίση: φαίνεται πιο μακριά ο δρόμος (ορίζοντας).
-        if (navigating) (if (CameraPrefs.powerSave) 40.0 else 56.0) else 0.0,
+        if (navigating) CameraPrefs.navTilt else 0.0,
         object : OnLocationCameraTransitionListener {
             override fun onLocationCameraTransitionFinished(cameraMode: Int) {
                 // Μετά τη μετάβαση (στη διάρκειά της το MapLibre απορρίπτει αλλαγές).

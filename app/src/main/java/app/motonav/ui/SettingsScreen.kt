@@ -139,8 +139,15 @@ fun SettingsScreen(
                         SwitchRow("Αυτοκίνητο", "Διαδρομές και κίνηση για αυτοκίνητο· κρύβει το «Χώμα» και το κλισιόμετρο", display.car) {
                             onDisplayChange(display.copy(car = it))
                         }
-                        SwitchRow("Εξοικονόμηση ενέργειας", "Λιγότερο ζέσταμα και μπαταρία: πιο αργή ανανέωση χάρτη, λιγότερη κλίση στην πλοήγηση, χωρίς ανάγλυφο και ισοϋψείς", display.powerSave) {
+                        SwitchRow("Εξοικονόμηση ενέργειας", "Λιγότερο ζέσταμα και μπαταρία: πιο αργή ανανέωση χάρτη, χωρίς ανάγλυφο, ισοϋψείς και 3D κτίρια", display.powerSave) {
                             onDisplayChange(display.copy(powerSave = it))
+                        }
+                        Column(Modifier.padding(horizontal = Space.lg, vertical = Space.xs), verticalArrangement = Arrangement.spacedBy(Space.sm)) {
+                            Text("Κλίση χάρτη στην πλοήγηση", style = MotoType.body, color = c.base.text)
+                            Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+                                TextChoice("Κανονική · βλέπεις μακριά", selected = display.navTilt >= 50, onClick = { onDisplayChange(display.copy(navTilt = 56)) }, modifier = Modifier.weight(1f))
+                                TextChoice("Λιγότερη", selected = display.navTilt < 50, onClick = { onDisplayChange(display.copy(navTilt = 40)) }, modifier = Modifier.weight(1f))
+                            }
                         }
                         SwitchRow("Πολλές στροφές", "Ο τύπος «Στροφές» ψάχνει πιο στριφτούς δρόμους, και με μεγαλύτερη παράκαμψη (έως 2× χρόνο)", display.moreCurves) {
                             onDisplayChange(display.copy(moreCurves = it))
