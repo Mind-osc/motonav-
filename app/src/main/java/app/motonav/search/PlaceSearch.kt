@@ -69,6 +69,8 @@ class PlaceSearch(private val tomtomKey: String = "") {
             if (near != null) append(String.format(Locale.US, "&lat=%.5f&lon=%.5f", near.lat, near.lon))
         }
         val split = PlaceParsers.splitHouseNumber(q)
+        // Διασταύρωση («Λιοσίων & Πραΐδου»): από τα δεδομένα μέσα στην εφαρμογή, και χωρίς internet.
+        val crossing = async(Dispatchers.IO) { if (OfflineCross.split(q) != null) runCatching { OfflineCross.search(q, near) }.getOrDefault(emptyList()) else emptyList() }
         val photon = async(Dispatchers.IO) { runCatching { PlaceParsers.photon(get(photonUrl(q))) } }
         // Χωρίς τόνο («συγγρου»): το Photon δεν ταιριάζει «συγγρου» με «Συγγρού». Ο τόνος στα ελληνικά είναι πάντα
         // σε μία από τις 3 τελευταίες συλλαβές, οπότε ρωτάμε και αυτές τις (έως 3) εκδοχές.
@@ -121,6 +123,8 @@ class PlaceSearch(private val tomtomKey: String = "") {
         val t = tomtom.await()
         if (a.isFailure && b.isFailure && c.isFailure && t.isFailure && av.all { it.isFailure }) {
             // Χωρίς internet: πόλεις, χωριά και κορυφές από τη λίστα μέσα στην εφαρμογή.
+            val crossings = crossing.await() + runCatching { app.motonav.data.ImportedPois.search(q, near) }.getOrDefault(emptyList())
+            if (crossings.isNotEmpty()) return@coroutineScope crossings
             val offline = withContext(Dispatchers.IO) { OfflineGazetteer.search(split?.first ?: q, near) }
             if (offline.isNotEmpty()) return@coroutineScope offline
             throw (a.exceptionOrNull() ?: IOException("search"))
@@ -131,7 +135,8 @@ class PlaceSearch(private val tomtomKey: String = "") {
             t.getOrDefault(emptyList()) + b.getOrDefault(emptyList()),
             near,
         )
-        val result = PlaceParsers.markMissingNumber(ranked, split?.second)
+        val mine = runCatching { app.motonav.data.ImportedPois.search(q, near) }.getOrDefault(emptyList())
+        val result = crossing.await() + mine + PlaceParsers.markMissingNumber(ranked, split?.second)
         result.ifEmpty { withContext(Dispatchers.IO) { OfflineGazetteer.search(split?.first ?: q, near) } }
     }
 

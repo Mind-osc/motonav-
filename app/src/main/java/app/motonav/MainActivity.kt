@@ -99,6 +99,8 @@ class MainActivity : ComponentActivity() {
         // Η οθόνη μένει αναμμένη μόνο στην πλοήγηση ή όταν κινείσαι (το ρυθμίζει ο χάρτης).
         MapLibre.getInstance(this)
         app.motonav.search.OfflineGazetteer.init(applicationContext)
+        app.motonav.search.OfflineCross.init(applicationContext)
+        app.motonav.data.ImportedPois.init(applicationContext)
         app.motonav.routing.NoGoAreas.init(applicationContext)
         val repo = SettingsRepo(applicationContext)
 

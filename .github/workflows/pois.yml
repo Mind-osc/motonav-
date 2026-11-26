@@ -6,7 +6,7 @@ on:
     - cron: "41 2 * * 1"   # κάθε Δευτέρα
   push:
     branches: [main]
-    paths: ["tools/places/build_pois_pbf.py", ".github/workflows/pois.yml"]
+    paths: ["tools/places/build_pois_pbf.py", "tools/places/build_cross_pbf.py", ".github/workflows/pois.yml"]
 
 permissions:
   contents: write
@@ -36,13 +36,18 @@ jobs:
             -o /tmp/pois.pbf --overwrite
       - name: Σημεία
         run: python tools/places/build_pois_pbf.py /tmp/pois.pbf
+      - name: Διασταυρώσεις οδών
+        run: |
+          osmium tags-filter /tmp/gr.pbf w/highway=motorway,trunk,primary,secondary,tertiary,unclassified,residential,living_street,pedestrian,road -o /tmp/roads0.pbf --overwrite
+          osmium tags-filter /tmp/roads0.pbf w/name -o /tmp/roads.pbf --overwrite
+          python tools/places/build_cross_pbf.py /tmp/roads.pbf
       - name: Commit
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@users.noreply.github.com"
-          git add app/src/main/assets/places/gr-pois.tsv
+          git add app/src/main/assets/places/gr-pois.tsv app/src/main/assets/places/gr-cross.tsv
           if git diff --cached --quiet; then echo "no changes"; exit 0; fi
-          git commit -m "data: σημεία Ελλάδας (βενζίνη, καφέ κ.ά.) για offline κατηγορίες"
+          git commit -m "data: σημεία και διασταυρώσεις Ελλάδας για offline αναζήτηση"
           git pull --rebase origin main
           git push
           gh workflow run build.yml --ref main

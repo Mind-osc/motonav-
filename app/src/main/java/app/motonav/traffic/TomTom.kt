@@ -29,6 +29,9 @@ data class TrafficJam(val points: List<LatLon>, val level: Int)
  * - flowTileUrl(): πλακίδια χάρτη με χρώματα κίνησης.
  */
 class TomTomClient(private val key: String) {
+    /** «Αυτοκίνητο» στις Ρυθμίσεις: travelMode=car αντί για motorcycle. */
+    private val mode get() = if (app.motonav.routing.Vehicle.car) "car" else "motorcycle"
+
 
     suspend fun route(
         from: LatLon,
@@ -53,7 +56,7 @@ class TomTomClient(private val key: String) {
             append("https://api.tomtom.com/routing/1/calculateRoute/")
             append((listOf(from) + via + to).joinToString(":") { loc(it) })
             append("/json?key=").append(enc(key))
-            append("&traffic=true&routeType=fastest&travelMode=motorcycle")
+            append("&traffic=true&routeType=fastest&travelMode=$mode")
             append("&instructionsType=coded&language=el-GR&computeTravelTimeFor=all&sectionType=lanes&sectionType=motorway&sectionType=unpaved&sectionType=traffic")
             if (headingDeg != null) append("&vehicleHeading=").append(headingDeg.toInt().coerceIn(0, 359))
             if (avoidTolls) append("&avoid=tollRoads")
@@ -72,7 +75,7 @@ class TomTomClient(private val key: String) {
             append("https://api.tomtom.com/routing/1/calculateRoute/")
             append(loc(support.first())).append(':').append(loc(support.last()))
             append("/json?key=").append(enc(key))
-            append("&traffic=true&travelMode=motorcycle&computeTravelTimeFor=all&routeRepresentation=polyline&sectionType=traffic")
+            append("&traffic=true&travelMode=$mode&computeTravelTimeFor=all&routeRepresentation=polyline&sectionType=traffic")
         }
         val body = JSONObject().put(
             "supportingPoints",

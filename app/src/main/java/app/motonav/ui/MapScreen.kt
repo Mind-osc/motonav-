@@ -367,6 +367,8 @@ fun MapScreen(
     }
     LaunchedEffect(session.navigating) { if (session.navigating) fpsBoostKey++ }
     val mapFps = when {
+        // Εξοικονόμηση: λιγότερα καρέ (το βελάκι κινείται λίγο πιο «βηματικά», το κινητό ζεσταίνεται πολύ λιγότερο).
+        display.powerSave -> if (hot) 12 else if (riding) 15 else 24
         hot || (battery.percent < 20 && !battery.charging) -> 20
         fpsBoost -> screenHz
         riding -> 30
@@ -503,6 +505,18 @@ fun MapScreen(
                                     return@addOnMapClickListener true
                                 }
                             }
+                            // Πάτημα σε δικό σου σημείο (εισαγμένο αρχείο): γίνεται προορισμός.
+                            if (!session.navigating) {
+                                val f = m.queryRenderedFeatures(
+                                    android.graphics.RectF(pt.x - r, pt.y - r, pt.x + r, pt.y + r),
+                                    PoiLayer.LAYER,
+                                ).firstOrNull()
+                                val p = f?.let { app.motonav.data.ImportedPois.point(it.getStringProperty("c") ?: "", it.getNumberProperty("i")?.toInt() ?: -1) }
+                                if (p != null) {
+                                    session.pick(LatLon(p.lat, p.lon), p.name)
+                                    return@addOnMapClickListener true
+                                }
+                            }
                             // Πάτημα σε μέρος μηχανόβιων: γίνεται προορισμός (κάρτα με όνομα, διαδρομή, ★).
                             if (!session.navigating) {
                                 val spotId = m.queryRenderedFeatures(
@@ -574,13 +588,14 @@ fun MapScreen(
             style = null
             m.setStyle(Style.Builder().fromUri(styleUrl)) { loaded ->
                 if (c.base.isDark) MapContrast.apply(loaded)
-                Terrain.apply(loaded, c.base.isDark, display.showRelief, display.maptilerKey, display.showContours, display.showDirt)
+                Terrain.apply(loaded, c.base.isDark, display.showRelief && !display.powerSave, display.maptilerKey, display.showContours && !display.powerSave, display.showDirt)
                 style = loaded
             }
         }
-        LaunchedEffect(style, display.showRelief, display.maptilerKey, display.showContours, display.showDirt) {
+        LaunchedEffect(style, display.showRelief, display.maptilerKey, display.showContours, display.showDirt, display.powerSave) {
+            CameraPrefs.powerSave = display.powerSave
             val s = style ?: return@LaunchedEffect
-            Terrain.apply(s, c.base.isDark, display.showRelief, display.maptilerKey, display.showContours, display.showDirt)
+            Terrain.apply(s, c.base.isDark, display.showRelief && !display.powerSave, display.maptilerKey, display.showContours && !display.powerSave, display.showDirt)
         }
         LaunchedEffect(style, hasLocation, c, markerPrefs) {
             val m = map ?: return@LaunchedEffect
@@ -667,6 +682,10 @@ fun MapScreen(
         }
         LaunchedEffect(display.showAlternatives) { session.showAlternatives = display.showAlternatives }
         LaunchedEffect(display.moreCurves) { session.router.moreCurves = display.moreCurves }
+        LaunchedEffect(display.car) {
+            app.motonav.routing.Vehicle.car = display.car
+            if (display.car && session.routeType == RouteType.DIRT) session.chooseRouteType(RouteType.FASTEST)
+        }
         LaunchedEffect(display.avoidFerries, display.avoidMain, display.avoidNarrow, display.avoidUnpaved) {
             val A = app.motonav.routing.Avoid
             val changed = A.ferries != display.avoidFerries || A.mainRoads != display.avoidMain || A.narrow != display.avoidNarrow || A.unpaved != display.avoidUnpaved
@@ -720,6 +739,11 @@ fun MapScreen(
             }
             spotsLoading = false
             if (found == null) spotCache.failed(missing, now) else spots = spotCache.all
+        }
+        // Δικά σου σημεία (εισαγμένα αρχεία POI)
+        LaunchedEffect(style, app.motonav.data.ImportedPois.version, c.base.isDark) {
+            val s = style ?: return@LaunchedEffect
+            runCatching { PoiLayer.set(s, density, c.base.text.toArgb(), c.base.bg.toArgb()) }
         }
         LaunchedEffect(style, spots, display.showSpots, display.hiddenSpots, c.base.isDark) {
             val s = style ?: return@LaunchedEffect
@@ -1318,7 +1342,7 @@ fun MapScreen(
                     lean = instruments.leanDeg,
                     maxLeft = instruments.maxLeft,
                     maxRight = instruments.maxRight,
-                    showLean = display.showLean && instruments.leanAvailable,
+                    showLean = display.showLean && !display.car && instruments.leanAvailable,
                     onTap = recenter,
                     onLongPress = toggleNorth,
                     onResetLean = resetMax,
@@ -2219,7 +2243,7 @@ private fun DestinationCard(
                 Row(horizontalArrangement = Arrangement.spacedBy(Space.xs), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     RouteTypeButton(R.drawable.ic_route_fast, "Γρήγορη", session.routeType == RouteType.FASTEST) { session.chooseRouteType(RouteType.FASTEST) }
                     RouteTypeButton(R.drawable.ic_route_twisty, "Στροφές", session.routeType == RouteType.TWISTY) { session.chooseRouteType(RouteType.TWISTY) }
-                    RouteTypeButton(R.drawable.ic_route_dirt, "Χώμα", session.routeType == RouteType.DIRT) { session.chooseRouteType(RouteType.DIRT) }
+                    if (!app.motonav.routing.Vehicle.car) RouteTypeButton(R.drawable.ic_route_dirt, "Χώμα", session.routeType == RouteType.DIRT) { session.chooseRouteType(RouteType.DIRT) }
                     if (session.trafficKey.isNotBlank()) {
                         RouteTypeButton(R.drawable.ic_route_traffic, "Κίνηση", session.routeType == RouteType.TRAFFIC) { session.chooseRouteType(RouteType.TRAFFIC) }
                     }
@@ -2730,6 +2754,8 @@ private fun correctPuckHeight(map: MapLibreMap, top: Double, attempt: Int) {
 /** Βορράς πάνω (πάτημα στην πυξίδα) ή η κατεύθυνσή σου πάνω (κανονικά). */
 object CameraPrefs {
     var northUp by mutableStateOf(false)
+    /** Εξοικονόμηση: λιγότερη κλίση στην πλοήγηση (λιγότερα πλακίδια χάρτη να ζωγραφιστούν). */
+    var powerSave = false
 }
 
 /** Η πυξίδα ως κουμπί: πάτημα = βορράς πάνω / ξανά = η κατεύθυνσή σου πάνω. Με βορρά πάνω έχει χρωματιστό δαχτυλίδι. */
@@ -2766,7 +2792,7 @@ private fun centerOnMe(map: MapLibreMap, navigating: Boolean) {
         if (navigating) 17.0 else 16.0,
         if (north) 0.0 else null,
         // Λίγο περισσότερη κλίση: φαίνεται πιο μακριά ο δρόμος (ορίζοντας).
-        if (navigating) 56.0 else 0.0,
+        if (navigating) (if (CameraPrefs.powerSave) 40.0 else 56.0) else 0.0,
         object : OnLocationCameraTransitionListener {
             override fun onLocationCameraTransitionFinished(cameraMode: Int) {
                 // Μετά τη μετάβαση (στη διάρκειά της το MapLibre απορρίπτει αλλαγές).

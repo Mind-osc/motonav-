@@ -47,8 +47,9 @@ class BRouterClient(context: Context) {
         avoidTolls: Boolean = false,
     ): Route = withService { service ->
         when (type) {
-            RouteType.FASTEST -> {
-                val extra = mutableListOf("vmax=110")
+            RouteType.FASTEST, RouteType.DIRT.takeIf { Vehicle.car } -> {
+                // Αυτοκίνητο: το car-fast με τα δικά του όρια ταχύτητας (η μηχανή «κόβει» στα 110).
+                val extra = if (Vehicle.car) mutableListOf<String>() else mutableListOf("vmax=110")
                 if (avoidMotorways) extra += "avoid_motorways=1"
                 if (avoidTolls) extra += "avoid_toll=1"
                 call(service, waypoints, headingDeg, extra, alternative = 0)

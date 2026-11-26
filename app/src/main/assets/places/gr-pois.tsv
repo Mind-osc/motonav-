@@ -3909,7 +3909,6 @@ stolis	37.95095	23.69006	cafe
 	37.951	23.69988	cafe
 Coffee House	37.95146	23.73857	cafe
 	37.95158	23.61292	cafe
-Π54	37.95159	23.69697	cafe
 	37.9517	23.70089	cafe
 Το Καφε του Κυπ	37.95175	23.69807	cafe
 Il posto di caffe	37.95177	23.6657	cafe
@@ -3929,7 +3928,7 @@ Cairo Coffee	37.95219	23.69453	cafe
 Περί του Καφέ	37.9523	23.69548	cafe
 Drops	37.95237	23.68008	cafe
 Urban Box	37.95242	23.73739	cafe
-	37.95247	23.69733	cafe
+Gloria	37.95247	23.69733	cafe
 	37.95249	23.63858	cafe
 Δήθεν	37.95256	23.66651	cafe
 Dasti	37.95268	23.67964	cafe
@@ -3995,6 +3994,7 @@ Cafe-Bar "Το δέντρο"	37.9555	23.67974	cafe
 	37.9555	23.70524	cafe
 IL Toto	37.95551	23.63973	cafe
 Madison Square Garden	37.95552	23.70212	cafe
+	37.95562	23.70113	cafe
 	37.95569	23.71246	cafe
 	37.95571	23.71216	cafe
 Ο Πειραιάς	37.95572	23.63507	cafe
@@ -4165,7 +4165,6 @@ Coffee Island	37.96225	23.65749	cafe
 Omsom	37.96232	23.71928	cafe
 Tina´s	37.96235	23.75871	cafe
 	37.96243	23.67243	cafe
-Niblo	37.96244	23.71406	cafe
 Όπως τότε	37.96245	23.71953	cafe
 Κιβωτός	37.96245	23.72237	cafe
 Rebel Group Cafe	37.96249	23.72379	cafe
@@ -4202,6 +4201,7 @@ Hand Pickers	37.96334	23.69922	cafe
 Nainti Tou	37.96337	23.72235	cafe
 Ο Λέλος	37.96339	23.71713	cafe
 Δεν ξέρω	37.96343	23.75156	cafe
+The Coffeeshop	37.96346	23.64906	cafe
 Coffee Island	37.96347	23.74704	cafe
 	37.96363	22.63891	cafe
 No comment	37.96363	23.61689	cafe
@@ -5250,7 +5250,7 @@ Coffee Town	37.98852	23.74746	cafe
 Αλέξανδρος	37.98856	23.75612	cafe
 Ρακούν	37.98857	23.74858	cafe
 Bell square	37.98858	23.7585	cafe
-Bronx	37.9886	23.74886	cafe
+Bronx	37.98859	23.74888	cafe
 Il Toto	37.9886	23.76748	cafe
 Σαχέλ	37.98864	23.74714	cafe
 Sempre	37.98866	23.74741	cafe
@@ -5260,9 +5260,9 @@ Coffee specialist	37.98871	23.76416	cafe
 Mr. Coffee	37.98876	23.72779	cafe
 Ziya	37.98876	23.85093	cafe
 Enjoy	37.98881	23.75028	cafe
-mets	37.98887	23.76869	cafe
+Mets	37.98885	23.76862	cafe
 Fratelli	37.98897	23.74942	cafe
-Mikel	37.98898	23.74675	cafe
+Mikel	37.98898	23.7467	cafe
 Flo Kal	37.98901	23.75621	cafe
 Coffee Berry	37.98906	23.74632	cafe
 Coffee Lab	37.98921	23.73046	cafe
@@ -5296,8 +5296,8 @@ Huggamag	37.98965	23.76936	cafe
 Jasmine	37.98974	23.75207	cafe
 Friendz	37.98975	23.7046	cafe
 Epic	37.98976	23.34538	cafe
-Maestro Coffee	37.98977	23.74233	cafe
-La minute	37.9898	23.74215	cafe
+Μπεζ	37.98977	23.74233	cafe
+La minute	37.98981	23.74216	cafe
 Το παλιό στέκι	37.98984	23.75102	cafe
 sto mpam!	37.98986	23.74185	cafe
 Happy time	37.98986	23.74433	cafe
@@ -5370,6 +5370,7 @@ City	37.99141	23.72176	cafe
 De-Tox	37.9915	23.77205	cafe
 Qahwa	37.99153	23.67802	cafe
 Coffee Island	37.99154	23.74847	cafe
+Το Πιλοτικό	37.99155	23.7291	cafe
 Bono Buono	37.9916	23.72974	cafe
 Taresso	37.99161	23.76637	cafe
 Match Point	37.99167	23.73078	cafe
@@ -5765,9 +5766,9 @@ Cherry Me Up	38.00521	23.69664	cafe
 	38.00525	23.72238	cafe
 Coffee Berry	38.00528	23.7005	cafe
 Lovely Days	38.00531	23.69516	cafe
+Coffee Lab	38.00531	23.79577	cafe
 Il Toto	38.00532	23.71784	cafe
 Hidden Bistro	38.00532	23.79913	cafe
-Coffee Lab	38.00537	23.79584	cafe
 Plazz	38.0054	23.86962	cafe
 Καμέλια	38.00541	23.76632	cafe
 Jump!	38.00547	23.82888	cafe
@@ -5782,7 +5783,6 @@ Coffee Lab	38.00573	23.69951	cafe
 	38.00573	23.72891	cafe
 Best Coffee In Athens	38.00573	23.72934	cafe
 Kupa	38.00574	23.81952	cafe
-The Upper East Side	38.00574	23.8279	cafe
 Doris	38.00582	23.7379	cafe
 Coffee Rules	38.00583	23.73477	cafe
 Κιβωτός	38.00588	23.71703	cafe
@@ -6069,7 +6069,7 @@ Coffee Island	38.01749	23.8114	cafe
 Maillard	38.01754	23.69097	cafe
 Coffee Island	38.01754	23.75509	cafe
 	38.01761	23.68595	cafe
-Coffee Lab	38.01762	23.79605	cafe
+Coffee Lab	38.01766	23.79598	cafe
 Nine Grams	38.01768	23.72813	cafe
 The Park	38.01768	24.01147	cafe
 Babilon	38.01769	23.69103	cafe
@@ -6499,7 +6499,6 @@ Palmie Bistro	38.04209	23.72361	cafe
 Langano	38.0421	23.7416	cafe
 Mondial	38.0421	23.758	cafe
 	38.04212	23.68487	cafe
-La Grande Famiglia	38.04216	23.68334	cafe
 Baker Street	38.04217	23.75148	cafe
 Lâl	38.0422	23.75145	cafe
 Λαλαγγίτα	38.04222	23.75174	cafe
@@ -11108,7 +11107,7 @@ Café Balkan	40.63177	22.94204	cafe
 Mojo Cafe Bar	40.63183	22.94115	cafe
 Urban	40.63187	22.94693	cafe
 Κυλικείο Φιλοσοφικής	40.63188	22.95584	cafe
-Omikron	40.63189	22.94654	cafe
+Omicron Z	40.63189	22.94654	cafe
 Dada‘s house	40.63193	22.94643	cafe
 	40.63193	22.94912	cafe
 	40.63197	22.9429	cafe
@@ -13263,6 +13262,7 @@ Autohaus-Stuttgart	37.95237	23.6628	car_repair
 	37.95247	23.63386	car_repair
 	37.9527	23.66246	car_repair
 Carglass	37.95312	23.71259	car_repair
+	37.95374	23.63961	car_repair
 	37.95379	23.65647	car_repair
 	37.95444	23.71086	car_repair
 	37.95454	23.75871	car_repair
@@ -13283,8 +13283,10 @@ N.S. Racing	37.95462	23.6862	car_repair
 Αλτουβάς Auto Service	37.95871	23.62061	car_repair
 Αντώνης Αλαφούζος	37.95877	23.61738	car_repair
 ΣΤΕΡΓΙΟΣ ΧΡ. ΑΡΔΑΛΑΣ	37.95879	23.62189	car_repair
+	37.95886	23.62275	car_repair
 Γ. ΦΛΑΜΙΑΤΟΣ ΑΕ	37.9589	23.85688	car_repair
 Πάρης Παπαϊωάννου	37.95891	23.69459	car_repair
+Smabill	37.95916	23.61657	car_repair
 auto-power	37.95944	23.74143	car_repair
 Ηλεκτροδιάγνωση	37.95976	23.75582	car_repair
 DURLARIS RACING	37.95998	23.73598	car_repair
@@ -13297,6 +13299,7 @@ General Service	37.96036	23.75738	car_repair
 	37.96054	23.61303	car_repair
 	37.96066	23.73677	car_repair
 Auto Service Κουκουμάκης	37.96083	23.73429	car_repair
+	37.9609	23.61255	car_repair
 Ηλεκτρικά αυτοκινήτων	37.96101	23.70321	car_repair
 ΜΑΡΙΝΟΣ ΜΟΥΡΟΥΤΣΟΣ	37.96101	23.73572	car_repair
 Μηλιωρης	37.96104	23.69975	car_repair
@@ -13512,7 +13515,7 @@ Sittas	38.00914	23.85383	car_repair
 ΚΤΕΟ Πήγασος	38.00959	23.71373	car_repair
 BRC Gas Service	38.00965	23.71152	car_repair
 Μπεκιάρης	38.00975	23.71158	car_repair
-Tsakalas	38.00978	23.80775	car_repair
+Τσακαλάς	38.00978	23.80775	car_repair
 Tetras Group	38.0099	23.71167	car_repair
 Τάσσης Δημήτριος	38.01016	23.8085	car_repair
 Papaloukas Auto	38.01031	23.84265	car_repair
@@ -14490,6 +14493,7 @@ Skyline	37.95798	23.63245	car_wash
 ΣΑΧ	37.9581	23.63757	car_wash
 	37.95909	23.69871	car_wash
 Labiko	37.95929	23.61628	car_wash
+Iliopoulos	37.95993	23.61466	car_wash
 	37.95995	23.64948	car_wash
 	37.96088	23.7226	car_wash
 	37.96089	23.64922	car_wash
@@ -15873,7 +15877,7 @@ Fountain of Hadji Mustapha	37.90058	22.8775	drinking_water
 	37.97246	23.7378	drinking_water
 	37.97318	23.73916	drinking_water
 	37.97332	23.73859	drinking_water
-	37.97377	23.73623	drinking_water
+	37.97378	23.7362	drinking_water
 	37.97448	23.74333	drinking_water
 	37.97453	23.71234	drinking_water
 	37.97461	23.75588	drinking_water
@@ -18780,6 +18784,7 @@ Church	41.26963	26.38249	drinking_water
 	41.28453	24.07203	drinking_water
 	41.28456	22.92862	drinking_water
 	41.28533	22.93869	drinking_water
+	41.28693	25.61886	drinking_water
 	41.28887	23.93517	drinking_water
 	41.289	24.6214	drinking_water
 	41.28956	23.93196	drinking_water
@@ -18804,6 +18809,7 @@ Church	41.26963	26.38249	drinking_water
 	41.30989	23.59276	drinking_water
 	41.31055	24.0631	drinking_water
 Νερό	41.31159	24.70706	drinking_water
+	41.31185	25.64722	drinking_water
 	41.313	25.71291	drinking_water
 	41.31354	23.57881	drinking_water
 	41.31404	23.57966	drinking_water
@@ -19836,7 +19842,7 @@ Eat Stop	37.93991	22.9318	fast_food
 Korinthian House Grill	37.93995	22.93342	fast_food
 Simply Burgers	37.93996	23.64982	fast_food
 Family	37.94003	22.93463	fast_food
-Jackaroo	37.94013	23.64976	fast_food
+Jackaroo - Πειραιάς	37.94013	23.64976	fast_food
 Di Giorgio	37.94023	22.93368	fast_food
 Everest	37.94029	23.64923	fast_food
 Γρηγόρης	37.94041	23.64934	fast_food
@@ -19993,7 +19999,7 @@ Posidonio	37.9508	22.96264	fast_food
 Σκρέκης	37.9508	23.70231	fast_food
 Άλφα	37.9509	23.67883	fast_food
 Γρηγόρης	37.95123	23.66249	fast_food
-	37.95162	23.67903	fast_food
+Ο Μήτσος	37.95162	23.67903	fast_food
 Στριφτό	37.95196	23.70401	fast_food
 Pizza Fan	37.95197	23.69587	fast_food
 Crepe Avenue	37.95202	23.70654	fast_food
@@ -20109,7 +20115,7 @@ Pizzetta	37.96195	23.71041	fast_food
 Καλοφαγάς	37.96196	23.91499	fast_food
 Πάμε Πλατεία	37.96203	23.91416	fast_food
 Βύρωνας Grill	37.96205	23.75375	fast_food
-Jackaroo Νέος Κόσμος	37.96217	23.72526	fast_food
+Jackaroo - Νέος Κόσμος	37.96217	23.72526	fast_food
 ΒΕΑΤ	37.9623	23.72466	fast_food
 DL	37.96232	23.70356	fast_food
 Chicken Chef	37.96233	23.71902	fast_food
@@ -20604,7 +20610,7 @@ Max Chicken	37.98773	23.72594	fast_food
 Γρηγόρης	37.98797	23.73018	fast_food
 Το Σπίτι Της Τυρόπιτας	37.98799	23.752	fast_food
 Κουλουράδες	37.98802	23.75193	fast_food
-Γρηγόρης	37.98805	23.75182	fast_food
+Γρηγόρης	37.98805	23.75184	fast_food
 Αϊνστάιν	37.9882	23.76652	fast_food
 Το Φαγείν	37.98826	23.72795	fast_food
 Ταζμανία	37.98843	23.71239	fast_food
@@ -20682,7 +20688,7 @@ Hot Hot	37.99335	23.76554	fast_food
 Μπουγάτσα με το κιλό	37.99338	23.71371	fast_food
 Κουλουράδες	37.99338	23.76345	fast_food
 Presto Pizza	37.99341	23.33883	fast_food
-Jackaroo	37.99342	23.76414	fast_food
+Jackaroo - Πανόρμου	37.99342	23.76414	fast_food
 Goody's	37.99349	23.72996	fast_food
 Geusi Mam	37.99353	23.7759	fast_food
 Φαλάφελ Πανόρμου	37.99357	23.76361	fast_food
@@ -20770,6 +20776,7 @@ Goody's	38.00215	23.79144	fast_food
 ARTISTI	38.00218	23.7191	fast_food
 Γρηγόρης	38.00226	23.68624	fast_food
 Κουλουράδες	38.00237	23.71882	fast_food
+Everest	38.00245	23.79195	fast_food
 Pizza Pronto	38.00252	23.72781	fast_food
 Mr. Bee (Hot Dog & Cafe)	38.00255	23.74106	fast_food
 Hungry Baker	38.0026	23.7134	fast_food
@@ -20804,6 +20811,7 @@ Donut Worry	38.00571	23.82719	fast_food
 	38.00573	23.76614	fast_food
 Ο Γιώργος	38.00576	23.73789	fast_food
 Ταμμαμ	38.00577	23.71672	fast_food
+Κωνσταντινούπολη	38.00588	23.7348	fast_food
 	38.00612	23.73791	fast_food
 	38.00614	24.44593	fast_food
 Mailos	38.00628	23.82696	fast_food
@@ -20857,8 +20865,8 @@ Dum Spiro Spero	38.01223	23.72749	fast_food
 Γρηγόρης	38.0123	23.6579	fast_food
 Lampro's Grill House	38.01241	23.69672	fast_food
 Everest	38.01244	23.69659	fast_food
-Jackaroo	38.01245	23.70564	fast_food
-Jackaroo	38.01245	23.81952	fast_food
+Jackaroo - Περιστέρι	38.01245	23.70564	fast_food
+Jackaroo - Αγ. Παρασκευή	38.01245	23.81952	fast_food
 Pizza Fan	38.01246	23.81714	fast_food
 Goody's Burger House	38.01251	23.70575	fast_food
 Everest	38.01253	23.70585	fast_food
@@ -20912,7 +20920,7 @@ Goody's Burger House	38.01736	23.69036	fast_food
 Escape	38.01774	23.72816	fast_food
 ΒΕΑΤ	38.01791	23.80326	fast_food
 Everest	38.01799	23.81023	fast_food
-Αυθεντικόν	38.01885	23.7557	fast_food
+Αυθεντικόν - Γαλάτσι	38.01885	23.7557	fast_food
 Γιαννιώτικο Σουβλάκι	38.01888	23.80782	fast_food
 Pizza Fan	38.0192	24.00789	fast_food
 Γρηγόρης	38.01939	23.69297	fast_food
@@ -20959,14 +20967,14 @@ Goody's	38.02249	23.80136	fast_food
 Κουλουράδες	38.0225	23.74915	fast_food
 Ancho	38.02257	23.79792	fast_food
 Pax Burgers	38.02264	23.79764	fast_food
-Μπαρμπεεκιου	38.02269	23.79962	fast_food
+Μπαρ μπεε κιου	38.02269	23.79962	fast_food
 Luku-matters	38.02273	23.79946	fast_food
 Τα τρία αδέλφια	38.02275	23.80128	fast_food
 Θεσσαλονίκη	38.02276	23.79843	fast_food
 Γρηγόρης	38.02276	23.80023	fast_food
 Love Souvlaki	38.02281	23.80146	fast_food
 Taco Bell	38.02288	23.79867	fast_food
-Boca	38.0229	23.7461	fast_food
+Delis	38.0229	23.7461	fast_food
 Nostimo	38.02291	24.00975	fast_food
 	38.02295	23.7502	fast_food
 Άριστον	38.023	23.7358	fast_food
@@ -21047,7 +21055,7 @@ El Dorado	38.03667	23.73797	fast_food
 McDonald's	38.03679	23.79801	fast_food
 Το σουβλάκι των Βριλησσίων	38.03682	23.82808	fast_food
 Nanou Donuts House	38.03753	23.76584	fast_food
-τ'Αγραφα	38.03755	23.75085	fast_food
+τ' Αγραφα	38.03755	23.75085	fast_food
 Κρεπηλατείον	38.03784	23.79949	fast_food
 Nanou Donuts House	38.03793	23.69254	fast_food
 44 st	38.03809	23.75589	fast_food
@@ -24903,6 +24911,7 @@ EGas	38.008	23.7122	fuel
 EKO	38.00835	23.71208	fuel
 AEGEAN	38.00868	23.74604	fuel
 EKO	38.00872	23.68837	fuel
+Aegean	38.00876	23.80569	fuel
 AEGEAN	38.00885	23.42983	fuel
 REVOIL	38.00928	23.97275	fuel
 ΕΤΕΚΑ	38.0093	23.70249	fuel
@@ -25118,6 +25127,7 @@ SHELL	38.03798	23.71602	fuel
 EKO	38.03804	24.40287	fuel
 REVOIL	38.03809	23.59215	fuel
 AEGEAN	38.03816	23.59135	fuel
+Revoil	38.0386	23.74489	fuel
 AVIN	38.03861	23.77459	fuel
 EKO	38.03862	23.82833	fuel
 AVIN	38.03875	23.77529	fuel
@@ -29034,6 +29044,7 @@ Ziros apartments	35.04155	26.2326	guest_house
 Artichoke Apartments	35.04167	26.23272	guest_house
 Villa Paris	35.04179	26.23192	guest_house
 Lithos Traditional Guest Houses	35.04393	26.22548	guest_house
+Natura Cottages	35.04728	25.98646	guest_house
 	35.07411	26.13997	guest_house
 Manolis	35.0815	24.74155	guest_house
 Anthia Apartment Seaview	35.09635	26.25503	guest_house
@@ -34627,7 +34638,7 @@ Milestones	37.05972	25.36751	hotel
 Kyniska Palace Conference & Spa	37.05991	22.39016	hotel
 Athina Studios	37.05999	25.35838	hotel
 Milos	37.06026	25.40772	hotel
-Ξενοδοχείο Μελίβοια	37.06034	21.73022	hotel
+Ξενοδοχείο Μελίβοια	37.06033	21.73011	hotel
 Artina Nuovo	37.06117	21.57733	hotel
 Artina	37.06143	21.57734	hotel
 Stella Apartments	37.06241	25.35623	hotel
@@ -36253,7 +36264,7 @@ Piraeus Dream Hotel	37.94216	23.64441	hotel
 Γαλήνη	37.94282	23.66121	hotel
 Hotel Carol	37.9429	23.66142	hotel
 Achillion	37.94293	23.64536	hotel
-The Convo 336	37.94349	23.68491	hotel
+The Convo Athens Riviera	37.94349	23.68491	hotel
 Hotel Lacoba	37.94352	23.69682	hotel
 Atlantic Hotel	37.94379	23.68411	hotel
 Iris Lime Home	37.94409	23.64852	hotel
@@ -40349,6 +40360,7 @@ Katsilieris team	38.0312	23.70439	motorcycle
 Γλαρίτης Κωνσταντίνος	38.03282	23.70189	motorcycle
 Motocity	38.03702	23.76678	motorcycle
 	38.0391	23.75547	motorcycle
+Buggy Motors	38.06951	23.7668	motorcycle
 ΚΑΡΑΜΠΟΥΡΗΣ ΙΩΑΝΝΗΣ	38.23344	21.72777	motorcycle
 Moto Patras Fun Bike	38.23556	21.72775	motorcycle
 ΚΛΑΟΥΔΑΤΟΣ ΓΕΡΑΣΙΜΟΣ	38.24043	21.7288	motorcycle
@@ -40486,6 +40498,7 @@ Barhoma	37.99727	23.73115	motorcycle_repair
 	37.99918	23.72607	motorcycle_repair
 Naka Motoparts	38.00108	23.72223	motorcycle_repair
 	38.00142	23.78775	motorcycle_repair
+Motorad Rio	38.00548	23.72208	motorcycle_repair
 DX DragWorks	38.0055	23.84719	motorcycle_repair
 Ξενάκης Piaggio	38.00662	23.7222	motorcycle_repair
 Motodirect Yamaha Service	38.01214	23.81408	motorcycle_repair
@@ -45696,7 +45709,7 @@ Picasso	37.0593	25.35866	restaurant
 Nostimies Naxos	37.05935	25.35926	restaurant
 	37.05938	25.35855	restaurant
 Αντώνης	37.06007	25.40923	restaurant
-psarakia restaurant	37.06042	21.73044	restaurant
+Ψαράκια	37.06039	21.73031	restaurant
 Το Στέκι του Βαγγέλη	37.06056	25.40897	restaurant
 Manolis	37.06135	25.35664	restaurant
 Ο Κρεμμύδας	37.0623	22.38221	restaurant
@@ -48523,7 +48536,7 @@ Koi Sushi Bar	37.93988	23.64974	restaurant
 Aloe	37.93995	22.92071	restaurant
 Το Μαγειριό Της Ποπης	37.94	23.69959	restaurant
 Τσιπουρἁδικο Μελίνα	37.94003	23.70682	restaurant
-Jackaroo	37.94007	23.64989	restaurant
+Jackaroo - Πειραιάς	37.94007	23.64989	restaurant
 oma	37.94008	23.7548	restaurant
 Στην υγειά μας	37.94014	23.64289	restaurant
 Agora Bistro	37.94017	23.69185	restaurant
@@ -49823,7 +49836,7 @@ Bicicletta	37.98774	23.712	restaurant
 Άμα Λάχει	37.98793	23.73696	restaurant
 Μιχάλης	37.98797	23.72683	restaurant
 Το Αυτόφωρο	37.98799	23.75218	restaurant
-Η πίτα του παππού	37.98801	23.75208	restaurant
+Η πίττα του παππού	37.98801	23.75208	restaurant
 Paula	37.98828	23.7292	restaurant
 Ύδατα Στυγός	37.98841	22.27475	restaurant
 Πιπεράκιας	37.98849	23.76794	restaurant
@@ -50090,7 +50103,7 @@ Wisdom Kitchen	38.00432	23.73789	restaurant
 The Burger Joint	38.00438	23.77658	restaurant
 Ο Ντέλλος	38.00447	23.7946	restaurant
 	38.00452	23.42577	restaurant
-Fouzer	38.00452	23.82354	restaurant
+Fouzér	38.00452	23.82354	restaurant
 Kebap to rodi	38.00453	23.71571	restaurant
 	38.00458	23.72891	restaurant
 ETIEN PIZZA BAR	38.0047	23.77616	restaurant
@@ -50110,7 +50123,7 @@ Etien Pizza Bar	38.00546	23.78575	restaurant
 Ελληνίδα Μάνα	38.00546	23.79503	restaurant
 	38.00566	23.59646	restaurant
 La Piazzetta	38.00571	23.76627	restaurant
-MILF	38.00572	23.82782	restaurant
+MILF Grill (Meat I Live For)	38.00572	23.82782	restaurant
 Bellagio	38.00572	23.82817	restaurant
 ΚΑΦΕ-ΨΗΣΤΑΡΙΑ ΚΥΡΙΑΚΟΥ Α. ΚΩΝΣΤΑΝΤΙΝΟΣ	38.00577	22.64622	restaurant
 Kitchen Lab	38.00588	23.82704	restaurant
@@ -50387,7 +50400,7 @@ Tozteki	38.02169	24.00793	restaurant
 Μαντάμ Σουσού	38.02187	23.79666	restaurant
 Hunters	38.02193	23.8034	restaurant
 Ο Κουτρούλης	38.02195	22.2459	restaurant
-Άγραφα	38.02205	23.75779	restaurant
+Άγραφα 1977	38.02205	23.75779	restaurant
 Το Σουβλάκι του Χαλανδρίου Express	38.02213	23.79732	restaurant
 Gardenista	38.02218	23.79183	restaurant
 Ο Κώστας	38.02221	23.68994	restaurant
@@ -50480,6 +50493,7 @@ Anasa	38.03048	23.77885	restaurant
 η ταβέρνα του Μανώλη	38.03053	23.80637	restaurant
 Τσατσαράκι	38.03053	23.82597	restaurant
 Pizza Fan	38.03054	23.69747	restaurant
+Retro 62	38.03059	23.73594	restaurant
 Ευριπίδης	38.03068	23.77842	restaurant
 Ελιά	38.03085	23.73568	restaurant
 Καραβίδας	38.03104	23.75948	restaurant
@@ -50494,9 +50508,7 @@ Pizza Fan	38.03054	23.69747	restaurant
 Aggelos Crepe House	38.03149	23.72373	restaurant
 Πέτρινο	38.0315	21.36396	restaurant
 Lindo	38.03153	22.87307	restaurant
-Κρίτσι Κρίτσι Fried Chicken	38.03154	23.73695	restaurant
 O Ilias	38.03155	23.80753	restaurant
-Πιάτσα Καλαμάκι	38.03159	23.73693	restaurant
 	38.03163	22.10911	restaurant
 Το Τζάκι	38.03164	22.11027	restaurant
 Salaamalecum	38.03165	23.77733	restaurant
@@ -50621,6 +50633,7 @@ Pak - Asian Taste	38.0417	23.75655	restaurant
 Natuar	38.0417	23.77471	restaurant
 Διαχρονικό	38.04183	23.75321	restaurant
 Νοστιμιά	38.04188	23.54249	restaurant
+Ο Αγιορείτης	38.04216	23.68334	restaurant
 Λάδι & Ρίγανη	38.04218	23.75262	restaurant
 Calcetto Bar Restaurant	38.04222	21.355	restaurant
 Lefteris	38.04242	23.58105	restaurant
@@ -57739,6 +57752,7 @@ BEEF CENTER	37.93624	22.93555	tyres
 Τζανετάκης Μάνος	37.94949	23.74391	tyres
 Μιχελακάκης	37.95055	23.70671	tyres
 	37.95132	23.66281	tyres
+Anastasiadis	37.95175	23.6398	tyres
 Autopolis	37.95215	23.68113	tyres
 Bridgestone	37.95379	23.49633	tyres
 Michelin	37.95386	23.74127	tyres
@@ -58025,6 +58039,7 @@ Kastellou Charaki	35.04441	25.56981	viewpoint
 	35.05676	25.91615	viewpoint
 	35.05819	25.97188	viewpoint
 Bigla Gras	35.05845	25.97556	viewpoint
+	35.06285	25.98787	viewpoint
 	35.0629	24.94686	viewpoint
 Former Acropolis of Gortys	35.06472	24.94392	viewpoint
 	35.0655	24.93727	viewpoint

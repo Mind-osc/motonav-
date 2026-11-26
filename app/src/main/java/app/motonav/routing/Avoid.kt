@@ -4,6 +4,11 @@ package app.motonav.routing
  * Επιπλέον αποφυγές (Ρυθμίσεις → Χάρτης → Αποφυγές), όπως στο Kurviger: πλοία, κύριοι δρόμοι,
  * πολύ στενοί δρόμοι, χωματόδρομοι. Τις διαβάζουν το BRouter (δικό μας προφίλ) και το TomTom (όσες υποστηρίζει).
  */
+/** Όχημα: μηχανή (προεπιλογή) ή αυτοκίνητο. Ρυθμίσεις → Χάρτης → «Αυτοκίνητο». */
+object Vehicle {
+    @Volatile var car: Boolean = false
+}
+
 object Avoid {
     @Volatile var ferries = false
     @Volatile var mainRoads = false

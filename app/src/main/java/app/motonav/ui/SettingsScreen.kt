@@ -136,6 +136,12 @@ fun SettingsScreen(
                         SwitchRow("Εναλλακτικές διαδρομές", "Έως 4 λογικές, με «+3′» δίπλα. Κάτω από 5 km ή κλειστό εδώ: κουμπί «⇄ Εναλλακτικές» στην κάρτα.", display.showAlternatives) {
                             onDisplayChange(display.copy(showAlternatives = it))
                         }
+                        SwitchRow("Αυτοκίνητο", "Διαδρομές και κίνηση για αυτοκίνητο· κρύβει το «Χώμα» και το κλισιόμετρο", display.car) {
+                            onDisplayChange(display.copy(car = it))
+                        }
+                        SwitchRow("Εξοικονόμηση ενέργειας", "Λιγότερο ζέσταμα και μπαταρία: πιο αργή ανανέωση χάρτη, λιγότερη κλίση στην πλοήγηση, χωρίς ανάγλυφο και ισοϋψείς", display.powerSave) {
+                            onDisplayChange(display.copy(powerSave = it))
+                        }
                         SwitchRow("Πολλές στροφές", "Ο τύπος «Στροφές» ψάχνει πιο στριφτούς δρόμους, και με μεγαλύτερη παράκαμψη (έως 2× χρόνο)", display.moreCurves) {
                             onDisplayChange(display.copy(moreCurves = it))
                         }
@@ -194,6 +200,7 @@ fun SettingsScreen(
                                 }
                             }
                         }
+                        ImportedPoisSection()
                         SwitchRow("Ανάγλυφο βουνών", "Σκίαση στα βουνά και κορυφές με υψόμετρο", display.showRelief) {
                             onDisplayChange(display.copy(showRelief = it))
                         }
@@ -454,5 +461,62 @@ internal fun InfoRow(title: String, value: String) {
     Column(Modifier.fillMaxWidth().padding(horizontal = Space.lg, vertical = Space.sm)) {
         Text(title, style = MotoType.label, color = c.base.textMuted)
         Text(value, style = MotoType.body, color = c.base.text)
+    }
+}
+
+
+/** Ρυθμίσεις → Χάρτης: «Δικά σου σημεία» (εισαγωγή αρχείων POI, εμφάνιση/απόκρυψη, διαγραφή). */
+@androidx.compose.runtime.Composable
+private fun ImportedPoisSection() {
+    val context = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var busy by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val pick = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenMultipleDocuments(),
+    ) { uris ->
+        if (uris.isEmpty()) return@rememberLauncherForActivityResult
+        busy = true
+        scope.launch {
+            var cats = 0
+            var pts = 0
+            var failed = 0
+            uris.forEach { u ->
+                val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    runCatching { app.motonav.data.ImportedPois.import(context, u) }.getOrNull()
+                }
+                if (r == null || r.second == 0) failed++ else { cats += r.first; pts += r.second }
+            }
+            busy = false
+            val msg = when {
+                pts > 0 -> "Μπήκαν $pts σημεία σε $cats κατηγορί" + (if (cats == 1) "α" else "ες") + (if (failed > 0) " · $failed αρχεία χωρίς σημεία" else "")
+                else -> "Δεν βρέθηκαν σημεία. Δέχεται GPX, KML/KMZ, CSV, OV2, GeoJSON ή ZIP με αυτά."
+            }
+            android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
+    val c = LocalAppColors.current
+    Column(Modifier.padding(horizontal = Space.lg, vertical = Space.xs), verticalArrangement = Arrangement.spacedBy(Space.sm)) {
+        Text("Δικά σου σημεία", style = MotoType.body, color = c.base.text)
+        Text(
+            "Αρχεία σημείων από άλλες πηγές (π.χ. 4GPS, Garmin, TomTom, Google My Maps). Κάθε αρχείο γίνεται κατηγορία στον χάρτη και στην αναζήτηση.",
+            style = MotoType.label, color = c.base.textMuted,
+        )
+        app.motonav.data.ImportedPois.collections.forEach { col ->
+            Row(horizontalArrangement = Arrangement.spacedBy(Space.sm), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                TextChoice(
+                    "● ${col.name} (${col.count})",
+                    selected = col.visible,
+                    onClick = { app.motonav.data.ImportedPois.setVisible(col.id, !col.visible) },
+                    modifier = Modifier.weight(1f),
+                )
+                TextChoice("✕", selected = false, onClick = { app.motonav.data.ImportedPois.delete(col.id) })
+            }
+        }
+        TextChoice(
+            if (busy) "Εισαγωγή…" else "+ Εισαγωγή σημείων (GPX, KML, CSV, OV2, ZIP)",
+            selected = false,
+            onClick = { if (!busy) pick.launch(arrayOf("*/*")) },
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }

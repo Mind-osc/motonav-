@@ -44,6 +44,10 @@ data class DisplayPrefs(
     val showAlternatives: Boolean = true,
     /** «Στροφές» με ακόμα περισσότερες στροφές (δέχεται μεγαλύτερη παράκαμψη). */
     val moreCurves: Boolean = false,
+    /** Όχημα: αυτοκίνητο (χωρίς «Χώμα», χωρίς κλισιόμετρο, TomTom για αυτοκίνητο). */
+    val car: Boolean = false,
+    /** Εξοικονόμηση: λιγότερα καρέ, λιγότερη κλίση, χωρίς ανάγλυφο. */
+    val powerSave: Boolean = false,
     /** Αποφυγές: πλοία, κύριοι δρόμοι, πολύ στενοί δρόμοι, χωματόδρομοι. */
     val avoidFerries: Boolean = false,
     val avoidMain: Boolean = false,
@@ -112,6 +116,8 @@ class SettingsRepo(private val context: Context) {
     private val hiddenSpotsKey = stringPreferencesKey("hidden_spots")
     private val altKey = booleanPreferencesKey("show_alternatives")
     private val curvesKey = booleanPreferencesKey("more_curves")
+    private val carKey = booleanPreferencesKey("vehicle_car")
+    private val powerKey = booleanPreferencesKey("power_save")
     private val avFerryKey = booleanPreferencesKey("avoid_ferries")
     private val avMainKey = booleanPreferencesKey("avoid_main")
     private val avNarrowKey = booleanPreferencesKey("avoid_narrow")
@@ -144,6 +150,8 @@ class SettingsRepo(private val context: Context) {
             hiddenSpots = p[hiddenSpotsKey]?.split(',')?.filter { it.isNotBlank() }?.toSet() ?: emptySet(),
             showAlternatives = p[altKey] ?: true,
             moreCurves = p[curvesKey] ?: false,
+            car = p[carKey] ?: false,
+            powerSave = p[powerKey] ?: false,
             avoidFerries = p[avFerryKey] ?: false,
             avoidMain = p[avMainKey] ?: false,
             avoidNarrow = p[avNarrowKey] ?: false,
@@ -216,6 +224,8 @@ class SettingsRepo(private val context: Context) {
             p[hiddenSpotsKey] = d.hiddenSpots.joinToString(",")
             p[altKey] = d.showAlternatives
             p[curvesKey] = d.moreCurves
+            p[carKey] = d.car
+            p[powerKey] = d.powerSave
             p[avFerryKey] = d.avoidFerries
             p[avMainKey] = d.avoidMain
             p[avNarrowKey] = d.avoidNarrow
