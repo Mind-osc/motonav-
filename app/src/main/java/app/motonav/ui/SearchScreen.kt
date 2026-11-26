@@ -121,6 +121,8 @@ fun SearchScreen(
     /** Διαδρομές που κράτησες με όνομα: πάτημα = «Ακολούθησε» ακριβώς την ίδια. */
     savedRoutes: List<app.motonav.trips.SavedRoute> = emptyList(),
     onFollowSaved: (app.motonav.trips.SavedRoute) -> Unit = {},
+    /** Αποτελέσματα κατηγορίας (π.χ. Καφές) με αριθμούς και στον χάρτη, πάνω από το φύλλο. */
+    onMapResults: (List<Place>) -> Unit = {},
 ) {
     val c = LocalAppColors.current
     val search = remember(tomtomKey) { PlaceSearch(tomtomKey) }
@@ -242,12 +244,16 @@ fun SearchScreen(
     val imeOpen = WindowInsets.isImeVisible
     val screenH = LocalConfiguration.current.screenHeightDp.dp
     val idle = selected == null && query.isEmpty() && category == null
+    // Κατηγορία: τα 20 πιο κοντινά και στον χάρτη, με τον ίδιο αριθμό όπως στη λίστα.
+    val mapped = if (category != null && selected == null) results.take(20) else emptyList()
+    LaunchedEffect(mapped) { onMapResults(mapped) }
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { onMapResults(emptyList()) } }
 
     // Φύλλο που ανεβαίνει από κάτω· από πάνω φαίνεται ο χάρτης (σκοτεινιασμένος). Πάτημα εκεί = κλείσιμο.
     Box(
         Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.35f))
+            .background(Color.Black.copy(alpha = if (mapped.isNotEmpty()) 0.06f else 0.35f))
             .clickable(remember { MutableInteractionSource() }, indication = null, onClick = onBack),
         contentAlignment = Alignment.BottomCenter,
     ) {
@@ -304,7 +310,8 @@ fun SearchScreen(
                             PlaceRow(place, near, modifier = Modifier.animateItem(), icon = ImageVector.vectorResource(R.drawable.ic_history)) { onPick(place) }
                         }
                         items(results.filter { r -> past.none { Geo.distance(it.latLon, r.latLon) < 60 } }, key = { "${it.name}|${it.lat}|${it.lon}" }) { place ->
-                            PlaceRow(place, near, modifier = Modifier.animateItem()) { choose(place) }
+                            val n = mapped.indexOf(place).takeIf { it >= 0 }?.plus(1)
+                            PlaceRow(place, near, modifier = Modifier.animateItem(), number = n) { choose(place) }
                         }
                     }
                 }
@@ -548,7 +555,7 @@ private fun Hint(text: String) {
 }
 
 @Composable
-private fun PlaceRow(place: Place, near: LatLon?, onRemove: (() -> Unit)? = null, modifier: Modifier = Modifier, icon: ImageVector? = null, onClick: () -> Unit) {
+private fun PlaceRow(place: Place, near: LatLon?, onRemove: (() -> Unit)? = null, modifier: Modifier = Modifier, icon: ImageVector? = null, number: Int? = null, onClick: () -> Unit) {
     val c = LocalAppColors.current
     Row(
         modifier
@@ -559,7 +566,13 @@ private fun PlaceRow(place: Place, near: LatLon?, onRemove: (() -> Unit)? = null
             .padding(horizontal = Space.xs, vertical = Space.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(icon ?: Icons.Filled.LocationOn, contentDescription = null, tint = if (icon != null) c.accent else c.base.textMuted.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
+        if (number != null) {
+            Box(Modifier.size(24.dp).background(c.accent, androidx.compose.foundation.shape.CircleShape), contentAlignment = Alignment.Center) {
+                Text("$number", style = MotoType.label.copy(fontSize = 12.sp), color = c.onAccent)
+            }
+        } else {
+            Icon(icon ?: Icons.Filled.LocationOn, contentDescription = null, tint = if (icon != null) c.accent else c.base.textMuted.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
+        }
         Spacer(Modifier.width(Space.sm))
         Column(Modifier.weight(1f)) {
             Text(place.name, style = MotoType.body, color = c.base.text, maxLines = 1, overflow = TextOverflow.Ellipsis)

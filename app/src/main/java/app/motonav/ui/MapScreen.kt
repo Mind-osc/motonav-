@@ -467,6 +467,8 @@ fun MapScreen(
     var reportOpen by remember { mutableStateOf(false) }
     // Γρήγορες ενέργειες (μετρητής ταξιδιού, πλακίδια, διακόπτες) και αναφορά χάρτη στο OSM
     var quickOpen by remember { mutableStateOf(false) }
+    // Αποτελέσματα κατηγορίας της αναζήτησης (π.χ. Καφές): αριθμημένοι κύκλοι στον χάρτη
+    var categoryPins by remember { mutableStateOf<List<app.motonav.search.Place>>(emptyList()) }
     var mapReportOpen by remember { mutableStateOf(false) }
     // Μετρητής ταξιδιού A/B: κάθε στίγμα (με ή χωρίς πλοήγηση)
     LaunchedEffect(gps.value.location) { gps.value.location?.let { if (!app.motonav.nav.Simulator.active) app.motonav.trips.TripMeter.add(it) } }
@@ -772,6 +774,27 @@ fun MapScreen(
             }
             spotsLoading = false
             if (found == null) spotCache.failed(missing, now) else spots = spotCache.all
+        }
+        LaunchedEffect(style, categoryPins, c) {
+            val s = style ?: return@LaunchedEffect
+            val m = map ?: return@LaunchedEffect
+            runCatching { CategoryPins.set(s, categoryPins, c.accent.toArgb(), c.onAccent.toArgb(), c.base.bg.toArgb()) }
+            if (categoryPins.isEmpty()) return@LaunchedEffect
+            // Όλα τα σημεία (και εσύ) στο πάνω μέρος της οθόνης, πάνω από το φύλλο της αναζήτησης.
+            if (m.locationComponent.isLocationComponentActivated) m.locationComponent.cameraMode = CameraMode.NONE
+            val me = gps.value.location ?: gps.value.lastKnown
+            val b = LatLngBounds.Builder().apply {
+                categoryPins.forEach { include(LatLng(it.lat, it.lon)) }
+                me?.let { include(LatLng(it.latitude, it.longitude)) }
+            }
+            runCatching {
+                val update = if (landscape) {
+                    CameraUpdateFactory.newLatLngBounds(b.build(), (60 * density).toInt(), (70 * density).toInt(), (60 * density).toInt(), (40 * density).toInt())
+                } else {
+                    CameraUpdateFactory.newLatLngBounds(b.build(), (50 * density).toInt(), (90 * density).toInt(), (50 * density).toInt(), (m.height * 0.58f).toInt())
+                }
+                m.animateCamera(update, 700)
+            }
         }
         // Χρώμα κλίσης πάνω στη γραμμή της διαδρομής
         LaunchedEffect(style, session.route, display.slopeColors) {
@@ -1626,6 +1649,7 @@ fun MapScreen(
                 recents = recents,
                 tomtomKey = display.tomtomKey,
                 autoKeyboard = display.searchKeyboard,
+                onMapResults = { categoryPins = it },
                 onPick = { place ->
                     showSearch = false
                     scope.launch { repo.addRecent(place) }
