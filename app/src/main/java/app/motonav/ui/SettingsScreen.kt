@@ -365,6 +365,8 @@ fun SettingsScreen(
                             updScope.launch {
                                 val has = app.motonav.update.Updater.check(context, force = true)
                                 checking = if (has) null else "Έχεις την τελευταία έκδοση"
+                                // Βρέθηκε: κατέβασέ τη αμέσως (με APK) και άνοιξε την εγκατάσταση.
+                                if (has && app.motonav.update.Updater.available?.apkUrl != null) app.motonav.update.Updater.install(context)
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),

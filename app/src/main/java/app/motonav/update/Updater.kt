@@ -21,7 +21,8 @@ import java.net.URL
 /**
  * Νέα έκδοση; Ρωτάει τα Releases του δημόσιου repo στο GitHub.
  * - Build του δημόσιου repo: κατεβάζει το APK και ανοίγει την εγκατάσταση (ένα πάτημα «Εγκατάσταση»).
- * - Build του ιδιωτικού: δεν μπορεί να κατεβάσει από εκεί (κλειδωμένο), οπότε ανοίγει τη σελίδα Releases στον browser.
+ * - Build του ιδιωτικού με κλειδί (UPDATE_TOKEN): ρωτάει τα Releases του ιδιωτικού και κατεβάζει μόνη της το APK.
+ * - Build του ιδιωτικού χωρίς κλειδί: ανοίγει τη σελίδα Releases στον browser.
  */
 object Updater {
     const val PUBLIC_REPO = "Mind-osc/motonav-"
@@ -39,6 +40,9 @@ object Updater {
 
     private val isPublicBuild get() = BuildConfig.BUILD_REPO.equals(PUBLIC_REPO, ignoreCase = true)
 
+    /** Ιδιωτικό build με κλειδί: ενημερώσεις κατευθείαν από το ιδιωτικό repo. */
+    private val token get() = BuildConfig.UPDATE_TOKEN.takeIf { it.isNotBlank() && !isPublicBuild }
+
     private fun get(url: String): String {
         val c = URL(url).openConnection() as HttpURLConnection
         try {
@@ -46,6 +50,7 @@ object Updater {
             c.readTimeout = 15_000
             c.setRequestProperty("Accept", "application/vnd.github+json")
             c.setRequestProperty("User-Agent", "Streetwolf")
+            token?.let { c.setRequestProperty("Authorization", "Bearer $it") }
             if (c.responseCode !in 200..299) throw IOException("HTTP ${c.responseCode}")
             return c.inputStream.bufferedReader().use { it.readText() }
         } finally {
@@ -62,20 +67,24 @@ object Updater {
         val now = System.currentTimeMillis()
         if (!force && now - prefs.getLong("checked", 0L) < 6 * 3600_000L) return@withContext available != null
         runCatching {
-            val o = JSONObject(get("https://api.github.com/repos/$PUBLIC_REPO/releases/latest"))
+            val tok = token
+            val o = JSONObject(get("https://api.github.com/repos/${if (tok != null) PRIVATE_REPO else PUBLIC_REPO}/releases/latest"))
             prefs.edit().putLong("checked", now).apply()
             val tag = o.optString("tag_name")
             val published = runCatching { java.time.Instant.parse(o.optString("published_at")).toEpochMilli() }.getOrDefault(0L)
             val assets = o.optJSONArray("assets")
-            val apk = (0 until (assets?.length() ?: 0)).mapNotNull { assets?.optJSONObject(it) }
-                .firstOrNull { it.optString("name").endsWith(".apk") }?.optString("browser_download_url")
-            val newer = if (isPublicBuild) {
+            val list = (0 until (assets?.length() ?: 0)).mapNotNull { assets?.optJSONObject(it) }
+            val apk = if (tok != null) {
+                // Ιδιωτικό: το moto-nav.apk (με την Pointer), από το API (το browser_download_url θέλει σύνδεση στο GitHub).
+                list.firstOrNull { it.optString("name") == "moto-nav.apk" }?.optString("url")
+            } else list.firstOrNull { it.optString("name").endsWith(".apk") }?.optString("browser_download_url")
+            val newer = if (isPublicBuild || tok != null) {
                 (buildOf(tag) ?: 0) > BuildConfig.VERSION_CODE
             } else {
                 // Ιδιωτικό build: κάθε αλλαγή πάει και στο δημόσιο, οπότε «νέο» = δημοσιεύτηκε μετά από αυτό το build.
                 published > BuildConfig.BUILD_TIME + 15 * 60_000L
             }
-            available = if (newer) Available(tag, if (isPublicBuild) apk else null, o.optString("body").take(300)) else null
+            available = if (newer) Available(tag, if (isPublicBuild || tok != null) apk else null, o.optString("body").take(300)) else null
             error = null
             newer
         }.getOrElse { false }
@@ -118,6 +127,12 @@ object Updater {
                     c.connectTimeout = 10_000
                     c.readTimeout = 30_000
                     c.setRequestProperty("User-Agent", "Streetwolf")
+                    // Κλειδί μόνο προς το api.github.com· ποτέ στον server του redirect.
+                    val tok = token
+                    if (tok != null && u.host == "api.github.com") {
+                        c.setRequestProperty("Authorization", "Bearer $tok")
+                        c.setRequestProperty("Accept", "application/octet-stream")
+                    }
                     val code = c.responseCode
                     if (code in 300..399 && hops < 5) {
                         val loc = c.getHeaderField("Location") ?: throw IOException("redirect χωρίς Location")

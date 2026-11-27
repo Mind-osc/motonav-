@@ -25,6 +25,9 @@ android {
         // Για τον έλεγχο νέας έκδοσης: από ποιο repo χτίστηκε (public: κατεβάζει μόνη της· private: ανοίγει τη σελίδα).
         buildConfigField("String", "BUILD_REPO", "\"" + (System.getenv("GITHUB_REPOSITORY") ?: "") + "\"")
         buildConfigField("long", "BUILD_TIME", System.currentTimeMillis().toString() + "L")
+        // Μόνο στο ιδιωτικό build: κλειδί GitHub μόνο-για-ανάγνωση, για να κατεβάζει μόνη της τις ενημερώσεις
+        // από το ιδιωτικό repo. Στο public APK μένει κενό.
+        buildConfigField("String", "UPDATE_TOKEN", "\"" + (System.getenv("MOTONAV_UPDATE_TOKEN") ?: "").trim() + "\"")
     }
 
     // Κλειδί υπογραφής: από env vars (GitHub Secrets) ή από app/keystore.properties + app/release.keystore.

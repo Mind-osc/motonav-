@@ -19,6 +19,14 @@
     <!-- Για να βλέπουμε και να συνδεόμαστε με την εφαρμογή BRouter (Android 11+). -->
     <queries>
         <package android:name="btools.routingapp" />
+        <!-- Συρτάρι εφαρμογών του χάρτη: λίστα με τις εγκατεστημένες εφαρμογές και ποιες είναι μουσικής. -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <intent>
+            <action android:name="android.media.browse.MediaBrowserService" />
+        </intent>
     </queries>
 
     <application
@@ -67,6 +75,16 @@
             android:name=".nav.NavService"
             android:exported="false"
             android:foregroundServiceType="location|microphone" />
+        <!-- Pill μουσικής: διαβάζει τι παίζει (Spotify κ.λπ.) και στέλνει play/επόμενο. -->
+        <service
+            android:name=".media.MediaListener"
+            android:exported="true"
+            android:label="Streetwolf · μουσική"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.files"

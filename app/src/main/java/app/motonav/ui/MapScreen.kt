@@ -467,6 +467,7 @@ fun MapScreen(
     var reportOpen by remember { mutableStateOf(false) }
     // Γρήγορες ενέργειες (μετρητής ταξιδιού, πλακίδια, διακόπτες) και αναφορά χάρτη στο OSM
     var quickOpen by remember { mutableStateOf(false) }
+    var appsOpen by remember { mutableStateOf(false) }
     // Αποτελέσματα κατηγορίας της αναζήτησης (π.χ. Καφές): αριθμημένοι κύκλοι στον χάρτη
     var categoryPins by remember { mutableStateOf<List<app.motonav.search.Place>>(emptyList()) }
     // Μετά από πάτημα στον χάρτη: η κατηγορία μένει στον χάρτη χωρίς το φύλλο (πάτημα σε σημείο = προορισμός)
@@ -515,6 +516,8 @@ fun MapScreen(
                         // Έχουμε δική μας πυξίδα κάτω.
                         m.uiSettings.isCompassEnabled = false
                         m.addOnMapClickListener { p ->
+                            // Πάτημα στον χάρτη: το pill μουσικής ανεβαίνει και μένει το κουμπάκι.
+                            MediaPillState.onMapTap()
                             val pt = m.projection.toScreenLocation(p)
                             val r = 28f * density
                             // Πάτημα σε μέλος της παρέας: πληροφορίες και «πήγαινε εκεί».
@@ -1400,6 +1403,9 @@ fun MapScreen(
             val quickButton: @Composable (androidx.compose.ui.unit.Dp) -> Unit = { sz ->
                 RideIconButton(ImageVector.vectorResource(R.drawable.ic_bolt), "Γρήγορες ενέργειες", { quickOpen = true }, size = sz)
             }
+            val appsButton: @Composable (androidx.compose.ui.unit.Dp) -> Unit = { sz ->
+                RideIconButton(ImageVector.vectorResource(R.drawable.ic_apps), "Εφαρμογές", { appsOpen = true }, size = sz)
+            }
             val browseButtons: @Composable () -> Unit = {
                 RideIconButton(Icons.Filled.Search, "Αναζήτηση", { showSearch = true }, size = sizes.button)
                 RideIconButton(Icons.Filled.Settings, "Ρυθμίσεις", onOpenSettings, size = sizes.button)
@@ -1496,8 +1502,11 @@ fun MapScreen(
                             if (groupActive) TalkButton(sizes.smallButton, { recording = it })
                             RideIconButton(Icons.Filled.Warning, "Αναφορά κινδύνου ή κάμερας", { reportOpen = true }, size = sizes.smallButton)
                             quickButton(sizes.smallButton)
+                            appsButton(sizes.smallButton)
                             if (!session.navigating) browseButtons()
                         }
+                        // Pill μουσικής: κάτω από τα κουμπιά, με μικρό κενό.
+                        MediaPill(docked = true)
                         if (!display.customStatus) WeatherPill(session.weather, session.state?.progressM ?: 0.0)
                         else if (weatherOpen) WeatherPill(session.weather, session.state?.progressM ?: 0.0, startExpanded = true, onClose = { weatherOpen = false })
                     }
@@ -1551,6 +1560,7 @@ fun MapScreen(
                                     Row(horizontalArrangement = Arrangement.spacedBy(Space.sm), verticalAlignment = Alignment.CenterVertically) {
                                         RideIconButton(Icons.Filled.Warning, "Αναφορά κινδύνου ή κάμερας", { reportOpen = true }, size = sizes.smallButton)
                                         quickButton(sizes.smallButton)
+                                        appsButton(sizes.smallButton)
                                     }
                                     NextPoisBar(nextPois, progressNow, { p -> session.addStopNow(p.place.latLon, p.place.name) })
                                     // Τέρμα κάτω αριστερά: ηχείο, και δίπλα του άφιξη/χρόνος/απόσταση (το ✕ είναι πάνω από την ταχύτητα).
@@ -1572,6 +1582,7 @@ fun MapScreen(
                                     if (groupActive) TalkButton(sizes.smallButton, { recording = it })
                                     RideIconButton(Icons.Filled.Warning, "Αναφορά κινδύνου ή κάμερας", { reportOpen = true }, size = sizes.smallButton)
                                     quickButton(sizes.smallButton)
+                                    appsButton(sizes.smallButton)
                                     RideIconButton(Icons.Filled.Search, "Αναζήτηση", { showSearch = true }, size = sizes.smallButton)
                                     RideIconButton(Icons.Filled.Settings, "Ρυθμίσεις", onOpenSettings, size = sizes.smallButton)
                                 }
@@ -1629,6 +1640,9 @@ fun MapScreen(
                     if (!session.navigating) UpdatePill()
                 }
             }
+            // Pill μουσικής (Spotify κ.λπ.) πάνω πάνω στο κέντρο.
+            if (!landscape) MediaPill()
+            MediaHandle()
         }
         if (reportOpen && !pip) ReportSheet(
             onPick = report,
@@ -1639,6 +1653,8 @@ fun MapScreen(
         )
         BackHandler(enabled = reportOpen) { reportOpen = false }
         val themeNow by repo.theme.collectAsState(app.motonav.ui.theme.ThemeSettings())
+        if (appsOpen && !pip) AppsPanel(landscape, onClose = { appsOpen = false })
+        BackHandler(enabled = appsOpen) { appsOpen = false }
         if (quickOpen && !pip) QuickActionsPanel(
             themeMode = themeNow.mode,
             onTheme = { mode -> scope.launch { repo.save(themeNow.copy(mode = mode)) } },

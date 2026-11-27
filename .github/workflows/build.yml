@@ -24,6 +24,8 @@ jobs:
     timeout-minutes: 30
     env:
       MOTONAV_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      # Κλειδί μόνο-για-ανάγνωση: η ιδιωτική έκδοση κατεβάζει μόνη της τις ενημερώσεις. ΔΕΝ μπαίνει στο public APK.
+      MOTONAV_UPDATE_TOKEN: ${{ secrets.UPDATE_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -67,7 +69,7 @@ jobs:
       - name: Build με το παλιό κλειδί
         if: steps.keys.outputs.signed == 'true' && hashFiles('app/legacy.keystore') != ''
         run: |
-          MOTONAV_LEGACY=1 gradle :app:assembleRelease --no-daemon
+          MOTONAV_LEGACY=1 MOTONAV_UPDATE_TOKEN= gradle :app:assembleRelease --no-daemon
           cp app/build/outputs/apk/release/app-release.apk moto-nav-old-key.apk
 
       # Δεύτερο APK για το public repo: ίδιο κλειδί, χωρίς την Pointer (άδεια μόνο για προσωπική χρήση).
@@ -75,7 +77,7 @@ jobs:
         if: steps.keys.outputs.signed == 'true' && hashFiles('app/src/main/res/font/pointer.ttf') != ''
         run: |
           rm app/src/main/res/font/pointer.ttf
-          gradle :app:assembleRelease --no-daemon
+          MOTONAV_UPDATE_TOKEN= gradle :app:assembleRelease --no-daemon
           cp app/build/outputs/apk/release/app-release.apk moto-nav-public.apk
 
       - name: Release
