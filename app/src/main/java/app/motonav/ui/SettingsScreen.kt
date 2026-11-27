@@ -313,7 +313,8 @@ fun SettingsScreen(
                 InfoRow("Απεικόνιση χάρτη", "MapLibre Native (BSD)")
                 InfoRow("Διαδρομές", "BRouter (MIT), offline στο κινητό")
                 InfoRow("Αναζήτηση", "Photon (komoot) και Overpass API, από OpenStreetMap")
-                InfoRow("Σημεία ενδιαφέροντος", "OpenStreetMap, και POIs 4GPS (pois.4gps.gr) όταν τα εισάγεις, με την άδεια του 4GPS")
+                InfoRow("Σημεία ενδιαφέροντος", "OpenStreetMap")
+                InfoRow("Σημεία 4GPS", "© 4GPS · pois.4gps.gr · forum.4gps.gr. Βενζινάδικα, κάμερες κ.ά. όταν τα εισάγεις, με την άδεια του 4GPS. Ευχαριστούμε!")
                 InfoRow("Καιρός", "Open-Meteo")
                 InfoRow("Κίνηση", "TomTom Routing και Traffic API, με δικό σου κλειδί")
             }
@@ -364,7 +365,7 @@ fun SettingsScreen(
                             checking = "Ελέγχω…"
                             updScope.launch {
                                 val has = app.motonav.update.Updater.check(context, force = true)
-                                checking = if (has) null else "Έχεις την τελευταία έκδοση"
+                                checking = if (has) null else (app.motonav.update.Updater.error ?: "Έχεις την τελευταία έκδοση")
                                 // Βρέθηκε: κατέβασέ τη αμέσως (με APK) και άνοιξε την εγκατάσταση.
                                 if (has && app.motonav.update.Updater.available?.apkUrl != null) app.motonav.update.Updater.install(context)
                             }

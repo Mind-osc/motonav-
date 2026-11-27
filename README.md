@@ -175,7 +175,7 @@
 
 ## Πηγές δεδομένων
 
-OpenStreetMap (χάρτης, κάμερες, βενζίνη, μέρη) · OpenFreeMap (πλακίδια) · BRouter (διαδρομές) · Photon / Nominatim (αναζήτηση) · Open-Meteo (καιρός) · AWS Terrain Tiles (ανάγλυφο) · TomTom, ElevenLabs, MapTiler (με δικό σου κλειδί) · Firebase (παρέα).
+OpenStreetMap (χάρτης, κάμερες, βενζίνη, μέρη) · OpenFreeMap (πλακίδια) · BRouter (διαδρομές) · Photon / Nominatim (αναζήτηση) · Open-Meteo (καιρός) · AWS Terrain Tiles (ανάγλυφο) · TomTom, ElevenLabs, MapTiler (με δικό σου κλειδί) · Firebase (παρέα) · [4GPS](https://pois.4gps.gr) (σημεία ενδιαφέροντος όταν τα εισάγεις, με την άδεια του 4GPS).
 
 ## Άδεια
 

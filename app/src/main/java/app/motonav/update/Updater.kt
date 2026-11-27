@@ -87,7 +87,11 @@ object Updater {
             available = if (newer) Available(tag, if (isPublicBuild || tok != null) apk else null, o.optString("body").take(300)) else null
             error = null
             newer
-        }.getOrElse { false }
+        }.getOrElse {
+            // Να φαίνεται ότι απέτυχε (π.χ. χωρίς internet ή λάθος κλειδί), όχι «έχεις την τελευταία».
+            error = "Δεν έγινε ο έλεγχος: ${it.message}"
+            false
+        }
     }
 
     /** Πάτημα «Εγκατάσταση». */
