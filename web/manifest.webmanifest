@@ -1,6 +1,6 @@
 {
-  "name": "Moto Nav",
-  "short_name": "Moto Nav",
+  "name": "Streetwolf",
+  "short_name": "Streetwolf",
   "description": "Πλοήγηση για μηχανή: διαδρομές με στροφές, χωματόδρομοι, φωνή στα ελληνικά.",
   "lang": "el",
   "start_url": "./",

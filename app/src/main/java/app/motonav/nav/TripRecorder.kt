@@ -34,7 +34,7 @@ class TripRecorder(context: Context) {
             file = f
             writer = f.bufferedWriter().apply {
                 write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
-                write("<gpx version=\"1.1\" creator=\"Moto Nav\" xmlns=\"http://www.topografix.com/GPX/1/1\">\n")
+                write("<gpx version=\"1.1\" creator=\"Streetwolf\" xmlns=\"http://www.topografix.com/GPX/1/1\">\n")
                 write("<trk><name>$name</name><trkseg>\n")
             }
         }

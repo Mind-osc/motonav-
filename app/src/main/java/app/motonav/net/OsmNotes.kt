@@ -29,7 +29,7 @@ object OsmNotes {
         val body = buildString {
             append(kind.label).append(" / ").append(kind.en)
             if (text.isNotBlank()) append("\n\n").append(text.trim())
-            append("\n\n#MotoNav (αναφορά από αναβάτη, Android)")
+            append("\n\n#Streetwolf (αναφορά από αναβάτη, Android)")
         }
         val url = URL(
             String.format(Locale.US, "https://api.openstreetmap.org/api/0.6/notes.json?lat=%.6f&lon=%.6f&text=", lat, lon) +
@@ -39,7 +39,7 @@ object OsmNotes {
             requestMethod = "POST"
             connectTimeout = 15_000
             readTimeout = 20_000
-            setRequestProperty("User-Agent", "MotoNav/1.0 (Android; https://github.com/Mind-osc/motonav-)")
+            setRequestProperty("User-Agent", "Streetwolf/1.0 (Android; https://github.com/Mind-osc/motonav-)")
             doOutput = true
         }
         try {

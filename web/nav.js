@@ -358,7 +358,7 @@
     write(name, points) {
       const esc = (s) => String(s).replace(/[<&>"]/g, (c) => ({ "<": "&lt;", "&": "&amp;", ">": "&gt;", '"': "&quot;" }[c]));
       const pts = points.map((p) => `<trkpt lat="${p.lat.toFixed(6)}" lon="${p.lon.toFixed(6)}"/>`).join("");
-      return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Moto Nav web" xmlns="http://www.topografix.com/GPX/1/1"><metadata><name>${esc(name)}</name></metadata><trk><name>${esc(name)}</name><trkseg>${pts}</trkseg></trk></gpx>\n`;
+      return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Streetwolf web" xmlns="http://www.topografix.com/GPX/1/1"><metadata><name>${esc(name)}</name></metadata><trk><name>${esc(name)}</name><trkseg>${pts}</trkseg></trk></gpx>\n`;
     },
     /** Έως n ενδιάμεσα σημεία πάνω σε μια γραμμή (για να την ακολουθήσει το BRouter). */
     sample(points, n) {

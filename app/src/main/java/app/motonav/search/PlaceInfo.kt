@@ -87,14 +87,14 @@ object OsmNotes {
         runCatching {
             val body = "lat=" + String.format(Locale.US, "%.6f", p.lat) +
                 "&lon=" + String.format(Locale.US, "%.6f", p.lon) +
-                "&text=" + URLEncoder.encode("$text\n\n#MotoNav", "UTF-8")
+                "&text=" + URLEncoder.encode("$text\n\n#Streetwolf", "UTF-8")
             val c = URL("https://api.openstreetmap.org/api/0.6/notes.json").openConnection() as HttpURLConnection
             try {
                 c.connectTimeout = 8_000
                 c.readTimeout = 15_000
                 c.requestMethod = "POST"
                 c.doOutput = true
-                c.setRequestProperty("User-Agent", "MotoNav/0.1 (Android)")
+                c.setRequestProperty("User-Agent", "Streetwolf/0.1 (Android)")
                 c.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                 c.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
                 if (c.responseCode !in 200..299) throw IOException("HTTP ${c.responseCode}")

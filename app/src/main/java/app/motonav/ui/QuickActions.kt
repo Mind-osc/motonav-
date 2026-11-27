@@ -353,7 +353,7 @@ fun MapReportSheet(lat: Double?, lon: Double?, onClose: () -> Unit) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(Space.lg), verticalArrangement = Arrangement.spacedBy(Space.sm)) {
                 Text("Αναφορά χάρτη", style = MotoType.title.copy(fontWeight = FontWeight.Bold), color = c.base.text)
                 Text(
-                    "Πάει ως σημείωση στο OpenStreetMap, στο σημείο που είσαι. Οι εθελοντές της περιοχής διορθώνουν τον χάρτη, και η διόρθωση έρχεται και στο MotoNav.",
+                    "Πάει ως σημείωση στο OpenStreetMap, στο σημείο που είσαι. Οι εθελοντές της περιοχής διορθώνουν τον χάρτη, και η διόρθωση έρχεται και στο Streetwolf.",
                     style = MotoType.label.copy(fontWeight = FontWeight.Normal), color = c.base.textMuted,
                 )
                 if (lat == null || lon == null) {

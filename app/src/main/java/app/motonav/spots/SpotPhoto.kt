@@ -73,7 +73,7 @@ object SpotPhoto {
         c.connectTimeout = 8_000
         c.readTimeout = 15_000
         c.instanceFollowRedirects = true
-        c.setRequestProperty("User-Agent", "MotoNav/0.1 (personal Android app)")
+        c.setRequestProperty("User-Agent", "Streetwolf/0.1 (personal Android app)")
         if (c.responseCode !in 200..299) throw java.io.IOException("HTTP ${c.responseCode}")
         return c.inputStream
     }

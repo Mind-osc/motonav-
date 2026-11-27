@@ -85,7 +85,7 @@
       const coffee = link(g, "☕ Κέρασέ με έναν καφέ", "Η εφαρμογή είναι και θα μείνει δωρεάν", () => window.open("https://paypal.me/STAVROSMALAGARDIS", "_blank"));
       coffee.querySelector(".chev").textContent = "↗";
       link(g, "Τι νέο υπάρχει", "Οι αλλαγές της web έκδοσης", () => whatsNew(true));
-      body.insertAdjacentHTML("beforeend", `<div class="foot">Moto Nav web · έκδοση ${VERSION}. Για Android υπάρχει η πλήρης εφαρμογή
+      body.insertAdjacentHTML("beforeend", `<div class="foot">Streetwolf web · έκδοση ${VERSION}. Για Android υπάρχει η πλήρης εφαρμογή
         (offline, παρέα, CarPlay/Android Auto): <a href="https://github.com/Mind-osc/motonav-" target="_blank" rel="noopener">github.com/Mind-osc/motonav-</a></div>`);
     },
 
@@ -467,7 +467,7 @@
   }
   function exportWpts(l) {
     const esc2 = (s) => String(s).replace(/[<&>"]/g, (c) => ({ "<": "&lt;", "&": "&amp;", ">": "&gt;", '"': "&quot;" }[c]));
-    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Moto Nav web" xmlns="http://www.topografix.com/GPX/1/1">` +
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Streetwolf web" xmlns="http://www.topografix.com/GPX/1/1">` +
       l.items.map((it) => `<wpt lat="${it.lat}" lon="${it.lon}"><name>${esc2(it.name)}</name></wpt>`).join("") + "</gpx>\n";
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([xml], { type: "application/gpx+xml" }));

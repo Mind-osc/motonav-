@@ -104,7 +104,7 @@ object Backup {
                 bytes += target.length()
             }
         }
-        require(sawManifest) { "Δεν είναι αντίγραφο του Moto Nav" }
+        require(sawManifest) { "Δεν είναι αντίγραφο του Streetwolf" }
         return Result(files, bytes)
     }
 

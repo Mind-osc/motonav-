@@ -140,7 +140,7 @@ class WeatherClient {
         try {
             c.connectTimeout = 8_000
             c.readTimeout = 15_000
-            c.setRequestProperty("User-Agent", "MotoNav/0.1 (personal Android app)")
+            c.setRequestProperty("User-Agent", "Streetwolf/0.1 (personal Android app)")
             if (c.responseCode !in 200..299) throw IOException("HTTP ${c.responseCode}")
             val body = c.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
             OpenMeteoParser.parse(body, samples)

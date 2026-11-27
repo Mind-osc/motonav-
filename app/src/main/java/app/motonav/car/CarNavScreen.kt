@@ -177,7 +177,7 @@ class CarNavScreen(carContext: CarContext) : Screen(carContext) {
                 )
             }
             session.error != null -> b.setNavigationInfo(MessageInfo.Builder("Δεν βγήκε διαδρομή").setText(session.error?.message ?: "").build())
-            else -> b.setNavigationInfo(MessageInfo.Builder("Moto Nav").setText("Πάτα «Προορισμοί» για να διαλέξεις πού πας").build())
+            else -> b.setNavigationInfo(MessageInfo.Builder("Streetwolf").setText("Πάτα «Προορισμοί» για να διαλέξεις πού πας").build())
         }
         return b.build()
     }

@@ -173,7 +173,7 @@ fun GroupScreen(onScan: () -> Unit, onBack: () -> Unit) {
                     "Στείλε τον κωδικό",
                     selected = false,
                     onClick = {
-                        val text = "Μπες στην παρέα μου στο Moto Nav: ${GroupCodes.pretty(code)}\n${GroupCodes.link(code)}"
+                        val text = "Μπες στην παρέα μου στο Streetwolf: ${GroupCodes.pretty(code)}\n${GroupCodes.link(code)}"
                         runCatching {
                             context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), "Κωδικός παρέας"))
                         }

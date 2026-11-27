@@ -95,7 +95,7 @@ class NavService : Service() {
             )
             return NotificationCompat.Builder(context, CHANNEL)
                 .setSmallIcon(R.drawable.puck_arrow)
-                .setContentTitle("Moto Nav · πλοήγηση")
+                .setContentTitle("Streetwolf · πλοήγηση")
                 .setContentText(text)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)

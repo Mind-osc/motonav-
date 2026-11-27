@@ -9,7 +9,7 @@ object BookmarkFiles {
 
     fun toGpx(listName: String, places: List<Place>): String = buildString {
         append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
-        append("<gpx version=\"1.1\" creator=\"Moto Nav\" xmlns=\"http://www.topografix.com/GPX/1/1\">\n")
+        append("<gpx version=\"1.1\" creator=\"Streetwolf\" xmlns=\"http://www.topografix.com/GPX/1/1\">\n")
         append("<metadata><name>${esc(listName)}</name></metadata>\n")
         places.forEach { p ->
             append(String.format(Locale.US, "<wpt lat=\"%.6f\" lon=\"%.6f\">", p.lat, p.lon))

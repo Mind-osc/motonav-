@@ -342,7 +342,7 @@ fun SettingsScreen(
                 }
             }
 
-            Text("Moto Nav $version · δωρεάν, open source", style = MotoType.label, color = c.base.textMuted)
+            Text("Streetwolf $version · δωρεάν, open source", style = MotoType.label, color = c.base.textMuted)
             if (page == "main") {
                 DonateButton()
                 val updScope = androidx.compose.runtime.rememberCoroutineScope()

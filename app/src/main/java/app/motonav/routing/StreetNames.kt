@@ -87,7 +87,7 @@ object StreetNames {
             c.readTimeout = 30_000
             c.requestMethod = "POST"
             c.doOutput = true
-            c.setRequestProperty("User-Agent", "MotoNav/0.1 (personal Android app)")
+            c.setRequestProperty("User-Agent", "Streetwolf/0.1 (personal Android app)")
             c.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
             c.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
             if (c.responseCode !in 200..299) throw java.io.IOException("HTTP ${c.responseCode}")

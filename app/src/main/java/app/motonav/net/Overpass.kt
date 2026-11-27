@@ -32,7 +32,7 @@ object Overpass {
                 c.readTimeout = readTimeoutMs
                 c.requestMethod = "POST"
                 c.doOutput = true
-                c.setRequestProperty("User-Agent", "MotoNav/0.1 (personal Android app)")
+                c.setRequestProperty("User-Agent", "Streetwolf/0.1 (personal Android app)")
                 c.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                 c.outputStream.use { it.write(("data=" + URLEncoder.encode(q, "UTF-8")).toByteArray()) }
                 val code = c.responseCode

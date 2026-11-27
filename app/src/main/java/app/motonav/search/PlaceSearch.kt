@@ -201,7 +201,7 @@ class PlaceSearch(private val tomtomKey: String = "") {
         try {
             c.connectTimeout = 8_000
             c.readTimeout = 20_000
-            c.setRequestProperty("User-Agent", "MotoNav/0.1 (personal Android app)")
+            c.setRequestProperty("User-Agent", "Streetwolf/0.1 (personal Android app)")
             c.setRequestProperty("Accept", "application/json")
             if (body != null) {
                 c.requestMethod = "POST"

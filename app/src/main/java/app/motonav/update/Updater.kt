@@ -45,7 +45,7 @@ object Updater {
             c.connectTimeout = 8_000
             c.readTimeout = 15_000
             c.setRequestProperty("Accept", "application/vnd.github+json")
-            c.setRequestProperty("User-Agent", "MotoNav")
+            c.setRequestProperty("User-Agent", "Streetwolf")
             if (c.responseCode !in 200..299) throw IOException("HTTP ${c.responseCode}")
             return c.inputStream.bufferedReader().use { it.readText() }
         } finally {
@@ -99,7 +99,7 @@ object Updater {
                     Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + context.packageName)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                 )
             }
-            error = "Δώσε την άδεια «Εγκατάσταση άγνωστων εφαρμογών» στο Moto Nav και πάτα ξανά."
+            error = "Δώσε την άδεια «Εγκατάσταση άγνωστων εφαρμογών» στο Streetwolf και πάτα ξανά."
             return
         }
         error = null
@@ -117,7 +117,7 @@ object Updater {
                     c.instanceFollowRedirects = false
                     c.connectTimeout = 10_000
                     c.readTimeout = 30_000
-                    c.setRequestProperty("User-Agent", "MotoNav")
+                    c.setRequestProperty("User-Agent", "Streetwolf")
                     val code = c.responseCode
                     if (code in 300..399 && hops < 5) {
                         val loc = c.getHeaderField("Location") ?: throw IOException("redirect χωρίς Location")

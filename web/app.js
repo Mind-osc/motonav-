@@ -811,7 +811,7 @@
     if (!S.dest) return;
     const url = shareUrl();
     try {
-      if (navigator.share) await navigator.share({ title: `Moto Nav: ${S.dest.name}`, url });
+      if (navigator.share) await navigator.share({ title: `Streetwolf: ${S.dest.name}`, url });
       else { await navigator.clipboard.writeText(url); toast("Ο σύνδεσμος αντιγράφηκε."); }
     } catch (e) { /* ακύρωση */ }
   };
