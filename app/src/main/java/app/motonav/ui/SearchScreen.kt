@@ -121,8 +121,10 @@ fun SearchScreen(
     /** Διαδρομές που κράτησες με όνομα: πάτημα = «Ακολούθησε» ακριβώς την ίδια. */
     savedRoutes: List<app.motonav.trips.SavedRoute> = emptyList(),
     onFollowSaved: (app.motonav.trips.SavedRoute) -> Unit = {},
-    /** Αποτελέσματα κατηγορίας (π.χ. Καφές) με αριθμούς και στον χάρτη, πάνω από το φύλλο. */
+    /** Αποτελέσματα κατηγορίας (π.χ. Καφές) και στον χάρτη, πάνω από το φύλλο. */
     onMapResults: (List<Place>) -> Unit = {},
+    /** Πάτημα στον χάρτη με αποτελέσματα κατηγορίας: κλείνει το φύλλο και μένουν τα σημεία στον χάρτη (όνομα, λίστα). */
+    onBrowseMap: (String, List<Place>) -> Unit = { _, _ -> },
 ) {
     val c = LocalAppColors.current
     val search = remember(tomtomKey) { PlaceSearch(tomtomKey) }
@@ -244,8 +246,21 @@ fun SearchScreen(
     val imeOpen = WindowInsets.isImeVisible
     val screenH = LocalConfiguration.current.screenHeightDp.dp
     val idle = selected == null && query.isEmpty() && category == null
-    // Κατηγορία: τα 20 πιο κοντινά και στον χάρτη, με τον ίδιο αριθμό όπως στη λίστα.
-    val mapped = if (category != null && selected == null) results.take(20) else emptyList()
+    // Κατηγορία: όσα είναι ως 3 km γύρω σου και στον χάρτη (αν δεν υπάρχει κανένα τόσο κοντά, τα 10 πιο κοντινά).
+    // Και με κείμενο (π.χ. «coffee island», «shell», «φαρμακείο»): όσα ταιριάζουν και είναι ως 5 km γύρω σου.
+    val placeKinds = remember { setOf("city", "town", "village", "hamlet", "suburb", "municipality", "locality", "neighbourhood", "quarter", "island", "administrative", "county", "state", "region") }
+    val mapped = when {
+        selected != null -> emptyList()
+        category != null -> {
+            val nearBy = near?.let { n -> results.filter { Geo.distance(n, it.latLon) <= 3000 } } ?: results
+            nearBy.ifEmpty { results.take(10) }
+        }
+        query.isNotBlank() && near != null -> results.filter {
+            it.kind !in placeKinds && Geo.distance(near, it.latLon) <= 5000 &&
+                app.motonav.search.PlaceParsers.looseMatch(query, it.name)
+        }.takeIf { it.size >= 2 }.orEmpty()
+        else -> emptyList()
+    }
     LaunchedEffect(mapped) { onMapResults(mapped) }
     androidx.compose.runtime.DisposableEffect(Unit) { onDispose { onMapResults(emptyList()) } }
 
@@ -254,7 +269,10 @@ fun SearchScreen(
         Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = if (mapped.isNotEmpty()) 0.06f else 0.35f))
-            .clickable(remember { MutableInteractionSource() }, indication = null, onClick = onBack),
+            .clickable(remember { MutableInteractionSource() }, indication = null) {
+                val cat = category
+                if (mapped.isNotEmpty()) onBrowseMap(cat?.label ?: query.trim(), mapped) else onBack()
+            },
         contentAlignment = Alignment.BottomCenter,
     ) {
         Surface(
@@ -310,8 +328,7 @@ fun SearchScreen(
                             PlaceRow(place, near, modifier = Modifier.animateItem(), icon = ImageVector.vectorResource(R.drawable.ic_history)) { onPick(place) }
                         }
                         items(results.filter { r -> past.none { Geo.distance(it.latLon, r.latLon) < 60 } }, key = { "${it.name}|${it.lat}|${it.lon}" }) { place ->
-                            val n = mapped.indexOf(place).takeIf { it >= 0 }?.plus(1)
-                            PlaceRow(place, near, modifier = Modifier.animateItem(), number = n) { choose(place) }
+                            PlaceRow(place, near, modifier = Modifier.animateItem()) { choose(place) }
                         }
                     }
                 }

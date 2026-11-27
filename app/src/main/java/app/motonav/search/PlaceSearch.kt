@@ -455,7 +455,25 @@ object PlaceParsers {
             }
             if (!dup) out += s.p
         }
+        // Μαγαζιά/αλυσίδες («coffee island», «shell»): πρώτα όσα είναι ως 5 km γύρω σου, κατά απόσταση,
+        // και μετά τα μακρινά (π.χ. ένα «Coffe Island» 40 km μακριά που ταιριάζει ακριβώς στο όνομα).
+        // Όχι όταν ψάχνεις πόλη/χωριό (πρώτο αποτέλεσμα οικισμός με ίδιο όνομα).
+        val top = out.firstOrNull()
+        val streetKinds = setOf("house", "residential", "street", "road", "primary", "secondary", "tertiary", "unclassified", "living_street", "service", "trunk", "motorway", "pedestrian", "footway", "track", "path")
+        if (near != null && number == null && !(top != null && top.kind in placeKinds && textScore(nameQuery, top.name) == 0)) {
+            val close = out.filter { it.kind !in placeKinds && it.kind !in streetKinds && Geo.distance(near, it.latLon) <= 5000 && looseMatch(nameQuery, it.name) }
+                .sortedBy { Geo.distance(near, it.latLon) }
+            if (close.isNotEmpty()) return (close + out.filter { it !in close }).take(20)
+        }
         return out.take(20)
+    }
+
+    /** Χαλαρό ταίριασμα για ονόματα μαγαζιών: κάθε λέξη του ερωτήματος ξεκινάει όπως κάποια λέξη του ονόματος (4 γράμματα), με ή χωρίς ορθογραφικό λάθος στο τέλος. */
+    fun looseMatch(query: String, name: String): Boolean {
+        val qw = normalize(query).split(Regex("[\\s,.\\-]+")).filter { it.length >= 3 }
+        if (qw.isEmpty()) return false
+        val nw = normalize(name).split(Regex("[\\s,.\\-&]+")).filter { it.isNotEmpty() }
+        return qw.all { q -> val k = minOf(4, q.length); nw.any { it.length >= k && it.take(k) == q.take(k) } }
     }
 
     fun overpass(json: String, near: LatLon, fallbackName: String): List<Place> {

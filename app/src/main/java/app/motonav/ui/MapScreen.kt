@@ -469,6 +469,10 @@ fun MapScreen(
     var quickOpen by remember { mutableStateOf(false) }
     // Αποτελέσματα κατηγορίας της αναζήτησης (π.χ. Καφές): αριθμημένοι κύκλοι στον χάρτη
     var categoryPins by remember { mutableStateOf<List<app.motonav.search.Place>>(emptyList()) }
+    // Μετά από πάτημα στον χάρτη: η κατηγορία μένει στον χάρτη χωρίς το φύλλο (πάτημα σε σημείο = προορισμός)
+    var browse by remember { mutableStateOf<Pair<String, List<app.motonav.search.Place>>?>(null) }
+    val shownPins = if (categoryPins.isNotEmpty()) categoryPins else browse?.second.orEmpty()
+    LaunchedEffect(session.navigating) { if (session.navigating) browse = null }
     var mapReportOpen by remember { mutableStateOf(false) }
     // Μετρητής ταξιδιού A/B: κάθε στίγμα (με ή χωρίς πλοήγηση)
     LaunchedEffect(gps.value.location) { gps.value.location?.let { if (!app.motonav.nav.Simulator.active) app.motonav.trips.TripMeter.add(it) } }
@@ -530,6 +534,19 @@ fun MapScreen(
                                 ).firstOrNull()?.getNumberProperty("idx")?.toInt()
                                 if (alt != null) {
                                     session.selectAlternative(alt)
+                                    return@addOnMapClickListener true
+                                }
+                            }
+                            // Πάτημα σε σημείο της κατηγορίας (π.χ. καφέ): γίνεται προορισμός, με κάρτα και «Ξεκίνα».
+                            if (!session.navigating && browse != null) {
+                                val i = m.queryRenderedFeatures(
+                                    android.graphics.RectF(pt.x - r, pt.y - r, pt.x + r, pt.y + r),
+                                    CategoryPins.LAYER,
+                                ).firstOrNull()?.getNumberProperty("i")?.toInt()
+                                val p = i?.let { browse?.second?.getOrNull(it) }
+                                if (p != null) {
+                                    browse = null
+                                    session.pick(p.latLon, p.name)
                                     return@addOnMapClickListener true
                                 }
                             }
@@ -775,23 +792,24 @@ fun MapScreen(
             spotsLoading = false
             if (found == null) spotCache.failed(missing, now) else spots = spotCache.all
         }
-        LaunchedEffect(style, categoryPins, c) {
+        LaunchedEffect(style, shownPins, c) {
             val s = style ?: return@LaunchedEffect
             val m = map ?: return@LaunchedEffect
-            runCatching { CategoryPins.set(s, categoryPins, c.accent.toArgb(), c.onAccent.toArgb(), c.base.bg.toArgb()) }
-            if (categoryPins.isEmpty()) return@LaunchedEffect
+            runCatching { CategoryPins.set(s, shownPins, c.accent.toArgb(), c.onAccent.toArgb(), c.base.bg.toArgb(), c.base.text.toArgb()) }
+            if (shownPins.isEmpty()) return@LaunchedEffect
             // Όλα τα σημεία (και εσύ) στο πάνω μέρος της οθόνης, πάνω από το φύλλο της αναζήτησης.
             if (m.locationComponent.isLocationComponentActivated) m.locationComponent.cameraMode = CameraMode.NONE
             val me = gps.value.location ?: gps.value.lastKnown
             val b = LatLngBounds.Builder().apply {
-                categoryPins.forEach { include(LatLng(it.lat, it.lon)) }
+                shownPins.forEach { include(LatLng(it.lat, it.lon)) }
                 me?.let { include(LatLng(it.latitude, it.longitude)) }
             }
             runCatching {
                 val update = if (landscape) {
                     CameraUpdateFactory.newLatLngBounds(b.build(), (60 * density).toInt(), (70 * density).toInt(), (60 * density).toInt(), (40 * density).toInt())
                 } else {
-                    CameraUpdateFactory.newLatLngBounds(b.build(), (50 * density).toInt(), (90 * density).toInt(), (50 * density).toInt(), (m.height * 0.58f).toInt())
+                    val bottom = if (categoryPins.isNotEmpty()) (m.height * 0.58f).toInt() else (140 * density).toInt()
+                    CameraUpdateFactory.newLatLngBounds(b.build(), (50 * density).toInt(), (120 * density).toInt(), (50 * density).toInt(), bottom)
                 }
                 m.animateCamera(update, 700)
             }
@@ -1581,6 +1599,18 @@ fun MapScreen(
             ) {
                 androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Space.sm)) {
                     SimulationPill { app.motonav.nav.Simulator.active = false; session.stop() }
+                    browse?.let { (label, places) ->
+                        androidx.compose.material3.Surface(
+                            shape = RoundedCornerShape(Radius.lg),
+                            color = LocalAppColors.current.base.surface,
+                            border = BorderStroke(1.dp, LocalAppColors.current.outline),
+                        ) {
+                            Row(Modifier.padding(start = Space.md, end = Space.xs), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+                                Text("$label · ${places.size} κοντά σου · πάτα ένα", style = MotoType.label, color = LocalAppColors.current.base.text)
+                                TextChoice("✕", selected = false, onClick = { browse = null })
+                            }
+                        }
+                    }
                     RecPill(session)
                     noGoToDelete?.let { ng ->
                         androidx.compose.material3.Surface(
@@ -1650,6 +1680,7 @@ fun MapScreen(
                 tomtomKey = display.tomtomKey,
                 autoKeyboard = display.searchKeyboard,
                 onMapResults = { categoryPins = it },
+                onBrowseMap = { label, places -> browse = label to places; showSearch = false },
                 onPick = { place ->
                     showSearch = false
                     scope.launch { repo.addRecent(place) }

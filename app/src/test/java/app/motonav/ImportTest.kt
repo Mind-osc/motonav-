@@ -95,3 +95,11 @@ class FourGpsExtrasTest {
         assertEquals("Ωράριο: Δευτέρα - Παρασκευή: 08:00-18:00.", pts[1].detail)
     }
 }
+
+class LooseMatchTest {
+    @Test fun typoAndCase() {
+        org.junit.Assert.assertTrue(app.motonav.search.PlaceParsers.looseMatch("coffe island", "Coffee Island"))
+        org.junit.Assert.assertTrue(app.motonav.search.PlaceParsers.looseMatch("φαρμακειο", "Φαρμακείο Παπαδόπουλου"))
+        org.junit.Assert.assertFalse(app.motonav.search.PlaceParsers.looseMatch("coffee island", "Γρηγόρης"))
+    }
+}
