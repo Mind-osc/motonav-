@@ -6,6 +6,7 @@ import java.net.URL
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.util.Locale
+import app.motonav.i18n.tr
 
 /** Φωτογραφία για ένα μέρος και ποιος την τράβηξε (οι φωτογραφίες του Commons θέλουν αναφορά). */
 data class PhotoInfo(val url: String, val credit: String, val nearby: Boolean)
@@ -28,7 +29,7 @@ object SpotPhoto {
         }
         if (file != null) runCatching { commonsFile(file) }.getOrNull()?.let { return it }
         if (tag.startsWith("http") && Regex("""\.(jpe?g|png|webp)(\?.*)?$""", RegexOption.IGNORE_CASE).containsMatchIn(tag)) {
-            return PhotoInfo(tag, "Φωτογραφία από το OpenStreetMap", nearby = false)
+            return PhotoInfo(tag, tr("Φωτογραφία από το OpenStreetMap"), nearby = false)
         }
         return runCatching { nearby(spot.lat, spot.lon) }.getOrNull()
     }

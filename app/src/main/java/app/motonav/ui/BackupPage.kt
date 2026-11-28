@@ -22,6 +22,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import app.motonav.i18n.tr
+import app.motonav.i18n.trf
 
 /** Ρυθμίσεις → Αντίγραφο ασφαλείας: όλα σε ένα αρχείο, και επαναφορά με ένα πάτημα. */
 @Composable
@@ -36,35 +38,35 @@ internal fun BackupPage() {
 
     val save = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
-        status = "Αποθήκευση…"; error = false
+        status = tr("Αποθήκευση…"); error = false
         scope.launch {
             val r = withContext(Dispatchers.IO) {
                 runCatching { context.contentResolver.openOutputStream(uri)!!.use { Backup.export(context, it) } }
             }
-            r.onSuccess { status = "Έτοιμο: ${it.files} αρχεία, ${kb(it.bytes)}. Κράτα το αρχείο κάπου ασφαλές." }
-                .onFailure { status = "Δεν αποθηκεύτηκε: ${it.message}"; error = true }
+            r.onSuccess { status = trf("Έτοιμο: {0} αρχεία, {1}. Κράτα το αρχείο κάπου ασφαλές.", it.files, kb(it.bytes)) }
+                .onFailure { status = trf("Δεν αποθηκεύτηκε: {0}", it.message); error = true }
         }
     }
     val restore = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
-        status = "Επαναφορά…"; error = false
+        status = tr("Επαναφορά…"); error = false
         scope.launch {
             val r = withContext(Dispatchers.IO) {
                 runCatching { context.contentResolver.openInputStream(uri)!!.use { Backup.import(context, it) } }
             }
             r.onSuccess {
-                status = "Έγινε: ${it.files} αρχεία. Η εφαρμογή ξανανοίγει…"
+                status = trf("Έγινε: {0} αρχεία. Η εφαρμογή ξανανοίγει…", it.files)
                 delay(1200)
                 Backup.restart(context)
-            }.onFailure { status = "Δεν έγινε επαναφορά: ${it.message}"; error = true }
+            }.onFailure { status = trf("Δεν έγινε επαναφορά: {0}", it.message); error = true }
         }
     }
 
     Group {
-        LinkRow("Αποθήκευση αντιγράφου", "Ρυθμίσεις, κλειδιά, αγαπημένα, φωνή, παρέα, κάμερες, αναφορές, ημερολόγιο") {
+        LinkRow(tr("Αποθήκευση αντιγράφου"), tr("Ρυθμίσεις, κλειδιά, αγαπημένα, φωνή, παρέα, κάμερες, αναφορές, ημερολόγιο")) {
             save.launch(Backup.fileName())
         }
-        LinkRow("Επαναφορά από αντίγραφο", "Διάλεξε το αρχείο .zip. Τα τωρινά αντικαθίστανται και η εφαρμογή ξανανοίγει.") {
+        LinkRow(tr("Επαναφορά από αντίγραφο"), tr("Διάλεξε το αρχείο .zip. Τα τωρινά αντικαθίστανται και η εφαρμογή ξανανοίγει.")) {
             restore.launch(arrayOf("application/zip", "application/octet-stream", "*/*"))
         }
     }
@@ -73,8 +75,8 @@ internal fun BackupPage() {
             Text(it, style = MotoType.body, color = if (error) c.base.danger else c.base.text)
         }
         Text(
-            "Το αρχείο έχει μέσα τα κλειδιά σου (TomTom, ElevenLabs, MapTiler) και τον κωδικό της παρέας. Μην το μοιράζεσαι. " +
-                "Δεν έχει τους offline χάρτες: τους ξανακατεβάζεις.",
+            tr("Το αρχείο έχει μέσα τα κλειδιά σου (TomTom, ElevenLabs, MapTiler) και τον κωδικό της παρέας. Μην το μοιράζεσαι. ") +
+                tr("Δεν έχει τους offline χάρτες: τους ξανακατεβάζεις."),
             style = MotoType.label,
             color = c.base.textMuted,
         )

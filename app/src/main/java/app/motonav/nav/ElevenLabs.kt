@@ -10,6 +10,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import java.security.MessageDigest
+import app.motonav.i18n.tr
 
 /** Μια φωνή από το ElevenLabs. */
 data class ElevenVoice(
@@ -88,7 +89,9 @@ object ElevenStore {
     fun startPhrase(c: Context): String = prefs(c).getString("start_phrase", DEFAULT_START)?.ifBlank { DEFAULT_START } ?: DEFAULT_START
 
     /** Γλώσσα των οδηγιών: ελληνικά (προεπιλογή) ή αγγλικά. */
-    fun english(c: Context): Boolean = prefs(c).getBoolean("english", false)
+    fun english(c: Context): Boolean =
+        // Αν δεν το διάλεξες ποτέ εδώ: όπως η γλώσσα της εφαρμογής.
+        if (prefs(c).contains("english")) prefs(c).getBoolean("english", false) else app.motonav.i18n.Lang.english
 
     fun setEnglish(c: Context, on: Boolean) {
         prefs(c).edit().putBoolean("english", on).apply()
@@ -142,10 +145,10 @@ object ElevenClient {
             }
         }.getOrDefault("")
         val what = when (code) {
-            401 -> "Λάθος ή ληγμένο κλειδί ElevenLabs"
-            402 -> "Χρειάζεται συνδρομή ElevenLabs για αυτό"
-            403 -> "Δεν επιτρέπεται με αυτό το κλειδί (δικαιώματα κλειδιού ή πακέτο)"
-            429 -> "Πολλά αιτήματα ή τελείωσαν οι χαρακτήρες του μήνα"
+            401 -> tr("Λάθος ή ληγμένο κλειδί ElevenLabs")
+            402 -> tr("Χρειάζεται συνδρομή ElevenLabs για αυτό")
+            403 -> tr("Δεν επιτρέπεται με αυτό το κλειδί (δικαιώματα κλειδιού ή πακέτο)")
+            429 -> tr("Πολλά αιτήματα ή τελείωσαν οι χαρακτήρες του μήνα")
             else -> "ElevenLabs HTTP $code"
         }
         return if (detail.isBlank()) what else "$what: ${detail.take(160)}"
@@ -212,7 +215,7 @@ object ElevenClient {
 
     /** Προσθέτει μια φωνή της βιβλιοθήκης στις δικές σου· επιστρέφει το νέο voice_id. */
     fun addFromLibrary(key: String, v: ElevenVoice): String {
-        val owner = v.publicOwnerId ?: throw IOException("Λείπει ο κάτοχος της φωνής")
+        val owner = v.publicOwnerId ?: throw IOException(tr("Λείπει ο κάτοχος της φωνής"))
         val res = text("/v1/voices/add/$owner/${v.id}", key, "POST", JSONObject().put("new_name", v.name).toString())
         return JSONObject(res).optString("voice_id").ifBlank { v.id }
     }

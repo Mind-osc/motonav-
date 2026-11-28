@@ -50,6 +50,8 @@ import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.Point
 import kotlin.math.roundToInt
+import app.motonav.i18n.tr
+import app.motonav.i18n.trf
 
 /** S07 Αναφορά: μεγάλα πλακίδια για γάντια. Ένα πάτημα σημειώνει εκεί που είσαι και κλείνει. */
 @Composable
@@ -77,12 +79,12 @@ fun ReportSheet(
             modifier = Modifier.safeDrawingPadding().padding(Space.md).widthIn(max = 520.dp),
         ) {
             Column(Modifier.padding(Space.md), verticalArrangement = Arrangement.spacedBy(Space.sm)) {
-                Text("Τι υπάρχει εδώ;", style = MotoType.title, color = c.base.text)
+                Text(tr("Τι υπάρχει εδώ;"), style = MotoType.title, color = c.base.text)
                 val tap: (() -> Unit) -> Unit = { action -> haptic.performHapticFeedback(HapticFeedbackType.LongPress); action() }
                 if (onRoadClosed != null || onReroute != null) {
                     Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
-                        onRoadClosed?.let { ReportTile({ Text("⛔", fontSize = 20.sp) }, "Κλειστός δρόμος μπροστά", c.accent, Modifier.weight(1f)) { tap(it) } }
-                        onReroute?.let { ReportTile({ Text("↻", fontSize = 22.sp, color = c.accent) }, "Νέα διαδρομή από εδώ", c.accent, Modifier.weight(1f)) { tap(it) } }
+                        onRoadClosed?.let { ReportTile({ Text("⛔", fontSize = 20.sp) }, tr("Κλειστός δρόμος μπροστά"), c.accent, Modifier.weight(1f)) { tap(it) } }
+                        onReroute?.let { ReportTile({ Text("↻", fontSize = 22.sp, color = c.accent) }, tr("Νέα διαδρομή από εδώ"), c.accent, Modifier.weight(1f)) { tap(it) } }
                     }
                 }
                 if (onCamera != null) {
@@ -93,7 +95,7 @@ fun ReportSheet(
                                 tint = Color(0xFFFFD23F), modifier = Modifier.size(22.dp),
                             )
                         },
-                        "Κάμερα ταχύτητας εδώ", Color(0xFFFFD23F), Modifier.fillMaxWidth(),
+                        tr("Κάμερα ταχύτητας εδώ"), Color(0xFFFFD23F), Modifier.fillMaxWidth(),
                     ) { tap(onCamera) }
                 }
                 // Ο «κακός καιρός» δεν μπαίνει πια με το χέρι: τον ξέρει η εφαρμογή από την πρόγνωση στη διαδρομή.
@@ -105,7 +107,7 @@ fun ReportSheet(
                         if (row.size == 1) Box(Modifier.weight(1f))
                     }
                 }
-                TextChoice("Άκυρο", selected = false, onClick = onClose, modifier = Modifier.fillMaxWidth())
+                TextChoice(tr("Άκυρο"), selected = false, onClick = onClose, modifier = Modifier.fillMaxWidth())
             }
         }
     }
@@ -143,7 +145,7 @@ fun HazardBar(hazard: Hazard, distanceM: Double, confirmDelete: Boolean, onClick
         Box(Modifier.heightIn(min = 44.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {
             val d = if (distanceM < 1000) "${(distanceM / 10).roundToInt() * 10} m" else String.format(java.util.Locale("el", "GR"), "%.1f km", distanceM / 1000)
             Text(
-                if (confirmDelete) "Δεν υπάρχει πια; Πάτα ξανά για σβήσιμο." else "${hazard.kind.emoji}  ${hazard.kind.label} σε $d",
+                if (confirmDelete) tr("Δεν υπάρχει πια; Πάτα ξανά για σβήσιμο.") else trf("{0}  {1} σε {2}", hazard.kind.emoji, hazard.kind.label, d),
                 style = MotoType.title.copy(fontSize = 18.sp),
                 color = Color.White,
                 textAlign = TextAlign.Center,

@@ -22,6 +22,8 @@ import app.motonav.ui.theme.LocalAppColors
 import app.motonav.ui.theme.MotoType
 import app.motonav.ui.theme.Radius
 import app.motonav.ui.theme.Space
+import app.motonav.i18n.tr
+import app.motonav.i18n.trf
 
 /**
  * Στην πλοήγηση με στάσεις: «① Όνομα σε 12 km». Πάτημα: λίστα με όλες τις στάσεις,
@@ -40,7 +42,7 @@ fun NextStopPill(session: NavSession, open: Boolean, onToggle: () -> Unit) {
         ) {
             Box(Modifier.heightIn(min = 40.dp), contentAlignment = Alignment.Center) {
                 Text(
-                    "📍 Στάση 1${next.name?.let { ": $it" } ?: ""} σε ${fuelKm(dist)}",
+                    trf("📍 Στάση 1{0} σε {1}", next.name?.let { ": $it" } ?: "", fuelKm(dist)),
                     style = MotoType.label,
                     color = c.base.text,
                     maxLines = 1,
@@ -60,13 +62,13 @@ fun NextStopPill(session: NavSession, open: Boolean, onToggle: () -> Unit) {
     ) {
         Column(Modifier.padding(Space.md), verticalArrangement = Arrangement.spacedBy(Space.sm)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Στάσεις", style = MotoType.title, color = c.base.text, modifier = Modifier.weight(1f))
+                Text(tr("Στάσεις"), style = MotoType.title, color = c.base.text, modifier = Modifier.weight(1f))
                 TextChoice("✕", selected = false, onClick = onToggle)
             }
             session.stops.forEachIndexed { i, s ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
                     Text(
-                        "${i + 1}. ${s.name ?: "Στάση"}" + (dists.getOrNull(i)?.let { " · ${fuelKm(it)}" } ?: ""),
+                        "${i + 1}. ${s.name ?: tr("Στάση")}" + (dists.getOrNull(i)?.let { " · ${fuelKm(it)}" } ?: ""),
                         style = MotoType.body,
                         color = c.base.text,
                         maxLines = 1,
@@ -74,12 +76,12 @@ fun NextStopPill(session: NavSession, open: Boolean, onToggle: () -> Unit) {
                         modifier = Modifier.weight(1f),
                     )
                     // Η πρώτη είναι ήδη η επόμενη: για τις άλλες, «πήγαινε εδώ» = παράλειψη όσων είναι πριν.
-                    if (i > 0) TextChoice("Πήγαινε εδώ", selected = false, onClick = { session.skipTo(i); onToggle() })
+                    if (i > 0) TextChoice(tr("Πήγαινε εδώ"), selected = false, onClick = { session.skipTo(i); onToggle() })
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
-                TextChoice("Παράλειψη επόμενης", selected = true, onClick = { session.skipTo(1); onToggle() }, modifier = Modifier.weight(1f))
-                TextChoice("Κατευθείαν στο τέλος", selected = false, onClick = { session.skipTo(session.stops.size); onToggle() }, modifier = Modifier.weight(1f))
+                TextChoice(tr("Παράλειψη επόμενης"), selected = true, onClick = { session.skipTo(1); onToggle() }, modifier = Modifier.weight(1f))
+                TextChoice(tr("Κατευθείαν στο τέλος"), selected = false, onClick = { session.skipTo(session.stops.size); onToggle() }, modifier = Modifier.weight(1f))
             }
         }
     }
@@ -100,11 +102,11 @@ fun SimulationPill(onStop: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Space.sm),
         ) {
-            Text("▶ Προσομοίωση", style = MotoType.label, color = c.base.text)
+            Text(tr("▶ Προσομοίωση"), style = MotoType.label, color = c.base.text)
             TextChoice("${Simulator.speedUp}×", selected = true, onClick = {
                 Simulator.speedUp = when (Simulator.speedUp) { 1 -> 2; 2 -> 4; else -> 1 }
             })
-            TextChoice("Τέλος", selected = false, onClick = onStop)
+            TextChoice(tr("Τέλος"), selected = false, onClick = onStop)
         }
     }
 }

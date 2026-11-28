@@ -20,6 +20,8 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ServerValue
 import com.google.firebase.database.ValueEventListener
 import java.security.SecureRandom
+import app.motonav.i18n.tr
+import app.motonav.i18n.trf
 
 /** Ένα μέλος της παρέας όπως φαίνεται στον χάρτη. */
 data class Member(
@@ -98,7 +100,7 @@ object GroupLink {
         private set
     var error by mutableStateOf<String?>(null)
         private set
-    var name by mutableStateOf("Αναβάτης")
+    var name by mutableStateOf(tr("Αναβάτης"))
         private set
     var color by mutableStateOf(0xFFFF8A1F.toInt())
         private set
@@ -174,7 +176,7 @@ object GroupLink {
         if (::appContext.isInitialized) return
         appContext = context.applicationContext
         prefs = appContext.getSharedPreferences("group", Context.MODE_PRIVATE)
-        name = prefs.getString("name", null) ?: "Αναβάτης"
+        name = prefs.getString("name", null) ?: tr("Αναβάτης")
         color = prefs.getInt("color", 0xFFFF8A1F.toInt())
         sharing = prefs.getBoolean("sharing", true)
         voxMode = prefs.getBoolean("vox", true)
@@ -193,7 +195,7 @@ object GroupLink {
     private var offsetListener: ValueEventListener? = null
 
     fun setProfile(newName: String, newColor: Int) {
-        name = newName.trim().take(20).ifBlank { "Αναβάτης" }
+        name = newName.trim().take(20).ifBlank { tr("Αναβάτης") }
         color = newColor
         prefs.edit().putString("name", name).putInt("color", color).apply()
         lastSentAt = 0L
@@ -276,7 +278,7 @@ object GroupLink {
             val k = runCatching { GroupCrypto.derive(c) }.getOrNull()
             main.post {
                 if (code != c) return@post
-                if (k == null) { error = "Κρυπτογράφηση: δεν ξεκίνησε"; return@post }
+                if (k == null) { error = tr("Κρυπτογράφηση: δεν ξεκίνησε"); return@post }
                 keys = k
                 val auth = FirebaseAuth.getInstance()
                 val go = { uid: String -> myUid = uid; attach(k) }
@@ -284,7 +286,7 @@ object GroupLink {
                 if (user != null) go(user.uid)
                 else auth.signInAnonymously()
                     .addOnSuccessListener { r -> r.user?.uid?.let(go) }
-                    .addOnFailureListener { e -> error = "Σύνδεση: ${e.message}" }
+                    .addOnFailureListener { e -> error = trf("Σύνδεση: {0}", e.message) }
             }
         }.start()
     }
@@ -308,7 +310,7 @@ object GroupLink {
                 error = null
             }
 
-            override fun onCancelled(e: DatabaseError) { error = "Παρέα: ${e.message}" }
+            override fun onCancelled(e: DatabaseError) { error = trf("Παρέα: {0}", e.message) }
         })
         voiceListener = g.child("v").orderByChild("t").startAt((joinedAt - 5_000).toDouble())
             .addChildEventListener(object : ChildEventListener {
@@ -316,7 +318,7 @@ object GroupLink {
                     val from = s.child("from").getValue(String::class.java) ?: return
                     if (from == myUid) return
                     val audio = GroupCrypto.decrypt(k, s.child("d").getValue(String::class.java)) ?: return
-                    val who = GroupCrypto.decryptText(k, s.child("n").getValue(String::class.java)) ?: "Κάποιος"
+                    val who = GroupCrypto.decryptText(k, s.child("n").getValue(String::class.java)) ?: tr("Κάποιος")
                     runCatching { player?.play(audio, who) }
                 }
 
@@ -340,7 +342,7 @@ object GroupLink {
         val dLon = d("dLon")
         return Member(
             uid = uid,
-            name = o.optString("name", "Αναβάτης"),
+            name = o.optString("name", tr("Αναβάτης")),
             color = o.optLong("color", 0xFFFF8A1F).toInt(),
             position = LatLon(d("lat") ?: return null, d("lon") ?: return null),
             bearing = d("brg")?.toFloat(),

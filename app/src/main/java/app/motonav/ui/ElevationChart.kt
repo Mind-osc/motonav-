@@ -21,6 +21,7 @@ import app.motonav.ui.theme.LocalAppColors
 import app.motonav.ui.theme.MotoType
 import java.util.Locale
 import kotlin.math.roundToInt
+import app.motonav.i18n.trf
 
 /**
  * Προφίλ υψομέτρου: γεμάτη περιοχή στο χρώμα του θέματος, και από κάτω ↑ ανάβαση · ↓ κατάβαση · χαμηλό–ψηλό.
@@ -66,7 +67,7 @@ fun ElevationChart(profile: ElevationProfile, progressM: Double? = null, modifie
         val el = Locale("el", "GR")
         fun m(v: Double) = String.format(el, "%,d m", v.roundToInt())
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            val left = if (progressM != null) "μένει ↑ ${m(profile.ascentFrom(progressM))}" else "↑ ${m(profile.ascentM)}  ↓ ${m(profile.descentM)}"
+            val left = if (progressM != null) trf("μένει ↑ {0}", m(profile.ascentFrom(progressM))) else "↑ ${m(profile.ascentM)}  ↓ ${m(profile.descentM)}"
             Text(left, style = MotoType.label, color = text)
             Text("${m(profile.minM)} – ${m(profile.maxM)}", style = MotoType.label, color = muted)
         }

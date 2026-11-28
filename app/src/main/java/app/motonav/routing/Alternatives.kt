@@ -2,6 +2,7 @@ package app.motonav.routing
 
 import app.motonav.geo.Geo
 import app.motonav.geo.LatLon
+import app.motonav.i18n.tr
 
 /** Μια εναλλακτική με το σημείο όπου θα μπει το «συννεφάκι» με τη διαφορά χρόνου. */
 class Alternative(val route: Route, val labelAt: LatLon)
@@ -58,7 +59,7 @@ object Alternatives {
     fun deltaLabel(altS: Double, mainS: Double): String {
         val min = Math.round((altS - mainS) / 60.0).toInt()
         return when {
-            min == 0 -> "ίδια ώρα"
+            min == 0 -> tr("ίδια ώρα")
             min > 0 -> "+$min′"
             else -> "−${-min}′"
         }

@@ -5,6 +5,7 @@ import app.motonav.routing.OnRoute
 import app.motonav.routing.Route
 import org.json.JSONObject
 import java.util.Locale
+import app.motonav.i18n.tr
 
 /** Βενζινάδικο από το OpenStreetMap. */
 data class FuelStation(
@@ -130,7 +131,7 @@ object FuelOnRoute {
             if (lat.isNaN() || lon.isNaN()) continue
             val poi = o.optJSONObject("poi")
             val brand = poi?.optJSONArray("brands")?.optJSONObject(0)?.optString("name").orEmpty()
-            val name = brand.ifBlank { poi?.optString("name").orEmpty() }.ifBlank { "Βενζινάδικο" }
+            val name = brand.ifBlank { poi?.optString("name").orEmpty() }.ifBlank { tr("Βενζινάδικο") }
             out += FuelStation("tt-" + o.optString("id").ifBlank { "$lat,$lon" }, name, lat, lon)
         }
         return out
@@ -147,7 +148,7 @@ object FuelOnRoute {
             if (lat.isNaN() || lon.isNaN()) continue
             val tags = e.optJSONObject("tags") ?: JSONObject()
             fun tag(k: String) = if (tags.has(k) && !tags.isNull(k)) tags.optString(k).takeIf { it.isNotBlank() } else null
-            val name = tag("brand") ?: tag("name:el") ?: tag("name") ?: tag("operator") ?: "Βενζινάδικο"
+            val name = tag("brand") ?: tag("name:el") ?: tag("name") ?: tag("operator") ?: tr("Βενζινάδικο")
             out += FuelStation("osm-${e.optString("type")}-${e.optLong("id")}", name, lat, lon, tag("opening_hours"))
         }
         return out.distinctBy { it.id }

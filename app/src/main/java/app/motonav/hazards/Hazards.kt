@@ -7,17 +7,18 @@ import app.motonav.routing.Route
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import app.motonav.i18n.tr
 
 /** Είδη αναφοράς κινδύνου, με πόσο ζουν πριν σβηστούν μόνα τους. */
 enum class HazardKind(val label: String, val emoji: String, val ttlMin: Int, val color: Int, val labelEn: String) {
-    WEATHER("Κακός καιρός", "🌧", 3 * 60, 0xFF4FC3F7.toInt(), "bad weather"),
-    OBJECT("Αντικείμενο στον δρόμο", "📦", 2 * 60, 0xFFFFB300.toInt(), "object on the road"),
-    SLIPPERY("Λάδια / χαλίκι", "🛢", 24 * 60, 0xFFF58142.toInt(), "oil or gravel"),
-    POTHOLE("Λακκούβα", "🕳", 30 * 24 * 60, 0xFF8D6E63.toInt(), "pothole"),
-    ANIMAL("Ζώο στον δρόμο", "🐐", 60, 0xFF8BC34A.toInt(), "animal on the road"),
-    WORKS("Έργα", "🚧", 7 * 24 * 60, 0xFFFFD23F.toInt(), "road works"),
-    ACCIDENT("Τροχαίο", "💥", 2 * 60, 0xFFE53935.toInt(), "accident"),
-    CLOSED("Κλειστός δρόμος", "⛔", 24 * 60, 0xFFD32F2F.toInt(), "road closed"),
+    WEATHER(tr("Κακός καιρός"), "🌧", 3 * 60, 0xFF4FC3F7.toInt(), "bad weather"),
+    OBJECT(tr("Αντικείμενο στον δρόμο"), "📦", 2 * 60, 0xFFFFB300.toInt(), "object on the road"),
+    SLIPPERY(tr("Λάδια / χαλίκι"), "🛢", 24 * 60, 0xFFF58142.toInt(), "oil or gravel"),
+    POTHOLE(tr("Λακκούβα"), "🕳", 30 * 24 * 60, 0xFF8D6E63.toInt(), "pothole"),
+    ANIMAL(tr("Ζώο στον δρόμο"), "🐐", 60, 0xFF8BC34A.toInt(), "animal on the road"),
+    WORKS(tr("Έργα"), "🚧", 7 * 24 * 60, 0xFFFFD23F.toInt(), "road works"),
+    ACCIDENT(tr("Τροχαίο"), "💥", 2 * 60, 0xFFE53935.toInt(), "accident"),
+    CLOSED(tr("Κλειστός δρόμος"), "⛔", 24 * 60, 0xFFD32F2F.toInt(), "road closed"),
 }
 
 data class Hazard(

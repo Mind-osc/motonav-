@@ -11,6 +11,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import java.util.Locale
+import app.motonav.i18n.tr
 
 /** Ώρες, τηλέφωνο, site ενός μέρους, από το OpenStreetMap. */
 data class PlaceInfo(
@@ -70,8 +71,8 @@ object PlaceInfoLookup {
 
     /** «Mo-Fr 08:00-16:00; Sa 09:00-13:00» → «Δε-Πα 08:00-16:00 · Σα 09:00-13:00» */
     fun hoursGreek(s: String): String {
-        if (s.trim() == "24/7") return "Όλο το 24ωρο"
-        val days = mapOf("Mo" to "Δε", "Tu" to "Τρ", "We" to "Τε", "Th" to "Πε", "Fr" to "Πα", "Sa" to "Σα", "Su" to "Κυ", "PH" to "Αργίες", "off" to "κλειστό")
+        if (s.trim() == "24/7") return tr("Όλο το 24ωρο")
+        val days = mapOf("Mo" to tr("Δε"), "Tu" to tr("Τρ"), "We" to tr("Τε"), "Th" to tr("Πε"), "Fr" to tr("Πα"), "Sa" to tr("Σα"), "Su" to tr("Κυ"), "PH" to tr("Αργίες"), "off" to tr("κλειστό"))
         var out = s
         days.forEach { (en, gr) -> out = out.replace(Regex("\\b$en\\b"), gr) }
         return out.split(";").map { it.trim() }.filter { it.isNotEmpty() }.joinToString(" · ")

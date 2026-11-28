@@ -43,13 +43,14 @@ import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.min
 import kotlin.math.sin
+import app.motonav.i18n.tr
 
 /** Μικρό κυκλάκι-ουράνιο τόξο: ανοίγει τον κύκλο χρωμάτων. */
 @Composable
 fun WheelSwatch(selected: Boolean, current: Int?, onClick: () -> Unit) {
     val c = LocalAppColors.current
     val rainbow = remember { Brush.sweepGradient(listOf(Color.Red, Color.Yellow, Color.Green, Color.Cyan, Color.Blue, Color.Magenta, Color.Red)) }
-    ColorSwatch(Color.Transparent, selected, "Όποιο χρώμα θες", onClick = onClick) {
+    ColorSwatch(Color.Transparent, selected, tr("Όποιο χρώμα θες"), onClick = onClick) {
         Canvas(Modifier.size(40.dp)) {
             drawCircle(rainbow)
             if (selected && current != null) drawCircle(Color(current), radius = size.minDimension * 0.24f)
@@ -81,7 +82,7 @@ fun ColorWheelDialog(initial: Int?, onPick: (Int) -> Unit, onDismiss: () -> Unit
     Dialog(onDismissRequest = onDismiss) {
         Surface(shape = RoundedCornerShape(Radius.lg), color = c.base.surface, border = BorderStroke(1.dp, c.outline)) {
             Column(Modifier.padding(Space.lg), verticalArrangement = Arrangement.spacedBy(Space.md), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Διάλεξε χρώμα", style = MotoType.title, color = c.base.text)
+                Text(tr("Διάλεξε χρώμα"), style = MotoType.title, color = c.base.text)
                 val hues = remember {
                     Brush.sweepGradient((0..6).map { Color(android.graphics.Color.HSVToColor(floatArrayOf(it * 60f, 1f, 1f))) })
                 }
@@ -103,7 +104,7 @@ fun ColorWheelDialog(initial: Int?, onPick: (Int) -> Unit, onDismiss: () -> Unit
                         drawCircle(Color.White, 13.dp.toPx(), p, style = Stroke(2.5.dp.toPx()))
                     }
                 }
-                Text("Φωτεινότητα", style = MotoType.label, color = c.base.textMuted)
+                Text(tr("Φωτεινότητα"), style = MotoType.label, color = c.base.textMuted)
                 Slider(
                     value = value,
                     onValueChange = { value = it },
@@ -111,12 +112,12 @@ fun ColorWheelDialog(initial: Int?, onPick: (Int) -> Unit, onDismiss: () -> Unit
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(Space.sm), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    TextChoice("Λευκό", selected = false, onClick = { sat = 0f; value = 1f })
-                    TextChoice("Μαύρο", selected = false, onClick = { value = 0f })
+                    TextChoice(tr("Λευκό"), selected = false, onClick = { sat = 0f; value = 1f })
+                    TextChoice(tr("Μαύρο"), selected = false, onClick = { value = 0f })
                     Box(Modifier.weight(1f).height(44.dp).background(color, RoundedCornerShape(Radius.md)))
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(Space.sm), modifier = Modifier.fillMaxWidth()) {
-                    TextChoice("Άκυρο", selected = false, onClick = onDismiss, modifier = Modifier.weight(1f))
+                    TextChoice(tr("Άκυρο"), selected = false, onClick = onDismiss, modifier = Modifier.weight(1f))
                     TextChoice("OK", selected = true, onClick = { onPick(color.toArgb()) }, modifier = Modifier.weight(1f))
                 }
             }

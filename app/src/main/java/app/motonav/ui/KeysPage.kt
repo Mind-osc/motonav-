@@ -17,6 +17,7 @@ import app.motonav.ui.theme.LocalAppColors
 import app.motonav.ui.theme.MotoType
 import app.motonav.ui.theme.Space
 import kotlinx.coroutines.launch
+import app.motonav.i18n.tr
 
 /** Ρυθμίσεις → Χειριστήριο τιμονιού: ποιο κουμπί κάνει τι. */
 @Composable
@@ -25,8 +26,8 @@ internal fun KeysPage() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     Text(
-        "Χειριστήρια στο τιμόνι (Carpe Iter, WunderLINQ, Parrot, Bluetooth remote ή πληκτρολόγιο) στέλνουν πλήκτρα. " +
-            "Σύνδεσέ το από τις ρυθμίσεις Bluetooth του κινητού. Δουλεύει όσο φαίνεται ο χάρτης.",
+        tr("Χειριστήρια στο τιμόνι (Carpe Iter, WunderLINQ, Parrot, Bluetooth remote ή πληκτρολόγιο) στέλνουν πλήκτρα. ") +
+            tr("Σύνδεσέ το από τις ρυθμίσεις Bluetooth του κινητού. Δουλεύει όσο φαίνεται ο χάρτης."),
         style = MotoType.label,
         color = c.base.textMuted,
     )
@@ -42,23 +43,23 @@ internal fun KeysPage() {
                 Column(Modifier.weight(1f)) {
                     Text(a.label, style = MotoType.body, color = c.base.text)
                     Text(
-                        if (learning) "Πάτα τώρα το κουμπί στο χειριστήριο…"
+                        if (learning) tr("Πάτα τώρα το κουμπί στο χειριστήριο…")
                         else keys.joinToString(" · ") { KeyBus.keyName(it) }.ifEmpty { "—" },
                         style = MotoType.label,
                         color = if (learning) c.accent else c.base.textMuted,
                     )
                 }
-                TextChoice(if (learning) "Άκυρο" else "Αλλαγή", selected = learning, onClick = {
+                TextChoice(if (learning) tr("Άκυρο") else tr("Αλλαγή"), selected = learning, onClick = {
                     KeyBus.learning = if (learning) null else a
                 })
             }
         }
     }
-    TextChoice("Επαναφορά προεπιλογών", selected = false, onClick = {
+    TextChoice(tr("Επαναφορά προεπιλογών"), selected = false, onClick = {
         KeyBus.reset { text -> scope.launch { SettingsRepo(context.applicationContext).saveKeyMap(text) } }
     }, modifier = Modifier.fillMaxWidth())
     Text(
-        "Προεπιλογή: ↑ ζουμ +, ↓ ζουμ −, OK κέντραρε (πατημένο ξανά στην πλοήγηση: όλη η διαδρομή), ← φωνή, → αναφορά κινδύνου.",
+        tr("Προεπιλογή: ↑ ζουμ +, ↓ ζουμ −, OK κέντραρε (πατημένο ξανά στην πλοήγηση: όλη η διαδρομή), ← φωνή, → αναφορά κινδύνου."),
         style = MotoType.label,
         color = c.base.textMuted,
     )

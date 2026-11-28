@@ -58,20 +58,22 @@ import app.motonav.ui.theme.Touch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import app.motonav.i18n.tr
+import app.motonav.i18n.trf
 
 /** Χρώματα για βελάκι και γραμμή. null = του θέματος. */
 private val PALETTE: List<Pair<Int?, String>> = listOf(
-    null to "Θέμα",
-    0xFFFF2D2D.toInt() to "Κόκκινο",
-    0xFFFF8A1F.toInt() to "Πορτοκαλί",
-    0xFFFFD21F.toInt() to "Κίτρινο",
-    0xFF2ED573.toInt() to "Πράσινο",
-    0xFF1FD1F9.toInt() to "Γαλάζιο",
-    0xFF3B82F6.toInt() to "Μπλε",
-    0xFF8B5CF6.toInt() to "Μωβ",
-    0xFFFF4FA3.toInt() to "Ροζ",
-    0xFFFFFFFF.toInt() to "Λευκό",
-    0xFF111111.toInt() to "Μαύρο",
+    null to tr("Θέμα"),
+    0xFFFF2D2D.toInt() to tr("Κόκκινο"),
+    0xFFFF8A1F.toInt() to tr("Πορτοκαλί"),
+    0xFFFFD21F.toInt() to tr("Κίτρινο"),
+    0xFF2ED573.toInt() to tr("Πράσινο"),
+    0xFF1FD1F9.toInt() to tr("Γαλάζιο"),
+    0xFF3B82F6.toInt() to tr("Μπλε"),
+    0xFF8B5CF6.toInt() to tr("Μωβ"),
+    0xFFFF4FA3.toInt() to tr("Ροζ"),
+    0xFFFFFFFF.toInt() to tr("Λευκό"),
+    0xFF111111.toInt() to tr("Μαύρο"),
 )
 
 /** Ρυθμίσεις → Βελάκι και γραμμή: σχήμα, μέγεθος, χρώματα, περίγραμμα, με ζωντανή προεπισκόπηση. */
@@ -104,7 +106,7 @@ fun MarkerScreen(prefs: MarkerPrefs, onChange: (MarkerPrefs) -> Unit, onBack: ()
                 pickError = null
                 onChange(prefs.copy(shape = PuckShape.CUSTOM))
             } else {
-                pickError = "Δεν άνοιξε η εικόνα. Δοκίμασε PNG ή JPG."
+                pickError = tr("Δεν άνοιξε η εικόνα. Δοκίμασε PNG ή JPG.")
             }
         }
     }
@@ -119,14 +121,14 @@ fun MarkerScreen(prefs: MarkerPrefs, onChange: (MarkerPrefs) -> Unit, onBack: ()
             verticalArrangement = Arrangement.spacedBy(Space.md),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                RideIconButton(Icons.AutoMirrored.Filled.ArrowBack, "Πίσω", onBack, size = Touch.min)
+                RideIconButton(Icons.AutoMirrored.Filled.ArrowBack, tr("Πίσω"), onBack, size = Touch.min)
                 Spacer(Modifier.width(Space.md))
-                Text("Βελάκι και γραμμή", style = MotoType.title, color = c.base.text)
+                Text(tr("Βελάκι και γραμμή"), style = MotoType.title, color = c.base.text)
             }
 
             Preview(prefs, customVersion)
 
-            Text("Σχήμα", style = MotoType.title, color = c.base.text)
+            Text(tr("Σχήμα"), style = MotoType.title, color = c.base.text)
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
                 PuckShape.entries.forEach { shape ->
                     ShapeChoice(prefs.copy(shape = shape, sizeDp = 48), shape.label, prefs.shape == shape, customVersion) {
@@ -135,11 +137,11 @@ fun MarkerScreen(prefs: MarkerPrefs, onChange: (MarkerPrefs) -> Unit, onBack: ()
                     }
                 }
             }
-            TextChoice("Διάλεξε εικόνα από το κινητό…", selected = false, onClick = { pickImage.launch("image/*") }, modifier = Modifier.fillMaxWidth())
-            Text("PNG με διάφανο φόντο, με τη μύτη προς τα πάνω.", style = MotoType.label, color = c.base.textMuted)
+            TextChoice(tr("Διάλεξε εικόνα από το κινητό…"), selected = false, onClick = { pickImage.launch("image/*") }, modifier = Modifier.fillMaxWidth())
+            Text(tr("PNG με διάφανο φόντο, με τη μύτη προς τα πάνω."), style = MotoType.label, color = c.base.textMuted)
             pickError?.let { Text(it, style = MotoType.label, color = c.base.warning) }
 
-            Text("Μέγεθος: ${prefs.sizeDp}", style = MotoType.title, color = c.base.text)
+            Text(trf("Μέγεθος: {0}", prefs.sizeDp), style = MotoType.title, color = c.base.text)
             Slider(
                 value = prefs.sizeDp.toFloat(),
                 onValueChange = { onChange(prefs.copy(sizeDp = it.toInt())) },
@@ -149,20 +151,20 @@ fun MarkerScreen(prefs: MarkerPrefs, onChange: (MarkerPrefs) -> Unit, onBack: ()
 
             val isImage = prefs.shape == PuckShape.RED_IMAGE || prefs.shape == PuckShape.CUSTOM
             if (!isImage) {
-                Text("Χρώμα βελακιού", style = MotoType.title, color = c.base.text)
+                Text(tr("Χρώμα βελακιού"), style = MotoType.title, color = c.base.text)
                 Swatches(prefs.fill) { onChange(prefs.copy(fill = it)) }
 
-                ToggleLine("Περίγραμμα βελακιού", prefs.outline) { onChange(prefs.copy(outline = it)) }
+                ToggleLine(tr("Περίγραμμα βελακιού"), prefs.outline) { onChange(prefs.copy(outline = it)) }
                 if (prefs.outline) {
                     Swatches(prefs.outlineColor, allowTheme = false) { onChange(prefs.copy(outlineColor = it ?: AColor.WHITE)) }
                 }
             }
 
-            Text("Χρώμα γραμμής διαδρομής", style = MotoType.title, color = c.base.text)
+            Text(tr("Χρώμα γραμμής διαδρομής"), style = MotoType.title, color = c.base.text)
             Swatches(prefs.lineColor) { onChange(prefs.copy(lineColor = it)) }
 
             Text(
-                if (prefs.lineOutlineDp <= 0f) "Περίγραμμα γραμμής: χωρίς" else "Περίγραμμα γραμμής: ${"%.1f".format(prefs.lineOutlineDp)}",
+                if (prefs.lineOutlineDp <= 0f) tr("Περίγραμμα γραμμής: χωρίς") else trf("Περίγραμμα γραμμής: {0}", "%.1f".format(prefs.lineOutlineDp)),
                 style = MotoType.title,
                 color = c.base.text,
             )
@@ -173,11 +175,11 @@ fun MarkerScreen(prefs: MarkerPrefs, onChange: (MarkerPrefs) -> Unit, onBack: ()
                 colors = SliderDefaults.colors(thumbColor = c.accent, activeTrackColor = c.accent, inactiveTrackColor = c.base.surface3),
             )
             if (prefs.lineOutlineDp > 0f) {
-                Text("Χρώμα περιγράμματος (Θέμα = το φόντο του χάρτη)", style = MotoType.label, color = c.base.textMuted)
+                Text(tr("Χρώμα περιγράμματος (Θέμα = το φόντο του χάρτη)"), style = MotoType.label, color = c.base.textMuted)
                 Swatches(prefs.lineOutlineColor) { onChange(prefs.copy(lineOutlineColor = it)) }
             }
 
-            TextChoice("Επαναφορά στα αρχικά", selected = false, onClick = { onChange(MarkerPrefs()) }, modifier = Modifier.fillMaxWidth())
+            TextChoice(tr("Επαναφορά στα αρχικά"), selected = false, onClick = { onChange(MarkerPrefs()) }, modifier = Modifier.fillMaxWidth())
         }
     }
 }
@@ -207,7 +209,7 @@ private fun Preview(prefs: MarkerPrefs, version: Int) {
                 if (prefs.lineOutlineDp > 0f) drawPath(path, edge, style = Stroke(width = w + 2 * prefs.lineOutlineDp * density, cap = StrokeCap.Round))
                 drawPath(path, line, style = Stroke(width = w, cap = StrokeCap.Round))
             }
-            Image(bmp, contentDescription = "Προεπισκόπηση βελακιού", modifier = Modifier.size((bmp.width / density).dp).padding(top = 40.dp))
+            Image(bmp, contentDescription = tr("Προεπισκόπηση βελακιού"), modifier = Modifier.size((bmp.width / density).dp).padding(top = 40.dp))
         }
     }
 }
@@ -247,7 +249,7 @@ private fun Swatches(selected: Int?, allowTheme: Boolean = true, onPick: (Int?) 
             val shown = Color(color ?: c.accent.toArgb())
             val on = selected == color
             ColorSwatch(shown, on, name, onClick = { onPick(color) }) {
-                if (color == null) Text("Θ", style = MotoType.label, color = c.onAccent)
+                if (color == null) Text(tr("Θ"), style = MotoType.label, color = c.onAccent)
                 else if (on) Icon(Icons.Filled.Check, contentDescription = null, tint = if (color == 0xFFFFFFFF.toInt() || color == 0xFFFFD21F.toInt()) Color.Black else Color.White)
             }
         }
@@ -259,6 +261,6 @@ private fun ToggleLine(label: String, checked: Boolean, onChange: (Boolean) -> U
     val c = LocalAppColors.current
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         Text(label, style = MotoType.title, color = c.base.text, modifier = Modifier.weight(1f))
-        TextChoice(if (checked) "Ναι" else "Όχι", selected = checked, onClick = { onChange(!checked) })
+        TextChoice(if (checked) tr("Ναι") else tr("Όχι"), selected = checked, onClick = { onChange(!checked) })
     }
 }

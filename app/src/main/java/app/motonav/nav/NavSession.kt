@@ -19,6 +19,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import app.motonav.i18n.tr
+import app.motonav.i18n.trf
 
 /**
  * Η κατάσταση από τον προορισμό ως την άφιξη:
@@ -227,7 +229,7 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
      * Ακολουθείς έτοιμη διαδρομή (αποθηκευμένη ή GPX). Από όπου κι αν είσαι: σε πάει στο πιο κοντινό σημείο της
      * (προς τα μπροστά) και μετά ακριβώς πάνω της. Αν βγεις, σε ξαναφέρνει πάνω της (όχι από άλλο δρόμο ως το τέλος).
      */
-    fun followTrack(points: List<LatLon>, name: String = "Διαδρομή GPX") {
+    fun followTrack(points: List<LatLon>, name: String = tr("Διαδρομή GPX")) {
         if (navigating) return
         val full = app.motonav.routing.TrackRoute.build(points) ?: return
         planJob?.cancel()
@@ -269,7 +271,7 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
         if (!followingTrack || navigating) return
         val pts = trackPoints ?: return
         if (pts.size < 2) return
-        followTrack(pts.reversed(), destinationName ?: "Διαδρομή")
+        followTrack(pts.reversed(), destinationName ?: tr("Διαδρομή"))
     }
 
     /** Διαδρομή ως το σημείο εισόδου (BRouter, offline) + το υπόλοιπο της έτοιμης διαδρομής. */
@@ -328,7 +330,7 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
         error = null
         arrived = false
         destination = start
-        destinationName = if (hours == 1) "Βόλτα 1 ώρας" else "Βόλτα $hours ωρών"
+        destinationName = if (hours == 1) tr("Βόλτα 1 ώρας") else trf("Βόλτα {0} ωρών", hours)
         stops = emptyList()
         route = null
         routeType = RouteType.TWISTY
@@ -338,7 +340,7 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
             try {
                 resetTraffic()
                 val (r, via) = router.loop(start, hours * 3600.0, avoidTolls)
-                stops = via.mapIndexed { i, p -> Stop(p, "Βόλτα · σημείο ${i + 1}") }
+                stops = via.mapIndexed { i, p -> Stop(p, trf("Βόλτα · σημείο {0}", i + 1)) }
                 indexStops(r)
                 route = r
                 fetchStreetNames(r)
@@ -506,7 +508,7 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
         val dest = destination ?: return
         val fix = lastFix
         if (fix == null) {
-            error = RoutingException("Περιμένω σήμα GPS για να ξέρω από πού ξεκινάς.", RoutingException.Kind.NO_FIX)
+            error = RoutingException(tr("Περιμένω σήμα GPS για να ξέρω από πού ξεκινάς."), RoutingException.Kind.NO_FIX)
             return
         }
         planJob?.cancel()
@@ -555,7 +557,7 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
         val phrase = (if (VoiceLang.english && custom == ElevenStore.DEFAULT_START) "Let's go." else custom)
             .replace("{προορισμός}", destinationName?.let(Phrases::name) ?: Phrases.L("τον προορισμό", "your destination"))
         voice.sayProtected(phrase)
-        NavService.start(appContext, "Ξεκινάμε")
+        NavService.start(appContext, tr("Ξεκινάμε"))
     }
 
     fun stop() {
@@ -584,7 +586,7 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
         val len = r.distanceM
         if (len < 500.0 || !f.exists()) return
         val date = java.text.SimpleDateFormat("d/M", java.util.Locale.US).format(java.util.Date())
-        savePrompt = SavePrompt(f, name?.let { "Προς $it" } ?: "Βόλτα $date", len)
+        savePrompt = SavePrompt(f, name?.let { trf("Προς {0}", it) } ?: trf("Βόλτα {0}", date), len)
     }
 
     /** Μέτρα που έκανες σε προηγούμενες διαδρομές του ίδιου ταξιδιού (πριν από κάθε «νέα διαδρομή»). */
@@ -605,7 +607,7 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
         recorder = TripRecorder(appContext).also { it.start() }
         recordingFree = true
         recordingPaused = false
-        NavService.start(appContext, "Καταγραφή διαδρομής")
+        NavService.start(appContext, tr("Καταγραφή διαδρομής"))
     }
 
     fun togglePause() {
@@ -842,7 +844,7 @@ class NavSession(context: Context, private val scope: CoroutineScope) {
         if (routeType == RouteType.TRAFFIC) {
             if (trafficKey.isBlank()) {
                 throw RoutingException(
-                    "Για διαδρομή με κίνηση βάλε κλειδί TomTom στις Ρυθμίσεις → Live κίνηση.",
+                    tr("Για διαδρομή με κίνηση βάλε κλειδί TomTom στις Ρυθμίσεις → Live κίνηση."),
                     RoutingException.Kind.TRAFFIC,
                 )
             }

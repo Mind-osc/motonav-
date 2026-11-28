@@ -3,6 +3,7 @@ package app.motonav.search
 import android.content.Context
 import app.motonav.geo.Geo
 import app.motonav.geo.LatLon
+import app.motonav.i18n.tr
 
 /**
  * Διασταυρώσεις οδών χωρίς internet: «Λιοσίων & Πραΐδου», «Λιοσίων και Πραΐδου», «Λιοσίων / Πραΐδου».
@@ -90,6 +91,6 @@ object OfflineCross {
         // Ίδιο ζευγάρι οδών σε άλλη πόλη = άλλο αποτέλεσμα (κελί ~5 km).
         return sorted.filter { h -> seen.add("${h.a}|${h.b}|${Math.round(h.p.lat * 20)}|${Math.round(h.p.lon * 20)}") }
             .take(limit)
-            .map { h -> Place("${h.a} & ${h.b}", "Διασταύρωση", h.p.lat, h.p.lon, "crossing") }
+            .map { h -> Place("${h.a} & ${h.b}", tr("Διασταύρωση"), h.p.lat, h.p.lon, "crossing") }
     }
 }

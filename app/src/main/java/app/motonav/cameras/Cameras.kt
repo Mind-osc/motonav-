@@ -15,6 +15,7 @@ import java.net.URL
 import java.net.URLEncoder
 import java.util.Locale
 import kotlin.math.abs
+import app.motonav.i18n.tr
 
 /**
  * Κάμερα ταχύτητας.
@@ -37,9 +38,9 @@ data class SpeedCamera(
     /** Τι λέμε στη μπάρα και στη φωνή. */
     val title: String
         get() = when (kind) {
-            "red" -> "Κάμερα φαναριού"
-            "ai" -> "Κάμερα AI"
-            else -> "Κάμερα"
+            "red" -> tr("Κάμερα φαναριού")
+            "ai" -> tr("Κάμερα AI")
+            else -> tr("Κάμερα")
         }
 
     /** Για την αγγλική φωνή. */

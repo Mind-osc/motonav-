@@ -23,10 +23,22 @@ data class Instruments(
     val leanAvailable: Boolean = true,
     /** Κλίση δρόμου σε %, από βαρόμετρο (αν υπάρχει) ή υψόμετρο GPS. Θετικό = ανηφόρα. */
     val gradePct: Double? = null,
+    /** Επιτάχυνση σε g. Μπρος–πίσω: θετικό = γκάζι, αρνητικό = φρένο. Πλάγια: θετικό = στροφή δεξιά. */
+    val gLon: Float = 0f,
+    val gLat: Float = 0f,
+    val maxAccel: Float = 0f,
+    val maxBrake: Float = 0f,
+    val maxGLeft: Float = 0f,
+    val maxGRight: Float = 0f,
+    /** 0–100: πότε ξεκίνησε (SystemClock.elapsedRealtime), αν τρέχει τώρα. */
+    val runStartMs: Long? = null,
+    /** 0–100 σε δευτερόλεπτα: το τελευταίο και το καλύτερο. */
+    val last0to100: Float? = null,
+    val best0to100: Float? = null,
 )
 
 object LeanMath {
-    private const val G = 9.80665
+    const val G = 9.80665
 
     /**
      * Κλίση μηχανής σε σταθερή στροφή: tan(φ) = v · ω / g.
@@ -46,7 +58,7 @@ object LeanMath {
      * (Με τον «κατακόρυφο» της σύντηξης αισθητήρων, σε σταθερή στροφή 45° έβγαινε ~35°.)
      */
     fun yawRate(gx: Double, gy: Double, gz: Double, ax: Double, ay: Double, az: Double): Double =
-        (gx * ax + gy * ay + gz * az) / G
+        (gx * ax + gy * ay + gz * az) / LeanMath.G
 
     /**
      * Κλίση δρόμου από δείγματα (απόσταση που διένυσες, υψόμετρο): το τελευταίο μείον το πρώτο
@@ -60,6 +72,16 @@ object LeanMath {
         if (d < minDist) return null
         return (last.second - first.second) / d * 100.0
     }
+
+    /**
+     * Πλάγια επιτάχυνση σε στροφή, από την κλίση: g = tan(κλίση).
+     * (Ο αισθητήρας του κινητού δεν τη βλέπει: η μηχανή γέρνει μαζί της.) 45° = 1 g.
+     */
+    fun lateralG(leanDeg: Double): Double = kotlin.math.tan(Math.toRadians(leanDeg.coerceIn(-65.0, 65.0)))
+
+    /** Πότε πέρασε τα 100: γραμμική παρεμβολή ανάμεσα σε δύο σημεία GPS. Χρόνοι σε ms. */
+    fun crossTime(t0: Long, v0: Double, t1: Long, v1: Double, target: Double): Long =
+        if (v1 <= v0) t1 else t0 + ((target - v0) / (v1 - v0) * (t1 - t0)).toLong().coerceIn(0L, t1 - t0)
 
     /** Κατεύθυνση 0..360 από διάνυσμα (ανατολή, βορράς). */
     fun headingDeg(east: Double, north: Double): Double =
@@ -103,6 +125,28 @@ class InstrumentEngine(context: Context, private val onChange: (Instruments) -> 
     private var maxRight = 0f
     private var lastEmit = 0L
 
+    // ---- Επιτάχυνση (g)
+    /** Μπρος–πίσω από τους αισθητήρες (m/s²): επιτάχυνση στον κόσμο, πάνω στην κατεύθυνση του GPS. */
+    private var accFwd = 0.0
+    private var accFwdSum = 0.0
+    private var accFwdN = 0
+    private var accFwdAt = 0L
+    /** Διόρθωση των αισθητήρων με το GPS (σε g): ό,τι λέει η αλλαγή ταχύτητας ανάμεσα σε δύο σημεία. */
+    private var bias = 0.0
+    private var gpsLon = 0.0
+    private var gLon = 0.0
+    private var prevSpeed: Double? = null
+    private var prevFixMs = 0L
+    private var maxAccel = 0f
+    private var maxBrake = 0f
+    private var maxGLeft = 0f
+    private var maxGRight = 0f
+    // ---- 0–100
+    private var stoppedAtMs: Long? = null
+    private var runStartMs: Long? = null
+    private var last0to100: Float? = null
+    private var best0to100: Float? = null
+
     private val available = gyro != null && (accel != null || gameRot != null || magRot != null)
 
     fun start() {
@@ -123,6 +167,72 @@ class InstrumentEngine(context: Context, private val onChange: (Instruments) -> 
         maxLeft = 0f
         maxRight = 0f
         emit(force = true)
+    }
+
+    fun resetG() {
+        maxAccel = 0f; maxBrake = 0f; maxGLeft = 0f; maxGRight = 0f
+        last0to100 = null; best0to100 = null
+        emit(force = true)
+    }
+
+    /** Νέο σημείο GPS: επιτάχυνση από την αλλαγή ταχύτητας, διόρθωση αισθητήρων, και 0–100. */
+    private fun onSpeedFix(nowMs: Long) {
+        val v = speedMps
+        val pv = prevSpeed
+        val dt = (nowMs - prevFixMs) / 1000.0
+        if (pv != null && dt in 0.2..3.0) {
+            val g = (v - pv) / dt / LeanMath.G
+            gpsLon = gpsLon + 0.5 * (g - gpsLon)
+            if (accFwdN > 0) {
+                val avg = accFwdSum / accFwdN / LeanMath.G
+                bias += 0.3 * (g - avg - bias)
+            }
+        }
+        accFwdSum = 0.0; accFwdN = 0
+
+        // 0–100: ξεκινάει όταν φεύγεις από στάση, σταματάει στα 100 km/h.
+        val target = 100 / 3.6
+        when {
+            v < 0.8 -> { stoppedAtMs = nowMs; runStartMs = null }
+            // Πότε ξεκίνησες: ανάμεσα στο τελευταίο σημείο σε στάση και σε αυτό.
+            runStartMs == null && stoppedAtMs != null && pv != null && pv < 0.8 ->
+                runStartMs = LeanMath.crossTime(prevFixMs, pv, nowMs, v, 0.3)
+        }
+        val start = runStartMs
+        if (start != null && v >= 0.8) {
+            if (pv != null && v >= target) {
+                val t = (LeanMath.crossTime(prevFixMs, pv, nowMs, v, target) - start) / 1000f
+                if (t in 1.5f..30f) {
+                    last0to100 = t
+                    best0to100 = best0to100?.let { minOf(it, t) } ?: t
+                }
+                runStartMs = null; stoppedAtMs = null
+            } else if ((pv != null && v < pv - 3.0) || nowMs - start > 30_000) {
+                // Έκοψες ή άργησε πολύ: δεν μετράει.
+                runStartMs = null; stoppedAtMs = null
+            }
+        }
+        prevSpeed = v
+        prevFixMs = nowMs
+    }
+
+    private fun updateG() {
+        val now = SystemClock.elapsedRealtime()
+        val sensorOk = now - accFwdAt < 500 && gpsBearing != null
+        val raw = when {
+            speedMps < 0.8 && (prevSpeed ?: 0.0) < 0.8 -> 0.0
+            sensorOk -> accFwd / LeanMath.G + bias
+            else -> gpsLon
+        }
+        gLon += 0.3 * (raw.coerceIn(-2.0, 2.0) - gLon)
+        val lat = LeanMath.lateralG(lean)
+        if (speedMps > 3.0) {
+            val lo = gLon.toFloat(); val la = lat.toFloat()
+            if (lo > maxAccel) maxAccel = lo
+            if (-lo > maxBrake) maxBrake = -lo
+            if (la > maxGRight) maxGRight = la
+            if (-la > maxGLeft) maxGLeft = -la
+        }
     }
 
     fun onLocation(loc: Location) {
@@ -148,6 +258,7 @@ class InstrumentEngine(context: Context, private val onChange: (Instruments) -> 
                 }
             }
         }
+        onSpeedFix(SystemClock.elapsedRealtime())
         emit(force = true)
     }
 
@@ -174,6 +285,21 @@ class InstrumentEngine(context: Context, private val onChange: (Instruments) -> 
                 } else {
                     for (i in 0..2) acc[i] += 0.04 * (e.values[i] - acc[i])
                 }
+                // Μπρος–πίσω: επιτάχυνση στον κόσμο (ανατολή/βορράς, με πυξίδα), πάνω στην κατεύθυνση του GPS.
+                // Η βαρύτητα είναι κατακόρυφη, άρα δεν μπαίνει στο οριζόντιο.
+                val b = gpsBearing
+                if (hasMag && b != null) {
+                    val ax = e.values[0].toDouble(); val ay = e.values[1].toDouble(); val az = e.values[2].toDouble()
+                    val east = rMag[0] * ax + rMag[1] * ay + rMag[2] * az
+                    val north = rMag[3] * ax + rMag[4] * ay + rMag[5] * az
+                    val rad = Math.toRadians(b)
+                    val f = east * kotlin.math.sin(rad) + north * kotlin.math.cos(rad)
+                    accFwd += 0.12 * (f - accFwd)
+                    accFwdSum += accFwd; accFwdN++
+                    accFwdAt = SystemClock.elapsedRealtime()
+                }
+                updateG()
+                emit()
                 return
             }
             Sensor.TYPE_GYROSCOPE -> {
@@ -230,6 +356,15 @@ class InstrumentEngine(context: Context, private val onChange: (Instruments) -> 
                 altitudeM = altitude,
                 leanAvailable = available,
                 gradePct = grade,
+                gLon = gLon.toFloat(),
+                gLat = LeanMath.lateralG(lean).toFloat(),
+                maxAccel = maxAccel,
+                maxBrake = maxBrake,
+                maxGLeft = maxGLeft,
+                maxGRight = maxGRight,
+                runStartMs = runStartMs,
+                last0to100 = last0to100,
+                best0to100 = best0to100,
             )
         )
     }

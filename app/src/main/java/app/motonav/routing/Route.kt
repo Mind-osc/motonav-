@@ -4,6 +4,7 @@ import app.motonav.geo.Geo
 import app.motonav.geo.LatLon
 import org.json.JSONArray
 import org.json.JSONObject
+import app.motonav.i18n.tr
 
 enum class Turn {
     STRAIGHT, LEFT, SLIGHT_LEFT, SHARP_LEFT, RIGHT, SLIGHT_RIGHT, SHARP_RIGHT,
@@ -223,7 +224,7 @@ object BRouterJson {
             points += LatLon(lat = c.getDouble(1), lon = c.getDouble(0))
             elev += if (c.length() > 2) c.optDouble(2).takeIf { !it.isNaN() } else null
         }
-        if (points.size < 2) throw RoutingException("Η διαδρομή βγήκε άδεια.", RoutingException.Kind.OTHER)
+        if (points.size < 2) throw RoutingException(tr("Η διαδρομή βγήκε άδεια."), RoutingException.Kind.OTHER)
 
         val cumulative = DoubleArray(points.size)
         for (i in 1 until points.size) {

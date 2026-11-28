@@ -5,16 +5,18 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Locale
 import kotlin.math.floor
+import app.motonav.i18n.tr
+import app.motonav.i18n.trf
 
 /** Μέρη για μηχανόβιους στον χάρτη, από το OpenStreetMap. */
 enum class SpotKind(val label: String, val emoji: String, val color: Int) {
-    VIEW("Θέα", "🏞", 0xFF4FC3F7.toInt()),
-    PASS("Αυχένας", "⛰", 0xFFB0855A.toInt()),
-    WATER("Νερό", "💧", 0xFF29B6F6.toInt()),
-    BIKER_CAFE("Στέκι μηχανόβιων", "☕", 0xFFF58142.toInt()),
-    MOTO_SHOP("Μαγαζί/συνεργείο μηχανών", "🔧", 0xFFE53935.toInt()),
-    WASH("Πλυντήριο", "🚿", 0xFF26A69A.toInt()),
-    PICNIC("Στάση/πικνίκ", "🧺", 0xFF8BC34A.toInt()),
+    VIEW(tr("Θέα"), "🏞", 0xFF4FC3F7.toInt()),
+    PASS(tr("Αυχένας"), "⛰", 0xFFB0855A.toInt()),
+    WATER(tr("Νερό"), "💧", 0xFF29B6F6.toInt()),
+    BIKER_CAFE(tr("Στέκι μηχανόβιων"), "☕", 0xFFF58142.toInt()),
+    MOTO_SHOP(tr("Μαγαζί/συνεργείο μηχανών"), "🔧", 0xFFE53935.toInt()),
+    WASH(tr("Πλυντήριο"), "🚿", 0xFF26A69A.toInt()),
+    PICNIC(tr("Στάση/πικνίκ"), "🧺", 0xFF8BC34A.toInt()),
 }
 
 data class Spot(
@@ -91,7 +93,7 @@ out center tags 3000;""",
             val detail = listOfNotNull(
                 kind.label,
                 ele,
-                t.optString("opening_hours").takeIf { it.isNotEmpty() }?.let { "ωράριο: $it" },
+                t.optString("opening_hours").takeIf { it.isNotEmpty() }?.let { trf("ωράριο: {0}", it) },
             ).joinToString(" · ")
             val photo = t.optString("image").ifEmpty { t.optString("wikimedia_commons") }
                 .ifEmpty { t.optString("wikidata").takeIf { it.startsWith("Q") }.orEmpty() }

@@ -16,6 +16,7 @@ import java.util.Locale
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.math.roundToInt
+import app.motonav.i18n.tr
 
 enum class RouteType {
     /** Offline (BRouter), η πιο γρήγορη χωρίς κίνηση. */
@@ -55,7 +56,7 @@ class BRouterClient(context: Context) {
                 call(service, waypoints, headingDeg, extra, alternative = 0)
             }
             RouteType.TWISTY -> twisty(service, waypoints, headingDeg, avoidTolls)
-            RouteType.TRAFFIC -> error("Η διαδρομή με κίνηση γίνεται από το TomTom, όχι από το BRouter")
+            RouteType.TRAFFIC -> error(tr("Η διαδρομή με κίνηση γίνεται από το TomTom, όχι από το BRouter"))
             RouteType.DIRT -> dirt(service, waypoints, headingDeg, avoidTolls)
         }
     }
@@ -84,7 +85,7 @@ class BRouterClient(context: Context) {
             }
         }
         val best = LoopPlanner.pick(results.map { it.first }, targetS)
-            ?: throw (firstError ?: RoutingException("Δεν βρέθηκε κυκλική διαδρομή εδώ γύρω.", RoutingException.Kind.OTHER))
+            ?: throw (firstError ?: RoutingException(tr("Δεν βρέθηκε κυκλική διαδρομή εδώ γύρω."), RoutingException.Kind.OTHER))
         val chosen = results.first { it.first === best }
         val ratio = best.durationS / targetS
         if (ratio < 0.8 || ratio > 1.25) {
@@ -178,7 +179,7 @@ class BRouterClient(context: Context) {
             } catch (e: Exception) {
                 throw RoutingException(e.message ?: e.toString(), RoutingException.Kind.OTHER)
             }
-        } ?: throw RoutingException("Το BRouter δεν έστειλε διαδρομή.", RoutingException.Kind.OTHER)
+        } ?: throw RoutingException(tr("Το BRouter δεν έστειλε διαδρομή."), RoutingException.Kind.OTHER)
         if (!result.trimStart().startsWith("{")) throw classify(result)
         return withContext(Dispatchers.Default) { BRouterJson.parse(result) }
     }
@@ -215,7 +216,7 @@ class BRouterClient(context: Context) {
                 } catch (e: Exception) {
                     throw RoutingException(e.message ?: e.toString(), RoutingException.Kind.OTHER)
                 }
-            } ?: throw RoutingException("Το BRouter δεν έστειλε διαδρομή.", RoutingException.Kind.OTHER)
+            } ?: throw RoutingException(tr("Το BRouter δεν έστειλε διαδρομή."), RoutingException.Kind.OTHER)
 
             if (result.trimStart().startsWith("{")) {
                 workingProfile = profile
@@ -225,7 +226,7 @@ class BRouterClient(context: Context) {
             if (err.kind != RoutingException.Kind.NO_PROFILE) throw err
             lastError = err
         }
-        throw lastError ?: RoutingException("Δεν βρέθηκε προφίλ αυτοκινήτου στο BRouter.", RoutingException.Kind.NO_PROFILE)
+        throw lastError ?: RoutingException(tr("Δεν βρέθηκε προφίλ αυτοκινήτου στο BRouter."), RoutingException.Kind.NO_PROFILE)
     }
 
     private suspend fun callRoad(
@@ -253,14 +254,14 @@ class BRouterClient(context: Context) {
             } catch (e: Exception) {
                 throw RoutingException(e.message ?: e.toString(), RoutingException.Kind.OTHER)
             }
-        } ?: throw RoutingException("Το BRouter δεν έστειλε διαδρομή.", RoutingException.Kind.OTHER)
+        } ?: throw RoutingException(tr("Το BRouter δεν έστειλε διαδρομή."), RoutingException.Kind.OTHER)
         if (!result.trimStart().startsWith("{")) throw classify(result)
         return withContext(Dispatchers.Default) { BRouterJson.parse(result) }
     }
 
     private suspend fun <T> withService(block: suspend (IBRouterService) -> T): T {
         if (!isInstalled()) {
-            throw RoutingException("Δεν βρέθηκε η εφαρμογή BRouter.", RoutingException.Kind.NOT_INSTALLED)
+            throw RoutingException(tr("Δεν βρέθηκε η εφαρμογή BRouter."), RoutingException.Kind.NOT_INSTALLED)
         }
         val conn = Connection()
         val service = try {
@@ -269,7 +270,7 @@ class BRouterClient(context: Context) {
             throw e
         } catch (e: Exception) {
             runCatching { app.unbindService(conn) }
-            throw RoutingException("Το BRouter δεν απάντησε. Άνοιξέ το μία φορά και ξαναδοκίμασε.", RoutingException.Kind.OTHER)
+            throw RoutingException(tr("Το BRouter δεν απάντησε. Άνοιξέ το μία φορά και ξαναδοκίμασε."), RoutingException.Kind.OTHER)
         }
         try {
             return block(service)
@@ -297,7 +298,7 @@ class BRouterClient(context: Context) {
             val ok = runCatching { app.bindService(intent, conn, Context.BIND_AUTO_CREATE) }.getOrDefault(false)
             if (!ok) {
                 cont.resumeWithException(
-                    RoutingException("Δεν μπόρεσα να συνδεθώ με το BRouter.", RoutingException.Kind.OTHER)
+                    RoutingException(tr("Δεν μπόρεσα να συνδεθώ με το BRouter."), RoutingException.Kind.OTHER)
                 )
             }
         }

@@ -25,6 +25,8 @@ import java.util.Locale
 import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.layers.PropertyFactory
 import kotlin.math.roundToInt
+import app.motonav.i18n.tr
+import app.motonav.i18n.trf
 
 private val el = Locale("el", "GR")
 
@@ -39,10 +41,10 @@ internal fun fuelKm(m: Double): String = when {
 fun FuelPill(next: FuelOnRouteStop?, progressM: Double, loading: Boolean, failed: Boolean = false, onClick: () -> Unit) {
     val c = LocalAppColors.current
     val text = when {
-        next != null -> "⛽ ${next.station.name} σε ${fuelKm(next.alongM - progressM)}"
-        loading -> "⛽ ψάχνω βενζινάδικα…"
-        failed -> "⛽ δεν φόρτωσαν τα βενζινάδικα · πάτα για ξανά"
-        else -> "⛽ κανένα βενζινάδικο μέχρι τον προορισμό"
+        next != null -> trf("⛽ {0} σε {1}", next.station.name, fuelKm(next.alongM - progressM))
+        loading -> tr("⛽ ψάχνω βενζινάδικα…")
+        failed -> tr("⛽ δεν φόρτωσαν τα βενζινάδικα · πάτα για ξανά")
+        else -> tr("⛽ κανένα βενζινάδικο μέχρι τον προορισμό")
     }
     Surface(
         shape = RoundedCornerShape(Radius.md),
@@ -75,26 +77,26 @@ fun FuelList(ahead: List<FuelOnRouteStop>, progressM: Double, onAddStop: (FuelOn
     ) {
         Column(Modifier.padding(Space.md), verticalArrangement = Arrangement.spacedBy(Space.sm)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Βενζίνη στη διαδρομή", style = MotoType.title, color = c.base.text, modifier = Modifier.weight(1f))
+                Text(tr("Βενζίνη στη διαδρομή"), style = MotoType.title, color = c.base.text, modifier = Modifier.weight(1f))
                 TextChoice("✕", selected = false, onClick = onClose)
             }
             if (ahead.isEmpty()) {
-                Text("Δεν βρέθηκε βενζινάδικο ως τον προορισμό (έως 700 m από τη γραμμή).", style = MotoType.body, color = c.base.textMuted)
+                Text(tr("Δεν βρέθηκε βενζινάδικο ως τον προορισμό (έως 700 m από τη γραμμή)."), style = MotoType.body, color = c.base.textMuted)
             }
             ahead.take(6).forEach { f ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
                     Column(Modifier.weight(1f)) {
                         Text(f.station.name, style = MotoType.body, color = c.base.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        val off = if (f.offM < 60) "πάνω στον δρόμο" else "+${fuelKm(f.detourM)} παράκαμψη"
+                        val off = if (f.offM < 60) tr("πάνω στον δρόμο") else trf("+{0} παράκαμψη", fuelKm(f.detourM))
                         Text(
-                            listOfNotNull("σε ${fuelKm(f.alongM - progressM)}", off, f.station.hours?.let { "ωράριο $it" }).joinToString(" · "),
+                            listOfNotNull(trf("σε {0}", fuelKm(f.alongM - progressM)), off, f.station.hours?.let { trf("ωράριο {0}", it) }).joinToString(" · "),
                             style = MotoType.label,
                             color = c.base.textMuted,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
-                    TextChoice("Στάση", selected = false, onClick = { onAddStop(f) })
+                    TextChoice(tr("Στάση"), selected = false, onClick = { onAddStop(f) })
                 }
             }
         }

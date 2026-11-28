@@ -21,6 +21,8 @@ data class DisplayPrefs(
     val showLean: Boolean = true,
     val showCompass: Boolean = true,
     val showAltitude: Boolean = true,
+    /** Όργανο επιτάχυνσης (g) και 0–100, πάνω από την ταχύτητα. */
+    val showGMeter: Boolean = true,
     /** Χρώματα κίνησης στον χάρτη (θέλει κλειδί TomTom). */
     val showTraffic: Boolean = true,
     /** Κλειδί TomTom του χρήστη. Μένει μόνο στο κινητό. */
@@ -110,6 +112,7 @@ class SettingsRepo(private val context: Context) {
     private val showLeanKey = booleanPreferencesKey("show_lean")
     private val showCompassKey = booleanPreferencesKey("show_compass")
     private val showAltitudeKey = booleanPreferencesKey("show_altitude")
+    private val showGMeterKey = booleanPreferencesKey("show_gmeter")
     private val showTrafficKey = booleanPreferencesKey("show_traffic")
     private val tomtomKeyKey = stringPreferencesKey("tomtom_key")
     private val showCamerasKey = booleanPreferencesKey("show_cameras")
@@ -147,6 +150,7 @@ class SettingsRepo(private val context: Context) {
             showLean = p[showLeanKey] ?: true,
             showCompass = p[showCompassKey] ?: true,
             showAltitude = p[showAltitudeKey] ?: true,
+            showGMeter = p[showGMeterKey] ?: true,
             showTraffic = p[showTrafficKey] ?: true,
             tomtomKey = p[tomtomKeyKey] ?: "",
             showCameras = p[showCamerasKey] ?: true,
@@ -224,6 +228,7 @@ class SettingsRepo(private val context: Context) {
             p[showLeanKey] = d.showLean
             p[showCompassKey] = d.showCompass
             p[showAltitudeKey] = d.showAltitude
+            p[showGMeterKey] = d.showGMeter
             p[showTrafficKey] = d.showTraffic
             p[tomtomKeyKey] = d.tomtomKey.trim()
             p[showCamerasKey] = d.showCameras

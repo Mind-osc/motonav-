@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import app.motonav.i18n.tr
 
 /**
  * Χειριστήριο στο τιμόνι (Carpe Iter, WunderLINQ, Parrot, Bluetooth πληκτρολόγιο / remote):
@@ -13,12 +14,12 @@ import kotlinx.coroutines.flow.SharedFlow
  */
 object KeyBus {
     enum class Action(val label: String) {
-        ZOOM_IN("Ζουμ +"),
-        ZOOM_OUT("Ζουμ −"),
-        CENTER("Κέντραρε / όλη η διαδρομή"),
-        MUTE("Φωνή ναι/όχι"),
-        REPORT("Αναφορά κινδύνου"),
-        SEARCH("Αναζήτηση"),
+        ZOOM_IN(tr("Ζουμ +")),
+        ZOOM_OUT(tr("Ζουμ −")),
+        CENTER(tr("Κέντραρε / όλη η διαδρομή")),
+        MUTE(tr("Φωνή ναι/όχι")),
+        REPORT(tr("Αναφορά κινδύνου")),
+        SEARCH(tr("Αναζήτηση")),
     }
 
     /** Προεπιλογή: βελάκια, OK και πλήκτρα ζουμ (ό,τι στέλνουν τα περισσότερα χειριστήρια). */

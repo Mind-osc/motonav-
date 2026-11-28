@@ -57,6 +57,7 @@ import app.motonav.ui.theme.Space
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
+import app.motonav.i18n.tr
 
 private val ORANGE = Color(0xFFF5A623)
 private val BLUE = Color(0xFF3D9BFF)
@@ -86,24 +87,24 @@ fun TripMeterCard(modifier: Modifier = Modifier) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
             Text(if (useB) "Trip B" else "Trip A", style = MotoType.title.copy(fontWeight = FontWeight.Bold), color = c.base.text)
             Text(
-                if (useB) "μηδενίζεται μόνο από σένα" else "η τωρινή διαδρομή · ξεκινά μόνο του με το «Ξεκίνα»",
+                if (useB) tr("μηδενίζεται μόνο από σένα") else tr("η τωρινή διαδρομή · ξεκινά μόνο του με το «Ξεκίνα»"),
                 style = MotoType.label.copy(fontWeight = FontWeight.Normal), color = c.base.textMuted,
                 modifier = Modifier.weight(1f),
             )
-            if (m.paused) Text("ΠΑΥΣΗ", style = MotoType.label, color = ORANGE)
+            if (m.paused) Text(tr("ΠΑΥΣΗ"), style = MotoType.label, color = ORANGE)
         }
         Surface(shape = RoundedCornerShape(Radius.lg), color = c.base.surface2) {
             Column(Modifier.padding(horizontal = Space.lg, vertical = Space.sm)) {
                 val rows = listOf(
-                    "ΑΠΟΣΤΑΣΗ" to String.format(Locale("el", "GR"), "%.2f km", m.distanceM / 1000),
-                    "ΣΥΝΟΛΙΚΟΣ ΧΡΟΝΟΣ" to hms(m.totalS(now)),
-                    "ΧΡΟΝΟΣ ΤΑΞΙΔΙΟΥ" to hms(m.movingS),
-                    "ΔΙΑΡΚΕΙΑ ΣΤΑΣΗΣ" to hms(m.stoppedS(now)),
-                    "ΜΕΣΗ ΚΙΝΗΣΗΣ" to "${m.avgMovingKmh.toInt()} km/h",
-                    "ΣΥΝΟΛΙΚΗ ΜΕΣΗ" to "${m.avgTotalKmh(now).toInt()} km/h",
-                    "ΜΕΓ. ΤΑΧΥΤΗΤΑ" to "${m.maxKmh.toInt()} km/h",
-                    "ΑΝΟΔΟΣ" to "${m.ascentM.toInt()} m",
-                    "ΚΑΤΑΒΑΣΗ" to "${m.descentM.toInt()} m",
+                    tr("ΑΠΟΣΤΑΣΗ") to String.format(Locale("el", "GR"), "%.2f km", m.distanceM / 1000),
+                    tr("ΣΥΝΟΛΙΚΟΣ ΧΡΟΝΟΣ") to hms(m.totalS(now)),
+                    tr("ΧΡΟΝΟΣ ΤΑΞΙΔΙΟΥ") to hms(m.movingS),
+                    tr("ΔΙΑΡΚΕΙΑ ΣΤΑΣΗΣ") to hms(m.stoppedS(now)),
+                    tr("ΜΕΣΗ ΚΙΝΗΣΗΣ") to "${m.avgMovingKmh.toInt()} km/h",
+                    tr("ΣΥΝΟΛΙΚΗ ΜΕΣΗ") to "${m.avgTotalKmh(now).toInt()} km/h",
+                    tr("ΜΕΓ. ΤΑΧΥΤΗΤΑ") to "${m.maxKmh.toInt()} km/h",
+                    tr("ΑΝΟΔΟΣ") to "${m.ascentM.toInt()} m",
+                    tr("ΚΑΤΑΒΑΣΗ") to "${m.descentM.toInt()} m",
                 )
                 rows.forEachIndexed { i, (label, value) ->
                     Row(Modifier.fillMaxWidth().heightIn(min = 34.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -115,8 +116,8 @@ fun TripMeterCard(modifier: Modifier = Modifier) {
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            RoundAction(if (m.paused) Glyph.PLAY else Glyph.PAUSE, if (m.paused) "Συνέχεια" else "Παύση", ORANGE) { TripMeter.togglePause() }
-            RoundAction(Glyph.RESET, "Μηδενισμός", BLUE) { TripMeter.reset() }
+            RoundAction(if (m.paused) Glyph.PLAY else Glyph.PAUSE, if (m.paused) tr("Συνέχεια") else tr("Παύση"), ORANGE) { TripMeter.togglePause() }
+            RoundAction(Glyph.RESET, tr("Μηδενισμός"), BLUE) { TripMeter.reset() }
             RoundAction(Glyph.SWAP, if (useB) "Trip A" else "Trip B", BLUE) { TripMeter.swap() }
         }
     }
@@ -249,7 +250,7 @@ fun QuickActionsPanel(
                     Surface(shape = CircleShape, color = c.base.surface2, onClick = onClose, modifier = Modifier.size(52.dp)) {
                         Box(contentAlignment = Alignment.Center) { Text("‹", fontSize = 34.sp, color = c.base.text, fontWeight = FontWeight.Bold) }
                     }
-                    Text("Γρήγορες ενέργειες", style = MotoType.title.copy(fontWeight = FontWeight.Bold), color = c.base.text)
+                    Text(tr("Γρήγορες ενέργειες"), style = MotoType.title.copy(fontWeight = FontWeight.Bold), color = c.base.text)
                 }
                 HorizontalDivider(color = c.outline.copy(alpha = 0.6f))
                 Column(
@@ -257,42 +258,42 @@ fun QuickActionsPanel(
                     verticalArrangement = Arrangement.spacedBy(Space.md),
                 ) {
                     TripMeterCard()
-                    SectionTitle("Ενέργειες")
+                    SectionTitle(tr("Ενέργειες"))
                     val red = Color(0xFFE5534B); val green = Color(0xFF4CAF50); val amber = Color(0xFFE0A23A); val orange = Color(0xFFEF7D32)
                     Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
-                        ActionTile({ GlyphIcon(if (recording && !recordingPaused) Glyph.PAUSE else Glyph.DOT, red, 18.dp) }, "Καταγραφή",
-                            when { !recording -> "Έναρξη"; recordingPaused -> "Σε παύση"; else -> "Γράφει…" }, red, Modifier.weight(1f), onRecord)
-                        ActionTile({ MIcon(androidx.compose.material.icons.Icons.Filled.Place, green) }, "Αποθήκευση θέσης", "Στα Αγαπημένα", green, Modifier.weight(1f), onSaveHere)
+                        ActionTile({ GlyphIcon(if (recording && !recordingPaused) Glyph.PAUSE else Glyph.DOT, red, 18.dp) }, tr("Καταγραφή"),
+                            when { !recording -> tr("Έναρξη"); recordingPaused -> tr("Σε παύση"); else -> tr("Γράφει…") }, red, Modifier.weight(1f), onRecord)
+                        ActionTile({ MIcon(androidx.compose.material.icons.Icons.Filled.Place, green) }, tr("Αποθήκευση θέσης"), tr("Στα Αγαπημένα"), green, Modifier.weight(1f), onSaveHere)
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
-                        ActionTile({ MIcon(androidx.compose.material.icons.Icons.Filled.Edit, amber) }, "Αναφορά χάρτη", "Λείπει δρόμος…", amber, Modifier.weight(1f), onMapReport)
-                        ActionTile({ MIcon(androidx.compose.material.icons.Icons.Filled.Warning, orange) }, "Κίνδυνος / κάμερα", "Για όλους", orange, Modifier.weight(1f), onHazard)
+                        ActionTile({ MIcon(androidx.compose.material.icons.Icons.Filled.Edit, amber) }, tr("Αναφορά χάρτη"), tr("Λείπει δρόμος…"), amber, Modifier.weight(1f), onMapReport)
+                        ActionTile({ MIcon(androidx.compose.material.icons.Icons.Filled.Warning, orange) }, tr("Κίνδυνος / κάμερα"), tr("Για όλους"), orange, Modifier.weight(1f), onHazard)
                     }
-                    SectionTitle("Θέμα")
+                    SectionTitle(tr("Θέμα"))
                     Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
-                        listOf(app.motonav.ui.theme.ThemeMode.DARK to "Σκούρο", app.motonav.ui.theme.ThemeMode.LIGHT to "Φωτεινό", app.motonav.ui.theme.ThemeMode.AUTO to "Αυτόματο").forEach { (mode, label) ->
+                        listOf(app.motonav.ui.theme.ThemeMode.DARK to tr("Σκούρο"), app.motonav.ui.theme.ThemeMode.LIGHT to tr("Φωτεινό"), app.motonav.ui.theme.ThemeMode.AUTO to tr("Αυτόματο")).forEach { (mode, label) ->
                             TextChoice(label, themeMode == mode || (mode == app.motonav.ui.theme.ThemeMode.DARK && themeMode == app.motonav.ui.theme.ThemeMode.AMOLED), { onTheme(mode) }, Modifier.weight(1f))
                         }
                     }
-                    SectionTitle("Γρήγοροι διακόπτες")
+                    SectionTitle(tr("Γρήγοροι διακόπτες"))
                     Surface(shape = RoundedCornerShape(Radius.lg), color = c.base.surface) {
                         Column {
-                            SwitchRow("Φωνή πλοήγησης", null, !muted) { onMute() }
-                            SwitchRow("Φωνή για κάμερες", null, display.cameraVoice) { onDisplayChange(display.copy(cameraVoice = it)) }
-                            SwitchRow("Βορράς πάνω", "Αλλιώς η κατεύθυνσή σου πάνω", CameraPrefs.northUp) { if (it != CameraPrefs.northUp) onToggleNorth() }
-                            SwitchRow("Λιγότερη κλίση χάρτη", "Στην πλοήγηση: 40° αντί για 56°", display.navTilt < 50) { onDisplayChange(display.copy(navTilt = if (it) 40 else 56)) }
-                            SwitchRow("Χρώμα κλίσης στη γραμμή", "Κίτρινο 4–7 %, πορτοκαλί 7–10 %, κόκκινο > 10 %", display.slopeColors) {
+                            SwitchRow(tr("Φωνή πλοήγησης"), null, !muted) { onMute() }
+                            SwitchRow(tr("Φωνή για κάμερες"), null, display.cameraVoice) { onDisplayChange(display.copy(cameraVoice = it)) }
+                            SwitchRow(tr("Βορράς πάνω"), tr("Αλλιώς η κατεύθυνσή σου πάνω"), CameraPrefs.northUp) { if (it != CameraPrefs.northUp) onToggleNorth() }
+                            SwitchRow(tr("Λιγότερη κλίση χάρτη"), tr("Στην πλοήγηση: 40° αντί για 56°"), display.navTilt < 50) { onDisplayChange(display.copy(navTilt = if (it) 40 else 56)) }
+                            SwitchRow(tr("Χρώμα κλίσης στη γραμμή"), tr("Κίτρινο 4–7 %, πορτοκαλί 7–10 %, κόκκινο > 10 %"), display.slopeColors) {
                                 onDisplayChange(display.copy(slopeColors = it))
                             }
-                            SwitchRow("Φωτισμός όταν περνάς το όριο", null, display.overspeedGlow) { onDisplayChange(display.copy(overspeedGlow = it)) }
-                            SwitchRow("Μέρη για μηχανόβιους", null, display.showSpots) { onDisplayChange(display.copy(showSpots = it)) }
-                            SwitchRow("Ανάγλυφο βουνών", null, display.showRelief) { onDisplayChange(display.copy(showRelief = it)) }
-                            SwitchRow("Εξοικονόμηση ενέργειας", null, display.powerSave) { onDisplayChange(display.copy(powerSave = it)) }
-                            SwitchRow("Αυτοκίνητο", "Διαδρομές για αυτοκίνητο", display.car) { onDisplayChange(display.copy(car = it)) }
+                            SwitchRow(tr("Φωτισμός όταν περνάς το όριο"), null, display.overspeedGlow) { onDisplayChange(display.copy(overspeedGlow = it)) }
+                            SwitchRow(tr("Μέρη για μηχανόβιους"), null, display.showSpots) { onDisplayChange(display.copy(showSpots = it)) }
+                            SwitchRow(tr("Ανάγλυφο βουνών"), null, display.showRelief) { onDisplayChange(display.copy(showRelief = it)) }
+                            SwitchRow(tr("Εξοικονόμηση ενέργειας"), null, display.powerSave) { onDisplayChange(display.copy(powerSave = it)) }
+                            SwitchRow(tr("Αυτοκίνητο"), tr("Διαδρομές για αυτοκίνητο"), display.car) { onDisplayChange(display.copy(car = it)) }
                         }
                     }
-                    SectionTitle("Επόμενα στη διαδρομή")
-                    Text("Τι να δείχνει στην πλοήγηση, με την απόσταση ως το επόμενο (και χωρίς internet).", style = MotoType.label.copy(fontWeight = FontWeight.Normal), color = c.base.textMuted)
+                    SectionTitle(tr("Επόμενα στη διαδρομή"))
+                    Text(tr("Τι να δείχνει στην πλοήγηση, με την απόσταση ως το επόμενο (και χωρίς internet)."), style = MotoType.label.copy(fontWeight = FontWeight.Normal), color = c.base.textMuted)
                     RoutePoiKind.entries.chunked(3).forEach { row ->
                         Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
                             row.forEach { k ->
@@ -351,13 +352,13 @@ fun MapReportSheet(lat: Double?, lon: Double?, onClose: () -> Unit) {
             modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().safeDrawingPadding(),
         ) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(Space.lg), verticalArrangement = Arrangement.spacedBy(Space.sm)) {
-                Text("Αναφορά χάρτη", style = MotoType.title.copy(fontWeight = FontWeight.Bold), color = c.base.text)
+                Text(tr("Αναφορά χάρτη"), style = MotoType.title.copy(fontWeight = FontWeight.Bold), color = c.base.text)
                 Text(
-                    "Πάει ως σημείωση στο OpenStreetMap, στο σημείο που είσαι. Οι εθελοντές της περιοχής διορθώνουν τον χάρτη, και η διόρθωση έρχεται και στο Streetwolf.",
+                    tr("Πάει ως σημείωση στο OpenStreetMap, στο σημείο που είσαι. Οι εθελοντές της περιοχής διορθώνουν τον χάρτη, και η διόρθωση έρχεται και στο Streetwolf."),
                     style = MotoType.label.copy(fontWeight = FontWeight.Normal), color = c.base.textMuted,
                 )
                 if (lat == null || lon == null) {
-                    Text("Χρειάζεται στίγμα GPS.", style = MotoType.body, color = c.base.text)
+                    Text(tr("Χρειάζεται στίγμα GPS."), style = MotoType.body, color = c.base.text)
                 } else {
                     OsmNotes.Kind.entries.chunked(2).forEach { row ->
                         Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
@@ -368,21 +369,21 @@ fun MapReportSheet(lat: Double?, lon: Double?, onClose: () -> Unit) {
                     OutlinedTextField(
                         value = text,
                         onValueChange = { text = it.take(500) },
-                        label = { Text("Λεπτομέρειες (π.χ. όνομα δρόμου), προαιρετικά") },
+                        label = { Text(tr("Λεπτομέρειες (π.χ. όνομα δρόμου), προαιρετικά")) },
                         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
-                    TextChoice("Άκυρο", false, onClose, Modifier.weight(1f))
-                    TextChoice(if (busy) "Αποστολή…" else "Αποστολή", kind != null && lat != null, {
+                    TextChoice(tr("Άκυρο"), false, onClose, Modifier.weight(1f))
+                    TextChoice(if (busy) tr("Αποστολή…") else tr("Αποστολή"), kind != null && lat != null, {
                         val k = kind ?: return@TextChoice
                         if (busy || lat == null || lon == null) return@TextChoice
                         busy = true
                         scope.launch {
                             val r = runCatching { OsmNotes.create(lat, lon, k, text) }
                             busy = false
-                            val msg = if (r.isSuccess) "Ευχαριστούμε! Η σημείωση στάλθηκε στο OpenStreetMap." else "Δεν στάλθηκε (χρειάζεται internet). Δοκίμασε ξανά."
+                            val msg = if (r.isSuccess) tr("Ευχαριστούμε! Η σημείωση στάλθηκε στο OpenStreetMap.") else tr("Δεν στάλθηκε (χρειάζεται internet). Δοκίμασε ξανά.")
                             android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_LONG).show()
                             if (r.isSuccess) onClose()
                         }

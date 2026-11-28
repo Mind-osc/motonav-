@@ -17,6 +17,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.Locale
 import java.util.zip.ZipInputStream
+import app.motonav.i18n.trf
 
 /**
  * «Δικά σου σημεία»: αρχεία POI από άλλες πηγές (π.χ. 4GPS, Garmin, TomTom, Google My Maps).
@@ -236,14 +237,14 @@ object ImportedPois {
         val cmt = tag(inner, "cmt")
         val extra = if (cam != null || cmt.isBlank()) "" else {
             val toll = Regex("""(\d+[.,]\d{2})\s*-\s*(\d+[.,]\d{2})(?:\s*-\s*\d+[.,]\d{2})*""").find(cmt)
-            if (toll != null) "Διόδια: μηχανή ${toll.groupValues[1].replace('.', ',')} € · ΙΧ ${toll.groupValues[2].replace('.', ',')} €"
+            if (toll != null) trf("Διόδια: μηχανή {0} € · ΙΧ {1} €", toll.groupValues[1].replace('.', ','), toll.groupValues[2].replace('.', ','))
             else cmt.replace(Regex(""",\s*[0-2]\s*,\s*\d{1,3}\s*$"""), "").replace(Regex("""^\s*Site:\s*"""), "")
                 .replace(Regex("""(?:Τηλ|Κιν)[:.]?\s*[0-9 ]{10,}\s*-?"""), "").trim().trimEnd('-').trim()
         }
         val detail = listOf(extra.take(90), listOf(street, city).filter { it.isNotBlank() }.joinToString(", "), if (phone.isNotBlank()) "☎ $phone" else "", desc)
             .filter { it.isNotBlank() }.joinToString(" · ")
         val name = tag(inner, "name").ifBlank { String.format(Locale.US, "%.4f, %.4f", lat, lon) }
-        val camDetail = if (cam != null) listOfNotNull(speed?.let { "όριο $it" }, street.ifBlank { null }).joinToString(" · ") else detail
+        val camDetail = if (cam != null) listOfNotNull(speed?.let { trf("όριο {0}", it) }, street.ifBlank { null }).joinToString(" · ") else detail
         if (lat in -90.0..90.0 && lon in -180.0..180.0) Pt(name, lat, lon, camDetail.take(160), speed, dir) else null
     }.toList()
 

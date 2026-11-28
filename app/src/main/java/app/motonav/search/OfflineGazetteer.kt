@@ -3,6 +3,8 @@ package app.motonav.search
 import android.content.Context
 import app.motonav.geo.Geo
 import app.motonav.geo.LatLon
+import app.motonav.i18n.tr
+import app.motonav.i18n.trf
 
 /**
  * Αναζήτηση χωρίς internet: πόλεις, χωριά, οικισμοί, νησιά, κορυφές και διάσελα της Ελλάδας
@@ -140,15 +142,15 @@ object OfflineGazetteer {
     }
 
     private fun kindLabel(kind: String) = when (kind) {
-        "city" -> "Πόλη"
-        "town" -> "Κωμόπολη"
-        "village" -> "Χωριό"
-        "hamlet", "isolated_dwelling" -> "Οικισμός"
-        "island", "islet" -> "Νησί"
-        "peak", "volcano" -> "Κορυφή"
-        "pass" -> "Διάσελο"
-        "suburb", "quarter", "neighbourhood" -> "Περιοχή"
-        else -> "Τοποθεσία"
+        "city" -> tr("Πόλη")
+        "town" -> tr("Κωμόπολη")
+        "village" -> tr("Χωριό")
+        "hamlet", "isolated_dwelling" -> tr("Οικισμός")
+        "island", "islet" -> tr("Νησί")
+        "peak", "volcano" -> tr("Κορυφή")
+        "pass" -> tr("Διάσελο")
+        "suburb", "quarter", "neighbourhood" -> tr("Περιοχή")
+        else -> tr("Τοποθεσία")
     }
 
     fun search(query: String, near: LatLon?, limit: Int = 15): List<Place> {
@@ -172,7 +174,7 @@ object OfflineGazetteer {
                 .thenBy { h -> near?.let { Geo.distance(it, LatLon(h.e.lat, h.e.lon)) } ?: 0.0 },
         ).take(limit).map { h ->
             val detail = listOf(kindLabel(h.e.kind), h.e.detail).filter { it.isNotBlank() }.joinToString(" · ")
-            h.score to Place(h.e.name, "$detail · χωρίς internet", h.e.lat, h.e.lon, h.e.kind)
+            h.score to Place(h.e.name, trf("{0} · χωρίς internet", detail), h.e.lat, h.e.lon, h.e.kind)
         }
 
         // Οδοί: «Λιοσίων», «λεωφ. Αλεξάνδρας», «Αριστοτέλους» (χωρίς αριθμό). Πρώτα οι πιο κοντινές.
@@ -193,7 +195,7 @@ object OfflineGazetteer {
             compareBy<Pair<Int, Street>> { it.first }
                 .thenBy { (_, st) -> near?.let { Geo.distance(it, LatLon(st.lat, st.lon)) } ?: 0.0 },
         ).take(limit).map { (sc, st) ->
-            sc to Place(st.name, listOf("Οδός", st.area).filter { it.isNotBlank() }.joinToString(" · ") + " · χωρίς internet", st.lat, st.lon, "street")
+            sc to Place(st.name, listOf(tr("Οδός"), st.area).filter { it.isNotBlank() }.joinToString(" · ") + tr(" · χωρίς internet"), st.lat, st.lon, "street")
         }
 
         // Ίδιο «πόσο ταιριάζει»: πρώτα τα μέρη (πόλη/χωριό), μετά οι οδοί.

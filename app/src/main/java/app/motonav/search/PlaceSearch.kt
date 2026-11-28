@@ -13,6 +13,8 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import java.util.Locale
+import app.motonav.i18n.tr
+import app.motonav.i18n.trf
 
 data class Place(
     val name: String,
@@ -35,15 +37,15 @@ data class Place(
 /** Κατηγορίες «κοντά μου». Φίλτρα OpenStreetMap για το Overpass. */
 /** tomtom: κατηγορίες TomTom (γρήγορη αναζήτηση με κλειδί)· null = μόνο OpenStreetMap. */
 enum class Category(val label: String, val filter: String, val fallbackName: String, val tomtom: String? = null) {
-    FUEL("Βενζίνη", "[amenity=fuel]", "Βενζινάδικο", "7311"),
-    FOOD("Φαγητό", "[amenity~\"^(restaurant|fast_food)$\"]", "Φαγητό", "7315"),
-    CAFE("Καφές", "[amenity=cafe]", "Καφέ", "9376"),
-    GARAGE("Συνεργείο", "[shop~\"^(motorcycle|motorcycle_repair|car_repair|tyres)$\"]", "Συνεργείο", "7310"),
-    LODGING("Ύπνος", "[tourism~\"^(hotel|guest_house|hostel|camp_site)$\"]", "Κατάλυμα", "7314,7360"),
-    VIEW("Θέα", "[tourism=viewpoint]", "Θέα", "7337"),
-    WATER("Νερό", "[amenity=drinking_water]", "Βρύση"),
-    MOTO("Μηχανές", "[shop~\"^(motorcycle|motorcycle_repair)$\"]", "Μαγαζί μηχανών"),
-    WASH("Πλυντήριο", "[amenity=car_wash]", "Πλυντήριο", "9155"),
+    FUEL(tr("Βενζίνη"), "[amenity=fuel]", tr("Βενζινάδικο"), "7311"),
+    FOOD(tr("Φαγητό"), "[amenity~\"^(restaurant|fast_food)$\"]", tr("Φαγητό"), "7315"),
+    CAFE(tr("Καφές"), "[amenity=cafe]", tr("Καφέ"), "9376"),
+    GARAGE(tr("Συνεργείο"), "[shop~\"^(motorcycle|motorcycle_repair|car_repair|tyres)$\"]", tr("Συνεργείο"), "7310"),
+    LODGING(tr("Ύπνος"), "[tourism~\"^(hotel|guest_house|hostel|camp_site)$\"]", tr("Κατάλυμα"), "7314,7360"),
+    VIEW(tr("Θέα"), "[tourism=viewpoint]", tr("Θέα"), "7337"),
+    WATER(tr("Νερό"), "[amenity=drinking_water]", tr("Βρύση")),
+    MOTO(tr("Μηχανές"), "[shop~\"^(motorcycle|motorcycle_repair)$\"]", tr("Μαγαζί μηχανών")),
+    WASH(tr("Πλυντήριο"), "[amenity=car_wash]", tr("Πλυντήριο"), "9155"),
 }
 
 /**
@@ -376,8 +378,8 @@ object PlaceParsers {
         if (number == null) return list
         val re = Regex("(^|\\s)" + Regex.escape(number) + "($|\\s|,)")
         return list.map { p ->
-            if (p.kind !in streetKinds || re.containsMatchIn(p.name) || p.detail.contains("χωρίς τον αριθμό")) p
-            else p.copy(detail = listOf("χωρίς τον αριθμό $number", p.detail).filter { it.isNotBlank() }.joinToString(" · "))
+            if (p.kind !in streetKinds || re.containsMatchIn(p.name) || p.detail.contains(tr("χωρίς τον αριθμό"))) p
+            else p.copy(detail = listOf(trf("χωρίς τον αριθμό {0}", number), p.detail).filter { it.isNotBlank() }.joinToString(" · "))
         }
     }
 
@@ -491,7 +493,7 @@ object PlaceParsers {
                 tags.str("brand").takeIf { it != name },
                 listOf(tags.str("addr:street"), tags.str("addr:housenumber")).filter { it.isNotEmpty() }.joinToString(" "),
                 tags.str("addr:city"),
-                tags.str("opening_hours").takeIf { it.isNotEmpty() }?.let { "ωράριο: $it" },
+                tags.str("opening_hours").takeIf { it.isNotEmpty() }?.let { trf("ωράριο: {0}", it) },
             ).filterNotNull().filter { it.isNotEmpty() }.distinct().joinToString(" · ")
             out += Place(name, detail, lat, lon, tags.str("amenity").ifEmpty { tags.str("shop") }.ifEmpty { tags.str("tourism") })
         }

@@ -14,16 +14,17 @@ import android.graphics.RectF
 import android.graphics.Shader
 import app.motonav.R
 import java.io.File
+import app.motonav.i18n.tr
 
 /** Σχήματα για το βελάκι θέσης. Όλα δείχνουν προς τα πάνω (το MapLibre τα γυρίζει με την κατεύθυνση). */
 enum class PuckShape(val label: String) {
-    CLASSIC("Κλασικό"),
-    GLOSSY("Γυαλιστερό"),
-    SHARP("Μυτερό"),
-    CIRCLE("Κύκλος"),
-    CHEVRON("Σιρίτι"),
-    RED_IMAGE("Κόκκινο (εικόνα)"),
-    CUSTOM("Δική σου εικόνα"),
+    CLASSIC(tr("Κλασικό")),
+    GLOSSY(tr("Γυαλιστερό")),
+    SHARP(tr("Μυτερό")),
+    CIRCLE(tr("Κύκλος")),
+    CHEVRON(tr("Σιρίτι")),
+    RED_IMAGE(tr("Κόκκινο (εικόνα)")),
+    CUSTOM(tr("Δική σου εικόνα")),
 }
 
 /** Τι διαλέγεις για το βελάκι και τη γραμμή. Χρώμα null = το χρώμα του θέματος. */

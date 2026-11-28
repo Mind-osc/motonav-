@@ -40,6 +40,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
+import app.motonav.i18n.tr
+import app.motonav.i18n.trf
 
 private const val SAMPLE_GR = "Σε 300 μέτρα, στρίψε δεξιά στη Λεωφόρο Συγγρού."
 private const val SAMPLE_EN = "In 300 metres, turn right onto Leoforos Syngrou."
@@ -86,20 +88,20 @@ fun VoicePage() {
             )
             setDataSource(url) // http(s) ή αρχείο στο κινητό
             setOnPreparedListener { it.start() }
-            setOnErrorListener { _, _, _ -> message = "Δεν παίζει το δείγμα (internet;)"; true }
+            setOnErrorListener { _, _, _ -> message = tr("Δεν παίζει το δείγμα (internet;)"); true }
             prepareAsync()
         }
     }
     fun loadAll() {
-        if (s.key.isBlank()) { message = "Βάλε πρώτα το κλειδί."; return }
+        if (s.key.isBlank()) { message = tr("Βάλε πρώτα το κλειδί."); return }
         scope.launch {
-            loading = "Φορτώνω φωνές και μοντέλα…"
+            loading = tr("Φορτώνω φωνές και μοντέλα…")
             message = null
             try {
                 val (v, m) = withContext(Dispatchers.IO) { ElevenClient.voices(s.key) to runCatching { ElevenClient.models(s.key) }.getOrDefault(emptyList()) }
                 voices = v
                 models = m
-                if (v.isEmpty()) message = "Ο λογαριασμός δεν έχει φωνές."
+                if (v.isEmpty()) message = tr("Ο λογαριασμός δεν έχει φωνές.")
             } catch (e: Exception) {
                 message = e.message ?: e.toString()
             } finally {
@@ -112,51 +114,51 @@ fun VoicePage() {
     var english by remember { mutableStateOf(ElevenStore.english(context)) }
     Group {
         Column(Modifier.padding(horizontal = Space.lg, vertical = Space.md), verticalArrangement = Arrangement.spacedBy(Space.xs)) {
-            Text("Γλώσσα οδηγιών", style = MotoType.body, color = c.base.text)
+            Text(tr("Γλώσσα οδηγιών"), style = MotoType.body, color = c.base.text)
             Text(
-                "Ελληνικά ή English (φωνή του κινητού ή ElevenLabs). Στα αγγλικά τα ονόματα δρόμων λέγονται με λατινικούς χαρακτήρες. " +
-                    "Αν η αγγλική φωνή δεν ακούγεται, κατέβασέ την: Ρυθμίσεις κινητού → Μετατροπή κειμένου σε ομιλία.",
+                tr("Ελληνικά ή English (φωνή του κινητού ή ElevenLabs). Στα αγγλικά τα ονόματα δρόμων λέγονται με λατινικούς χαρακτήρες. ") +
+                    tr("Αν η αγγλική φωνή δεν ακούγεται, κατέβασέ την: Ρυθμίσεις κινητού → Μετατροπή κειμένου σε ομιλία."),
                 style = MotoType.label,
                 color = c.base.textMuted,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
-                TextChoice("Ελληνικά", selected = !english, onClick = { english = false; ElevenStore.setEnglish(context, false) }, modifier = Modifier.weight(1f))
+                TextChoice(tr("Ελληνικά"), selected = !english, onClick = { english = false; ElevenStore.setEnglish(context, false) }, modifier = Modifier.weight(1f))
                 TextChoice("English", selected = english, onClick = { english = true; ElevenStore.setEnglish(context, true) }, modifier = Modifier.weight(1f))
             }
-            TextChoice("Άκουσέ τη", selected = false, onClick = { tester.say(SAMPLE) }, modifier = Modifier.fillMaxWidth())
+            TextChoice(tr("Άκουσέ τη"), selected = false, onClick = { tester.say(SAMPLE) }, modifier = Modifier.fillMaxWidth())
         }
     }
     Group {
         Column(Modifier.padding(horizontal = Space.lg, vertical = Space.md), verticalArrangement = Arrangement.spacedBy(Space.xs)) {
-            Text("Φράση στο «Ξεκίνα»", style = MotoType.body, color = c.base.text)
+            Text(tr("Φράση στο «Ξεκίνα»"), style = MotoType.body, color = c.base.text)
             Text("Π.χ. «Πάμε!», «Καλό ταξίδι.» ή «Πάμε για {προορισμός}.» (μπαίνει το όνομα του προορισμού).", style = MotoType.label, color = c.base.textMuted)
             KeyFieldPlain(startPhrase, ElevenStore.DEFAULT_START) {
                 startPhrase = it
                 ElevenStore.setStartPhrase(context, it)
             }
-            TextChoice("Άκουσέ την", selected = false, onClick = {
+            TextChoice(tr("Άκουσέ την"), selected = false, onClick = {
                 tester.say(startPhrase.ifBlank { ElevenStore.DEFAULT_START }.replace("{προορισμός}", "Λεωφόρο Συγγρού"))
             }, modifier = Modifier.fillMaxWidth())
         }
     }
     Group {
         SwitchRow(
-            "Φωνή ElevenLabs",
-            if (s.usable) "Φωνή: ${s.voiceName}" else "Κλειστό: μιλάει η φωνή του κινητού",
+            tr("Φωνή ElevenLabs"),
+            if (s.usable) trf("Φωνή: {0}", s.voiceName) else tr("Κλειστό: μιλάει η φωνή του κινητού"),
             s.enabled,
         ) { update(s.copy(enabled = it)) }
         Column(Modifier.padding(horizontal = Space.lg, vertical = Space.sm), verticalArrangement = Arrangement.spacedBy(Space.xs)) {
-            Text("Κλειδί API από elevenlabs.io → Developers → API Keys (με δικαίωμα Text to Speech και Voices). Μένει μόνο στο κινητό.", style = MotoType.label, color = c.base.textMuted)
+            Text(tr("Κλειδί API από elevenlabs.io → Developers → API Keys (με δικαίωμα Text to Speech και Voices). Μένει μόνο στο κινητό."), style = MotoType.label, color = c.base.textMuted)
             KeyField(s.key) { update(s.copy(key = it)) }
         }
         Row(Modifier.padding(horizontal = Space.lg, vertical = Space.sm), horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
-            TextChoice("Φόρτωσε φωνές", selected = false, onClick = { loadAll() }, modifier = Modifier.weight(1f))
-            TextChoice("Δοκιμή", selected = true, onClick = {
+            TextChoice(tr("Φόρτωσε φωνές"), selected = false, onClick = { loadAll() }, modifier = Modifier.weight(1f))
+            TextChoice(tr("Δοκιμή"), selected = true, onClick = {
                 // Η δοκιμή πάει κατευθείαν στο ElevenLabs (χωρίς τη φωνή του κινητού ως εφεδρεία),
                 // για να φαίνεται αμέσως αν φταίει το κλειδί, η φωνή ή το μοντέλο.
                 val why = when {
-                    s.key.isBlank() -> "Λείπει το κλειδί."
-                    s.voiceId.isBlank() -> "Διάλεξε πρώτα φωνή (Φόρτωσε φωνές → πάτα μία)."
+                    s.key.isBlank() -> tr("Λείπει το κλειδί.")
+                    s.voiceId.isBlank() -> tr("Διάλεξε πρώτα φωνή (Φόρτωσε φωνές → πάτα μία).")
                     else -> null
                 }
                 if (why != null) {
@@ -165,7 +167,7 @@ fun VoicePage() {
                 } else {
                     val now = s
                     scope.launch {
-                        testStatus = true to "Φτιάχνω τη φράση με «${now.voiceName}»…"
+                        testStatus = true to trf("Φτιάχνω τη φράση με «{0}»…", now.voiceName)
                         try {
                             val f = withContext(Dispatchers.IO) { ElevenClient.speech(context, now, SAMPLE) }
                             playPreview(f.path)
@@ -187,45 +189,45 @@ fun VoicePage() {
             )
         }
         loading?.let { InfoRow("", it) }
-        (message ?: ElevenStatus.lastError)?.let { InfoRow("Μήνυμα", it) }
+        (message ?: ElevenStatus.lastError)?.let { InfoRow(tr("Μήνυμα"), it) }
         InfoRow(
-            "Χωρίς internet",
-            "Κάθε φράση που ακούστηκε μία φορά μένει στο κινητό (τώρα ${"%.1f".format(Locale.US, cacheBytes / 1_048_576.0)} MB). " +
-                "Νέες φράσεις χωρίς internet ή αν τελειώσουν οι χαρακτήρες: η φωνή του κινητού.",
+            tr("Χωρίς internet"),
+            trf("Κάθε φράση που ακούστηκε μία φορά μένει στο κινητό (τώρα {0} MB). ", "%.1f".format(Locale.US, cacheBytes / 1_048_576.0)) +
+                tr("Νέες φράσεις χωρίς internet ή αν τελειώσουν οι χαρακτήρες: η φωνή του κινητού."),
         )
     }
 
     if (models.isNotEmpty()) {
         Group {
             Column(Modifier.padding(horizontal = Space.lg, vertical = Space.md), verticalArrangement = Arrangement.spacedBy(Space.xs)) {
-                Text("Μοντέλο", style = MotoType.body, color = c.base.text)
+                Text(tr("Μοντέλο"), style = MotoType.body, color = c.base.text)
                 models.sortedByDescending { it.greek }.forEach { m ->
                     Choice(
                         title = m.name,
-                        subtitle = (if (m.greek) "ελληνικά ✓ · " else "χωρίς ελληνικά · ") + m.id,
+                        subtitle = (if (m.greek) tr("ελληνικά ✓ · ") else tr("χωρίς ελληνικά · ")) + m.id,
                         selected = s.modelId == m.id,
                     ) { update(s.copy(modelId = m.id)) }
                 }
             }
         }
     } else {
-        Group { InfoRow("Μοντέλο", s.modelId + " (πάτα «Φόρτωσε φωνές» για όλα)") }
+        Group { InfoRow(tr("Μοντέλο"), s.modelId + tr(" (πάτα «Φόρτωσε φωνές» για όλα)")) }
     }
 
     Group {
         Column(Modifier.padding(horizontal = Space.lg, vertical = Space.md), verticalArrangement = Arrangement.spacedBy(Space.xs)) {
-            Text("Ρυθμίσεις φωνής (όπως στο site)", style = MotoType.body, color = c.base.text)
-            SettingSlider("Ταχύτητα", s.speed, 0.7f..1.2f, "%.2f×") { update(s.copy(speed = it)) }
-            SettingSlider("Σταθερότητα (Stability)", s.stability, 0f..1f, "%.0f%%", 100f) { update(s.copy(stability = it)) }
-            SettingSlider("Ομοιότητα (Similarity)", s.similarity, 0f..1f, "%.0f%%", 100f) { update(s.copy(similarity = it)) }
-            SettingSlider("Ύφος (Style)", s.style, 0f..1f, "%.0f%%", 100f) { update(s.copy(style = it)) }
+            Text(tr("Ρυθμίσεις φωνής (όπως στο site)"), style = MotoType.body, color = c.base.text)
+            SettingSlider(tr("Ταχύτητα"), s.speed, 0.7f..1.2f, "%.2f×") { update(s.copy(speed = it)) }
+            SettingSlider(tr("Σταθερότητα (Stability)"), s.stability, 0f..1f, "%.0f%%", 100f) { update(s.copy(stability = it)) }
+            SettingSlider(tr("Ομοιότητα (Similarity)"), s.similarity, 0f..1f, "%.0f%%", 100f) { update(s.copy(similarity = it)) }
+            SettingSlider(tr("Ύφος (Style)"), s.style, 0f..1f, "%.0f%%", 100f) { update(s.copy(style = it)) }
         }
-        SwitchRow("Speaker boost", "Πιο καθαρή και πιο κοντά στην αρχική φωνή", s.speakerBoost) { update(s.copy(speakerBoost = it)) }
+        SwitchRow("Speaker boost", tr("Πιο καθαρή και πιο κοντά στην αρχική φωνή"), s.speakerBoost) { update(s.copy(speakerBoost = it)) }
         Row(Modifier.padding(horizontal = Space.lg, vertical = Space.sm), horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
-            TextChoice("Προεπιλογές", selected = false, onClick = {
+            TextChoice(tr("Προεπιλογές"), selected = false, onClick = {
                 update(s.copy(stability = 0.5f, similarity = 0.75f, style = 0f, speakerBoost = true, speed = 1f))
             }, modifier = Modifier.weight(1f))
-            TextChoice("Σβήσε αποθηκευμένες", selected = false, onClick = {
+            TextChoice(tr("Σβήσε αποθηκευμένες"), selected = false, onClick = {
                 ElevenStore.clearCache(context)
                 cacheBytes = 0
             }, modifier = Modifier.weight(1f))
@@ -235,29 +237,29 @@ fun VoicePage() {
     // Επιλεγμένη φωνή που θέλει συνδρομή (π.χ. από τη βιβλιοθήκη): προειδοποίηση, γιατί αλλιώς «σιωπή» και ζητάει subscribe.
     val chosen = voices.firstOrNull { it.id == s.voiceId }
     if (chosen != null && chosen.category != "premade" && chosen.category != "generated") {
-        Group { InfoRow("Προσοχή", "Η «${chosen.name}» θέλει συνδρομή στο ElevenLabs. Διάλεξε μία από τις δωρεάν παρακάτω.") }
+        Group { InfoRow(tr("Προσοχή"), trf("Η «{0}» θέλει συνδρομή στο ElevenLabs. Διάλεξε μία από τις δωρεάν παρακάτω.", chosen.name)) }
     }
     if (voices.isNotEmpty()) {
         Group {
             Column(Modifier.padding(horizontal = Space.lg, vertical = Space.md), verticalArrangement = Arrangement.spacedBy(Space.xs)) {
                 val free = voices.filter { it.category == "premade" || it.category == "generated" }
-                Text("Δωρεάν φωνές (${free.size})", style = MotoType.body, color = c.base.text)
+                Text(trf("Δωρεάν φωνές ({0})", free.size), style = MotoType.body, color = c.base.text)
                 Text(
-                    "Δείχνουμε μόνο φωνές που παίζουν στο δωρεάν πακέτο, χωρίς συνδρομή. Μιλάνε ελληνικά και αγγλικά " +
-                        "(με Multilingual v2 ή Flash v2.5). ▶ για δείγμα, πάτημα για επιλογή.",
+                    tr("Δείχνουμε μόνο φωνές που παίζουν στο δωρεάν πακέτο, χωρίς συνδρομή. Μιλάνε ελληνικά και αγγλικά ") +
+                        tr("(με Multilingual v2 ή Flash v2.5). ▶ για δείγμα, πάτημα για επιλογή."),
                     style = MotoType.label,
                     color = c.base.textMuted,
                 )
-                KeyFieldPlain(filter, "Ψάξε φωνή (όνομα, female, male…)") { filter = it }
+                KeyFieldPlain(filter, tr("Ψάξε φωνή (όνομα, female, male…)")) { filter = it }
                 free
                     .filter { v -> filter.isBlank() || (v.name + " " + v.description + " " + v.category).contains(filter, ignoreCase = true) }
                     .sortedBy { if (it.category == "premade") 0 else 1 }
                     .forEach { v ->
                         val kind = when (v.category) {
-                            "premade" -> "ΔΩΡΕΑΝ"
-                            "professional", "famous", "high_quality" -> "βιβλιοθήκη · θέλει συνδρομή"
-                            "cloned" -> "δικός σου κλώνος"
-                            "generated" -> "δική σου (Voice Design)"
+                            "premade" -> tr("ΔΩΡΕΑΝ")
+                            "professional", "famous", "high_quality" -> tr("βιβλιοθήκη · θέλει συνδρομή")
+                            "cloned" -> tr("δικός σου κλώνος")
+                            "generated" -> tr("δική σου (Voice Design)")
                             else -> v.category
                         }
                         Choice(
@@ -267,7 +269,7 @@ fun VoicePage() {
                             onPreview = v.previewUrl?.let { url -> { playPreview(url) } },
                         ) {
                             update(s.copy(voiceId = v.id, voiceName = v.name))
-                            testStatus = true to "Επιλέχθηκε «${v.name}». «Δοκιμή» για να την ακούσεις· στην πλοήγηση μιλάει μόνο αν ανοίξεις τον διακόπτη «Φωνή ElevenLabs»."
+                            testStatus = true to trf("Επιλέχθηκε «{0}». «Δοκιμή» για να την ακούσεις· στην πλοήγηση μιλάει μόνο αν ανοίξεις τον διακόπτη «Φωνή ElevenLabs».", v.name)
                         }
                     }
             }

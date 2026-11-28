@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import app.motonav.i18n.trf
 
 /**
  * Τι έγινε στην τελευταία αναζήτηση βενζινάδικων στη διαδρομή, για τις Ρυθμίσεις
@@ -27,15 +28,15 @@ object FuelDiag {
     }
 
     fun osm(ok: Int?, error: Throwable?, ms: Long, boxes: Int) {
-        osm = "${now()} · " + (if (error == null) "OK, $ok πρατήρια" else "ΛΑΘΟΣ ${describe(error)}") + " · ${ms / 1000.0}″ · $boxes κουτάκια"
+        osm = "${now()} · " + (if (error == null) trf("OK, {0} πρατήρια", ok) else trf("ΛΑΘΟΣ {0}", describe(error))) + trf(" · {0}″ · {1} κουτάκια", ms / 1000.0, boxes)
     }
 
     fun tomtom(ok: Int?, error: Throwable?, ms: Long, hasKey: Boolean) {
-        tomtom = if (!hasKey) "${now()} · χωρίς κλειδί TomTom" else
-            "${now()} · " + (if (error == null) "OK, $ok πρατήρια" else "ΛΑΘΟΣ ${describe(error)}") + " · ${ms / 1000.0}″"
+        tomtom = if (!hasKey) trf("{0} · χωρίς κλειδί TomTom", now()) else
+            "${now()} · " + (if (error == null) trf("OK, {0} πρατήρια", ok) else trf("ΛΑΘΟΣ {0}", describe(error))) + " · ${ms / 1000.0}″"
     }
 
     fun result(onRoute: Int, routeKm: Double) {
-        result = "${now()} · $onRoute πάνω στη διαδρομή (${"%.1f".format(routeKm)} km)"
+        result = trf("{0} · {1} πάνω στη διαδρομή ({2} km)", now(), onRoute, "%.1f".format(routeKm))
     }
 }

@@ -4,6 +4,8 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import app.motonav.i18n.tr
+import app.motonav.i18n.trf
 
 /**
  * Overpass (δεδομένα OpenStreetMap). Ο κεντρικός server συχνά δεν προλαβαίνει (HTTP 429/502/503/504),
@@ -58,16 +60,16 @@ object Overpass {
 }
 
 class OverpassBusy(val code: Int) : IOException("Overpass HTTP $code")
-class NoInternet : IOException("Δεν υπάρχει internet")
+class NoInternet : IOException(tr("Δεν υπάρχει internet"))
 
 /** Μήνυμα για τον χρήστη: τι πήγε στραβά, χωρίς τεχνικά. */
 fun friendlyError(e: Exception): String = when (e) {
-    is NoInternet, is java.net.UnknownHostException -> "Δεν υπάρχει internet αυτή τη στιγμή."
-    is OverpassBusy -> "Οι servers του χάρτη είναι φορτωμένοι. Δοκίμασε ξανά σε λίγο."
-    is java.net.SocketTimeoutException -> "Ο server αργεί να απαντήσει. Δοκίμασε ξανά."
+    is NoInternet, is java.net.UnknownHostException -> tr("Δεν υπάρχει internet αυτή τη στιγμή.")
+    is OverpassBusy -> tr("Οι servers του χάρτη είναι φορτωμένοι. Δοκίμασε ξανά σε λίγο.")
+    is java.net.SocketTimeoutException -> tr("Ο server αργεί να απαντήσει. Δοκίμασε ξανά.")
     else -> if (e.message?.startsWith("HTTP 5") == true || e.message?.startsWith("HTTP 429") == true) {
-        "Ο server αναζήτησης έχει πρόβλημα. Δοκίμασε ξανά σε λίγο."
+        tr("Ο server αναζήτησης έχει πρόβλημα. Δοκίμασε ξανά σε λίγο.")
     } else {
-        "Δεν έγινε αναζήτηση (${e.message})."
+        trf("Δεν έγινε αναζήτηση ({0}).", e.message)
     }
 }

@@ -6,6 +6,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import java.util.Locale
+import app.motonav.i18n.tr
 
 /**
  * «Αναφορά χάρτη»: σημείωση στο OpenStreetMap (Notes API, χωρίς λογαριασμό). Τη βλέπουν οι εθελοντές
@@ -14,14 +15,14 @@ import java.util.Locale
  */
 object OsmNotes {
     enum class Kind(val label: String, val en: String) {
-        MISSING_ROAD("Λείπει δρόμος", "Missing road"),
-        WRONG_NAME("Λάθος όνομα δρόμου", "Wrong street name"),
-        MISSING_NUMBER("Λείπουν αριθμοί σπιτιών", "Missing house numbers"),
-        CLOSED("Ο δρόμος είναι κλειστός / δεν περνάει", "Road closed / impassable"),
-        ONEWAY("Λάθος μονόδρομος", "Wrong one-way"),
-        SURFACE("Χωματόδρομος / άσφαλτος λάθος", "Wrong surface (dirt/paved)"),
-        PLACE("Λείπει ή είναι λάθος μαγαζί/σημείο", "Missing or wrong place"),
-        OTHER("Άλλο", "Other"),
+        MISSING_ROAD(tr("Λείπει δρόμος"), "Missing road"),
+        WRONG_NAME(tr("Λάθος όνομα δρόμου"), "Wrong street name"),
+        MISSING_NUMBER(tr("Λείπουν αριθμοί σπιτιών"), "Missing house numbers"),
+        CLOSED(tr("Ο δρόμος είναι κλειστός / δεν περνάει"), "Road closed / impassable"),
+        ONEWAY(tr("Λάθος μονόδρομος"), "Wrong one-way"),
+        SURFACE(tr("Χωματόδρομος / άσφαλτος λάθος"), "Wrong surface (dirt/paved)"),
+        PLACE(tr("Λείπει ή είναι λάθος μαγαζί/σημείο"), "Missing or wrong place"),
+        OTHER(tr("Άλλο"), "Other"),
     }
 
     /** Επιστρέφει το id της σημείωσης. Πετάει IOException χωρίς internet. */
@@ -29,7 +30,7 @@ object OsmNotes {
         val body = buildString {
             append(kind.label).append(" / ").append(kind.en)
             if (text.isNotBlank()) append("\n\n").append(text.trim())
-            append("\n\n#Streetwolf (αναφορά από αναβάτη, Android)")
+            append(tr("\n\n#Streetwolf (αναφορά από αναβάτη, Android)"))
         }
         val url = URL(
             String.format(Locale.US, "https://api.openstreetmap.org/api/0.6/notes.json?lat=%.6f&lon=%.6f&text=", lat, lon) +

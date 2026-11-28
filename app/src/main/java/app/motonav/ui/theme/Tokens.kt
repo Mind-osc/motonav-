@@ -1,6 +1,7 @@
 package app.motonav.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import app.motonav.i18n.tr
 
 // Γεννιέται από replica/design/tokens.json (gen). Άλλαξε τα tokens, όχι αυτό το αρχείο.
 
@@ -59,14 +60,14 @@ object Tokens {
         isDark = false,
     )
     val accents = listOf(
-        AccentPreset("Μωβ", dark = Color(0xFFA78BFA), light = Color(0xFF6D28D9)),
-        AccentPreset("Κόκκινο", dark = Color(0xFFFF7A7A), light = Color(0xFFC62828)),
-        AccentPreset("Πορτοκαλί", dark = Color(0xFFFB923C), light = Color(0xFFB45309)),
-        AccentPreset("Κίτρινο", dark = Color(0xFFFACC15), light = Color(0xFF8A6A00)),
-        AccentPreset("Πράσινο", dark = Color(0xFF4ADE80), light = Color(0xFF15803D)),
-        AccentPreset("Κυανό", dark = Color(0xFF22D3EE), light = Color(0xFF0E7490)),
-        AccentPreset("Μπλε", dark = Color(0xFF60A5FA), light = Color(0xFF1D4ED8)),
-        AccentPreset("Ροζ", dark = Color(0xFFF472B6), light = Color(0xFFBE185D)),
-        AccentPreset("Λευκό/Γκρι", dark = Color(0xFFE5E7EB), light = Color(0xFF374151)),
+        AccentPreset(tr("Μωβ"), dark = Color(0xFFA78BFA), light = Color(0xFF6D28D9)),
+        AccentPreset(tr("Κόκκινο"), dark = Color(0xFFFF7A7A), light = Color(0xFFC62828)),
+        AccentPreset(tr("Πορτοκαλί"), dark = Color(0xFFFB923C), light = Color(0xFFB45309)),
+        AccentPreset(tr("Κίτρινο"), dark = Color(0xFFFACC15), light = Color(0xFF8A6A00)),
+        AccentPreset(tr("Πράσινο"), dark = Color(0xFF4ADE80), light = Color(0xFF15803D)),
+        AccentPreset(tr("Κυανό"), dark = Color(0xFF22D3EE), light = Color(0xFF0E7490)),
+        AccentPreset(tr("Μπλε"), dark = Color(0xFF60A5FA), light = Color(0xFF1D4ED8)),
+        AccentPreset(tr("Ροζ"), dark = Color(0xFFF472B6), light = Color(0xFFBE185D)),
+        AccentPreset(tr("Λευκό/Γκρι"), dark = Color(0xFFE5E7EB), light = Color(0xFF374151)),
     )
 }

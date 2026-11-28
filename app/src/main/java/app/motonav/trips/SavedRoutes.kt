@@ -8,6 +8,7 @@ import app.motonav.geo.LatLon
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import app.motonav.i18n.tr
 
 /** Μια διαδρομή που έκανες και την κράτησες με όνομα (π.χ. «Σπίτι μέσω Πάρνηθας»). Την ξανακάνεις με «Ακολούθησε». */
 data class SavedRoute(val id: String, val name: String, val lengthM: Double, val createdMs: Long)
@@ -45,7 +46,7 @@ object SavedRoutes {
         val id = "r" + System.currentTimeMillis()
         return runCatching {
             gpx.copyTo(file(c, id), overwrite = true)
-            val r = SavedRoute(id, name.trim().ifBlank { "Διαδρομή" }.take(40), lengthM, System.currentTimeMillis())
+            val r = SavedRoute(id, name.trim().ifBlank { tr("Διαδρομή") }.take(40), lengthM, System.currentTimeMillis())
             list = listOf(r) + list
             write(c)
             r

@@ -49,6 +49,7 @@ import app.motonav.ui.theme.ThemeMode
 import app.motonav.ui.theme.ThemeSettings
 import app.motonav.ui.theme.Tokens
 import app.motonav.ui.theme.Touch
+import app.motonav.i18n.tr
 
 /** S11 Ρυθμίσεις → Εμφάνιση. Οι αλλαγές φαίνονται αμέσως και αποθηκεύονται. */
 @Composable
@@ -80,22 +81,22 @@ fun AppearanceScreen(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RideIconButton(
                     icon = Icons.AutoMirrored.Filled.ArrowBack,
-                    description = "Πίσω στον χάρτη",
+                    description = tr("Πίσω στον χάρτη"),
                     onClick = onBack,
                     size = Touch.min,
                 )
                 Spacer(Modifier.width(Space.lg))
-                Text("Εμφάνιση", style = MotoType.street, color = c.base.text)
+                Text(tr("Εμφάνιση"), style = MotoType.street, color = c.base.text)
             }
 
             PreviewCard()
 
-            Section("Φόντο") {
+            Section(tr("Φόντο")) {
                 Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
                     val modes = listOf(
-                        ThemeMode.DARK to "Σκούρο",
-                        ThemeMode.AMOLED to "Μαύρο",
-                        ThemeMode.LIGHT to "Ανοιχτό",
+                        ThemeMode.DARK to tr("Σκούρο"),
+                        ThemeMode.AMOLED to tr("Μαύρο"),
+                        ThemeMode.LIGHT to tr("Ανοιχτό"),
                     )
                     modes.forEach { (mode, label) ->
                         TextChoice(
@@ -107,19 +108,19 @@ fun AppearanceScreen(
                     }
                 }
                 TextChoice(
-                    text = "Αυτόματο: μέρα ανοιχτό, νύχτα και τούνελ σκούρο",
+                    text = tr("Αυτόματο: μέρα ανοιχτό, νύχτα και τούνελ σκούρο"),
                     selected = settings.mode == ThemeMode.AUTO,
                     onClick = { onChange(settings.copy(mode = ThemeMode.AUTO)) },
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Text(
-                    "Το «Μαύρο» είναι καθαρό μαύρο: σε οθόνες OLED τρώει λιγότερη μπαταρία.",
+                    tr("Το «Μαύρο» είναι καθαρό μαύρο: σε οθόνες OLED τρώει λιγότερη μπαταρία."),
                     style = MotoType.label,
                     color = c.base.textMuted,
                 )
             }
 
-            Section("Χρώμα") {
+            Section(tr("Χρώμα")) {
                 val all = Tokens.accents.indices.toList() + ThemeSettings.CUSTOM
                 all.chunked(5).forEach { row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(Space.md)) {
@@ -145,13 +146,13 @@ fun AppearanceScreen(
                         }
                     }
                 }
-                val name = if (settings.accentPreset == ThemeSettings.CUSTOM) "Δικό μου"
+                val name = if (settings.accentPreset == ThemeSettings.CUSTOM) tr("Δικό μου")
                 else Tokens.accents.getOrNull(settings.accentPreset)?.name ?: ""
                 Text(name, style = MotoType.title, color = c.base.text)
             }
 
             if (settings.accentPreset == ThemeSettings.CUSTOM) {
-                Section("Δικό μου χρώμα") {
+                Section(tr("Δικό μου χρώμα")) {
                     // Όλο το φάσμα: απόχρωση, ένταση, φωτεινότητα (και άσπρο/μαύρο), όπως στο βελάκι.
                     Surface(
                         onClick = { wheelOpen = true },
@@ -162,12 +163,12 @@ fun AppearanceScreen(
                         Row(Modifier.padding(horizontal = Space.lg), verticalAlignment = Alignment.CenterVertically) {
                             Box(Modifier.size(28.dp).background(c.accent, RoundedCornerShape(50)))
                             Spacer(Modifier.width(Space.md))
-                            Text("Διάλεξε από τον κύκλο χρωμάτων", style = MotoType.body, color = c.base.text)
+                            Text(tr("Διάλεξε από τον κύκλο χρωμάτων"), style = MotoType.body, color = c.base.text)
                         }
                     }
                     if (c.accentAdjusted) {
                         Text(
-                            "Το χρώμα φωτίστηκε λίγο για να φαίνεται και στον ήλιο.",
+                            tr("Το χρώμα φωτίστηκε λίγο για να φαίνεται και στον ήλιο."),
                             style = MotoType.label,
                             color = c.base.textMuted,
                         )
@@ -176,7 +177,7 @@ fun AppearanceScreen(
             }
 
             Text(
-                "Το κόκκινο για υπέρβαση ορίου και κινδύνους μένει πάντα κόκκινο.",
+                tr("Το κόκκινο για υπέρβαση ορίου και κινδύνους μένει πάντα κόκκινο."),
                 style = MotoType.label,
                 color = c.base.textMuted,
             )
@@ -255,7 +256,7 @@ private fun CustomSwatch(selected: Boolean, onClick: () -> Unit) {
     ColorSwatch(
         color = Color.Transparent,
         selected = selected,
-        description = "Δικό μου χρώμα",
+        description = tr("Δικό μου χρώμα"),
         onClick = onClick,
     ) {
         Box(

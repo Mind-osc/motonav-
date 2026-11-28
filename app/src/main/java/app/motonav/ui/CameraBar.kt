@@ -41,6 +41,7 @@ import app.motonav.cameras.CameraAlerts
 import app.motonav.ui.theme.MotoType
 import app.motonav.ui.theme.Radius
 import kotlin.math.roundToInt
+import app.motonav.i18n.tr
 
 private val CamYellow = Color(0xFFFFD23F)
 private val CamYellowLight = Color(0xFFFFE88A)
@@ -51,7 +52,7 @@ private val CamInk = Color(0xFF1A1400)
  * απόσταση, όριο (αν είναι γνωστό) και λεπτή γραμμή που γεμίζει όσο πλησιάζεις.
  */
 @Composable
-fun CameraBar(distanceM: Double, maxspeed: Int?, speedKmh: Float?, title: String = "Κάμερα", onClick: (() -> Unit)? = null) {
+fun CameraBar(distanceM: Double, maxspeed: Int?, speedKmh: Float?, title: String = tr("Κάμερα"), onClick: (() -> Unit)? = null) {
     val glowAnim = rememberInfiniteTransition(label = "camera-glow")
     val glow by glowAnim.animateFloat(
         initialValue = 8f,

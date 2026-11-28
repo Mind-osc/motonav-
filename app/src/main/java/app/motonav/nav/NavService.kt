@@ -17,6 +17,7 @@ import app.motonav.MainActivity
 import app.motonav.R
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import app.motonav.i18n.tr
 
 /**
  * Υπηρεσία προσκηνίου για όσο διαρκεί η πλοήγηση. Με αυτήν το Android αφήνει την εφαρμογή
@@ -35,7 +36,7 @@ class NavService : Service() {
                 return START_NOT_STICKY
             }
             else -> {
-                val text = intent?.getStringExtra(EXTRA_TEXT) ?: "Πλοήγηση σε εξέλιξη"
+                val text = intent?.getStringExtra(EXTRA_TEXT) ?: tr("Πλοήγηση σε εξέλιξη")
                 val n = notification(this, text)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     // Και μικρόφωνο, αν έχει άδεια: για να ακούει η παρέα (VOX) και με σβηστή οθόνη.
@@ -77,8 +78,8 @@ class NavService : Service() {
             val nm = context.getSystemService(NotificationManager::class.java)
             if (nm != null && nm.getNotificationChannel(CHANNEL) == null) {
                 nm.createNotificationChannel(
-                    NotificationChannel(CHANNEL, "Πλοήγηση", NotificationManager.IMPORTANCE_LOW).apply {
-                        description = "Μόνιμη ειδοποίηση όσο πλοηγείσαι"
+                    NotificationChannel(CHANNEL, tr("Πλοήγηση"), NotificationManager.IMPORTANCE_LOW).apply {
+                        description = tr("Μόνιμη ειδοποίηση όσο πλοηγείσαι")
                         setShowBadge(false)
                     }
                 )
@@ -95,14 +96,14 @@ class NavService : Service() {
             )
             return NotificationCompat.Builder(context, CHANNEL)
                 .setSmallIcon(R.drawable.puck_arrow)
-                .setContentTitle("Streetwolf · πλοήγηση")
+                .setContentTitle(tr("Streetwolf · πλοήγηση"))
                 .setContentText(text)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
                 .setSilent(true)
                 .setCategory(NotificationCompat.CATEGORY_NAVIGATION)
                 .setContentIntent(open)
-                .addAction(0, "Τέλος", stop)
+                .addAction(0, tr("Τέλος"), stop)
                 .build()
         }
     }

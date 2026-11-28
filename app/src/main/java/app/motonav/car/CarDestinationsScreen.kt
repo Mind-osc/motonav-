@@ -12,6 +12,7 @@ import app.motonav.data.SettingsRepo
 import app.motonav.search.Place
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import app.motonav.i18n.tr
 
 /** Λίστα προορισμών στο Android Auto: σπίτι, δουλειά, αγαπημένα, πρόσφατα. */
 class CarDestinationsScreen(carContext: CarContext, private val onPick: (Place) -> Unit) : Screen(carContext) {
@@ -21,8 +22,8 @@ class CarDestinationsScreen(carContext: CarContext, private val onPick: (Place) 
         lifecycleScope.launch {
             val repo = SettingsRepo(carContext.applicationContext)
             val list = ArrayList<Pair<String, Place>>()
-            repo.home.first()?.let { list += "Σπίτι" to it }
-            repo.work.first()?.let { list += "Δουλειά" to it }
+            repo.home.first()?.let { list += tr("Σπίτι") to it }
+            repo.work.first()?.let { list += tr("Δουλειά") to it }
             repo.favorites.first().forEach { list += "★ ${it.name}" to it }
             repo.recents.first().forEach { p -> if (list.none { it.second.latLon == p.latLon }) list += p.name to p }
             items = list.take(MAX)
@@ -31,10 +32,10 @@ class CarDestinationsScreen(carContext: CarContext, private val onPick: (Place) 
     }
 
     override fun onGetTemplate(): Template {
-        val t = ListTemplate.Builder().setTitle("Πού πάμε;").setHeaderAction(Action.BACK)
+        val t = ListTemplate.Builder().setTitle(tr("Πού πάμε;")).setHeaderAction(Action.BACK)
         val list = items ?: return t.setLoading(true).build()
         val b = ItemList.Builder()
-        if (list.isEmpty()) b.setNoItemsMessage("Αποθήκευσε σπίτι, δουλειά ή αγαπημένα από το κινητό.")
+        if (list.isEmpty()) b.setNoItemsMessage(tr("Αποθήκευσε σπίτι, δουλειά ή αγαπημένα από το κινητό."))
         list.forEach { (title, place) ->
             b.addItem(
                 Row.Builder()

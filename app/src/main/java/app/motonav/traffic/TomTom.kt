@@ -15,6 +15,8 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import java.util.Locale
+import app.motonav.i18n.tr
+import app.motonav.i18n.trf
 
 /** Χρόνος για μια διαδρομή με την τωρινή κίνηση. */
 data class TrafficEta(val durationS: Double, val delayS: Double, val jams: List<TrafficJam> = emptyList())
@@ -104,10 +106,10 @@ class TomTomClient(private val key: String) {
             }
             val code = c.responseCode
             if (code == 401 || code == 403) {
-                throw RoutingException("Το κλειδί TomTom δεν δέχτηκε (HTTP $code). Έλεγξέ το στις Ρυθμίσεις.", RoutingException.Kind.TRAFFIC)
+                throw RoutingException(trf("Το κλειδί TomTom δεν δέχτηκε (HTTP {0}). Έλεγξέ το στις Ρυθμίσεις.", code), RoutingException.Kind.TRAFFIC)
             }
             if (code == 429) {
-                throw RoutingException("Τέλος οι δωρεάν κλήσεις TomTom για σήμερα.", RoutingException.Kind.TRAFFIC)
+                throw RoutingException(tr("Τέλος οι δωρεάν κλήσεις TomTom για σήμερα."), RoutingException.Kind.TRAFFIC)
             }
             if (code !in 200..299) {
                 val err = runCatching { c.errorStream?.bufferedReader()?.use { it.readText() } }.getOrNull()
@@ -184,9 +186,9 @@ object TomTomParser {
 
     fun routes(json: String): List<Route> {
         val arr = JSONObject(json).optJSONArray("routes")
-        if (arr == null || arr.length() == 0) throw RoutingException("Το TomTom δεν βρήκε διαδρομή.", RoutingException.Kind.OTHER)
+        if (arr == null || arr.length() == 0) throw RoutingException(tr("Το TomTom δεν βρήκε διαδρομή."), RoutingException.Kind.OTHER)
         return (0 until arr.length()).mapNotNull { i -> arr.optJSONObject(i)?.let { r -> runCatching { one(r) }.getOrNull() } }
-            .ifEmpty { throw RoutingException("Η διαδρομή TomTom βγήκε άδεια.", RoutingException.Kind.OTHER) }
+            .ifEmpty { throw RoutingException(tr("Η διαδρομή TomTom βγήκε άδεια."), RoutingException.Kind.OTHER) }
     }
 
     private fun one(r: JSONObject): Route {
@@ -202,7 +204,7 @@ object TomTomParser {
                 if (points.isEmpty() || points.last() != ll) points += ll
             }
         }
-        if (points.size < 2) throw RoutingException("Η διαδρομή TomTom βγήκε άδεια.", RoutingException.Kind.OTHER)
+        if (points.size < 2) throw RoutingException(tr("Η διαδρομή TomTom βγήκε άδεια."), RoutingException.Kind.OTHER)
 
         val cumulative = DoubleArray(points.size)
         for (i in 1 until points.size) cumulative[i] = cumulative[i - 1] + Geo.distance(points[i - 1], points[i])
@@ -311,7 +313,7 @@ object TomTomParser {
 
     fun eta(json: String): TrafficEta {
         val s = JSONObject(json).optJSONArray("routes")?.optJSONObject(0)?.optJSONObject("summary")
-            ?: throw IOException("TomTom: χωρίς summary")
+            ?: throw IOException(tr("TomTom: χωρίς summary"))
         return TrafficEta(
             durationS = s.optDouble("travelTimeInSeconds"),
             delayS = s.optDouble("trafficDelayInSeconds", 0.0),

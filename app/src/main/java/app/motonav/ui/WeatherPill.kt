@@ -37,6 +37,8 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
+import app.motonav.i18n.tr
+import app.motonav.i18n.trf
 
 /**
  * Μίνιμαλ καιρός: εικονίδιο + θερμοκρασία εκεί που είσαι, και προειδοποίηση για το πρώτο
@@ -67,7 +69,7 @@ fun WeatherPill(points: List<WeatherPoint>, progressM: Double, startExpanded: Bo
                     WeatherIcon(warn.sky, Modifier.size(18.dp))
                     Spacer(Modifier.width(Space.xs))
                     Text(
-                        "${warnText(warn)} σε ${((warn.atMeters - progressM).coerceAtLeast(0.0) / 1000).roundToInt()} km",
+                        trf("{0} σε {1} km", warnText(warn), ((warn.atMeters - progressM).coerceAtLeast(0.0) / 1000).roundToInt()),
                         style = MotoType.label,
                         color = c.base.warning,
                     )
@@ -100,11 +102,11 @@ fun WeatherPill(points: List<WeatherPoint>, progressM: Double, startExpanded: Bo
 }
 
 private fun warnText(p: WeatherPoint): String = when {
-    p.sky == Sky.STORM -> "καταιγίδα"
-    p.sky == Sky.SNOW -> "χιόνι"
-    p.rainProb >= 50 -> "βροχή ${p.rainProb}%"
-    p.windKmh >= 45 -> "αέρας ${p.windKmh.roundToInt()}"
-    p.tempC <= 2 -> "παγωνιά"
+    p.sky == Sky.STORM -> tr("καταιγίδα")
+    p.sky == Sky.SNOW -> tr("χιόνι")
+    p.rainProb >= 50 -> trf("βροχή {0}%", p.rainProb)
+    p.windKmh >= 45 -> trf("αέρας {0}", p.windKmh.roundToInt())
+    p.tempC <= 2 -> tr("παγωνιά")
     else -> WeatherCodes.label(p.sky)
 }
 
@@ -119,7 +121,7 @@ fun WeatherInline(points: List<WeatherPoint>, progressM: Double, style: androidx
     val here = ahead.first()
     val warn = ahead.drop(1).firstOrNull { it.isBad }
     Row(
-        Modifier.clickable(onClickLabel = "Καιρός στη διαδρομή", onClick = onClick),
+        Modifier.clickable(onClickLabel = tr("Καιρός στη διαδρομή"), onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         WeatherIcon(here.sky, Modifier.size(20.dp))

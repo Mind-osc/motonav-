@@ -16,6 +16,8 @@ import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.ln
 import kotlin.math.tan
+import app.motonav.i18n.tr
+import app.motonav.i18n.trf
 
 /** Ό,τι βλέπει τώρα ο χάρτης: νότος, δύση, βορράς, ανατολή. Το γράφει η οθόνη του χάρτη. */
 object MapBus {
@@ -39,18 +41,18 @@ object OfflineMaps {
     /** Γειτονικές χώρες για ταξίδια (κύριοι δρόμοι και πόλεις, όπως η Ελλάδα): νότος, δύση, βορράς, ανατολή. */
     class Country(val name: String, val bounds: DoubleArray)
     val COUNTRIES = listOf(
-        Country("Κύπρος", doubleArrayOf(34.5, 32.2, 35.75, 34.65)),
-        Country("Αλβανία", doubleArrayOf(39.6, 19.2, 42.7, 21.1)),
-        Country("Βόρεια Μακεδονία", doubleArrayOf(40.8, 20.4, 42.4, 23.1)),
-        Country("Βουλγαρία", doubleArrayOf(41.2, 22.3, 44.3, 28.7)),
-        Country("Τουρκία (δυτική)", doubleArrayOf(36.0, 26.0, 42.2, 32.0)),
-        Country("Μαυροβούνιο", doubleArrayOf(41.8, 18.4, 43.6, 20.4)),
-        Country("Σερβία", doubleArrayOf(42.2, 18.8, 46.2, 23.1)),
-        Country("Βοσνία-Ερζεγοβίνη", doubleArrayOf(42.5, 15.7, 45.3, 19.7)),
-        Country("Κροατία", doubleArrayOf(42.3, 13.4, 46.6, 19.5)),
-        Country("Ρουμανία", doubleArrayOf(43.6, 20.2, 48.3, 29.8)),
-        Country("Ιταλία (νότια)", doubleArrayOf(36.6, 12.3, 42.0, 18.6)),
-        Country("Ιταλία (βόρεια)", doubleArrayOf(42.0, 6.6, 47.1, 14.0)),
+        Country(tr("Κύπρος"), doubleArrayOf(34.5, 32.2, 35.75, 34.65)),
+        Country(tr("Αλβανία"), doubleArrayOf(39.6, 19.2, 42.7, 21.1)),
+        Country(tr("Βόρεια Μακεδονία"), doubleArrayOf(40.8, 20.4, 42.4, 23.1)),
+        Country(tr("Βουλγαρία"), doubleArrayOf(41.2, 22.3, 44.3, 28.7)),
+        Country(tr("Τουρκία (δυτική)"), doubleArrayOf(36.0, 26.0, 42.2, 32.0)),
+        Country(tr("Μαυροβούνιο"), doubleArrayOf(41.8, 18.4, 43.6, 20.4)),
+        Country(tr("Σερβία"), doubleArrayOf(42.2, 18.8, 46.2, 23.1)),
+        Country(tr("Βοσνία-Ερζεγοβίνη"), doubleArrayOf(42.5, 15.7, 45.3, 19.7)),
+        Country(tr("Κροατία"), doubleArrayOf(42.3, 13.4, 46.6, 19.5)),
+        Country(tr("Ρουμανία"), doubleArrayOf(43.6, 20.2, 48.3, 29.8)),
+        Country(tr("Ιταλία (νότια)"), doubleArrayOf(36.6, 12.3, 42.0, 18.6)),
+        Country(tr("Ιταλία (βόρεια)"), doubleArrayOf(42.0, 6.6, 47.1, 14.0)),
     )
 
     /** Πόσα πλακίδια έχει μια περιοχή από ζουμ 0 ως maxZoom. */
@@ -81,18 +83,18 @@ object OfflineMaps {
         private set
 
     private fun meta(name: String, style: String) = JSONObject().put("name", name).put("style", style).toString().toByteArray()
-    private fun nameOf(r: OfflineRegion) = runCatching { JSONObject(String(r.metadata)).optString("name") }.getOrDefault("").ifBlank { "Περιοχή ${r.id}" }
+    private fun nameOf(r: OfflineRegion) = runCatching { JSONObject(String(r.metadata)).optString("name") }.getOrDefault("").ifBlank { trf("Περιοχή {0}", r.id) }
 
     fun download(context: Context, name: String, b: DoubleArray, maxZoom: Int) {
         if (busy) return
         busy = true
         error = null
-        progress = "Ξεκινάει…"
+        progress = tr("Ξεκινάει…")
         val manager = OfflineManager.getInstance(context.applicationContext)
         manager.setOfflineMapboxTileCountLimit(200_000)
         val bounds = LatLngBounds.from(b[2], b[3], b[0], b[1])
         val ratio = context.resources.displayMetrics.density
-        val styles = listOf(STYLE_DARK to "σκούρο", STYLE_LIGHT to "ανοιχτό")
+        val styles = listOf(STYLE_DARK to tr("σκούρο"), STYLE_LIGHT to tr("ανοιχτό"))
 
         fun step(i: Int) {
             if (i >= styles.size) {
@@ -136,7 +138,7 @@ object OfflineMaps {
             }
 
             override fun mapboxTileCountLimitExceeded(limit: Long) {
-                this@OfflineMaps.error = "Πέρασε το όριο των $limit πλακιδίων."
+                this@OfflineMaps.error = trf("Πέρασε το όριο των {0} πλακιδίων.", limit)
             }
         })
         region.setDownloadState(OfflineRegion.STATE_ACTIVE)
@@ -211,9 +213,9 @@ object OfflineMaps {
                         return
                     }
                     val r = regions[i]
-                    progress = "Ενημέρωση ${nameOf(r)}…"
+                    progress = trf("Ενημέρωση {0}…", nameOf(r))
                     r.invalidate(object : OfflineRegion.OfflineRegionInvalidateCallback {
-                        override fun onInvalidate() = run(app, r, "Ενημέρωση ${nameOf(r)}") { next(i + 1) }
+                        override fun onInvalidate() = run(app, r, trf("Ενημέρωση {0}", nameOf(r))) { next(i + 1) }
                         override fun onError(error: String) { this@OfflineMaps.error = error; next(i + 1) }
                     })
                 }

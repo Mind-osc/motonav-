@@ -130,11 +130,17 @@ class MainActivity : ComponentActivity() {
             val overlay = showSettings || showAppearance || showTrips || showOffline || showMarker || showGroup || showBookmarks
             app.motonav.nav.KeyBus.overlay = overlay
             androidx.compose.runtime.LaunchedEffect(display.keyMap) { app.motonav.nav.KeyBus.load(display.keyMap) }
-            androidx.compose.runtime.LaunchedEffect(display.customStatus, overlay, inPip) {
+            // Και σε κάθε περιστροφή: το Android ξαναδείχνει τη γραμμή του και έπεφτε πάνω στη δική μας.
+            val orientation = androidx.compose.ui.platform.LocalConfiguration.current.orientation
+            androidx.compose.runtime.LaunchedEffect(display.customStatus, overlay, inPip, orientation) {
                 val ctl = androidx.core.view.WindowCompat.getInsetsController(window, window.decorView)
                 ctl.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                if (display.customStatus && !overlay && !inPip) ctl.hide(androidx.core.view.WindowInsetsCompat.Type.statusBars())
-                else ctl.show(androidx.core.view.WindowInsetsCompat.Type.statusBars())
+                if (display.customStatus && !overlay && !inPip) {
+                    ctl.hide(androidx.core.view.WindowInsetsCompat.Type.statusBars())
+                    // Ξανά μετά το τέλος της περιστροφής, γιατί τότε την ξαναβγάζει.
+                    kotlinx.coroutines.delay(600)
+                    ctl.hide(androidx.core.view.WindowInsetsCompat.Type.statusBars())
+                } else ctl.show(androidx.core.view.WindowInsetsCompat.Type.statusBars())
             }
             // Μέγεθος όλου του UI (Ρυθμίσεις → Στον χάρτη): μεγαλώνει/μικραίνει κουμπιά και κείμενα, όχι τον χάρτη.
             val baseDensity = androidx.compose.ui.platform.LocalDensity.current

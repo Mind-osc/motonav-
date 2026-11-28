@@ -9,6 +9,7 @@ import java.io.OutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
+import app.motonav.i18n.tr
 
 /**
  * Αντίγραφο ασφαλείας σε ένα .zip: ρυθμίσεις, κλειδιά, αγαπημένα, φωνή, παρέα, κάμερες,
@@ -84,7 +85,7 @@ object Backup {
                 val name = e.name
                 if (name == MANIFEST) {
                     val m = JSONObject(zip.readBytes().decodeToString())
-                    require(m.optInt("format") in 1..FORMAT) { "Άγνωστη έκδοση αντιγράφου" }
+                    require(m.optInt("format") in 1..FORMAT) { tr("Άγνωστη έκδοση αντιγράφου") }
                     sawManifest = true
                     continue
                 }
@@ -104,7 +105,7 @@ object Backup {
                 bytes += target.length()
             }
         }
-        require(sawManifest) { "Δεν είναι αντίγραφο του Streetwolf" }
+        require(sawManifest) { tr("Δεν είναι αντίγραφο του Streetwolf") }
         return Result(files, bytes)
     }
 

@@ -30,6 +30,7 @@
     </queries>
 
     <application
+        android:name=".StreetwolfApp"
         android:allowBackup="true"
         android:label="Streetwolf"
         android:icon="@mipmap/ic_launcher"

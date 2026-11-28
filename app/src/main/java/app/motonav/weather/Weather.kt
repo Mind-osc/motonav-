@@ -11,6 +11,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Locale
 import kotlin.math.abs
+import app.motonav.i18n.tr
 
 enum class Sky { CLEAR, PARTLY, CLOUDY, FOG, DRIZZLE, RAIN, SNOW, STORM }
 
@@ -46,14 +47,14 @@ object WeatherCodes {
     }
 
     fun label(sky: Sky): String = when (sky) {
-        Sky.CLEAR -> "καθαρός"
-        Sky.PARTLY -> "λίγα σύννεφα"
-        Sky.CLOUDY -> "συννεφιά"
-        Sky.FOG -> "ομίχλη"
-        Sky.DRIZZLE -> "ψιχάλα"
-        Sky.RAIN -> "βροχή"
-        Sky.SNOW -> "χιόνι"
-        Sky.STORM -> "καταιγίδα"
+        Sky.CLEAR -> tr("καθαρός")
+        Sky.PARTLY -> tr("λίγα σύννεφα")
+        Sky.CLOUDY -> tr("συννεφιά")
+        Sky.FOG -> tr("ομίχλη")
+        Sky.DRIZZLE -> tr("ψιχάλα")
+        Sky.RAIN -> tr("βροχή")
+        Sky.SNOW -> tr("χιόνι")
+        Sky.STORM -> tr("καταιγίδα")
     }
 }
 

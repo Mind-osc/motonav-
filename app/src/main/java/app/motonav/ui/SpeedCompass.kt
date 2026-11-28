@@ -53,6 +53,7 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import app.motonav.i18n.tr
 
 /**
  * Ταχύτητα + πυξίδα σε στυλ Apple Watch: γύρω-γύρω στο κουτί γραμμούλες ανά 10° που κινούνται με την
@@ -241,7 +242,7 @@ private fun CompassBezel(headingDeg: Float?, modifier: Modifier) {
                 )
             }
         }
-        listOf(90 to "Α", 180 to "Ν", 270 to "Δ").forEach { (deg, letter) ->
+        listOf(90 to tr("Α"), 180 to tr("Ν"), 270 to tr("Δ")).forEach { (deg, letter) ->
             val theta = Math.toRadians((deg - heading).toDouble())
             val (p, d) = onFrame(theta, a, b, r)
             val q = Offset(cx + p.x, cy + p.y) - d * 14.dp.toPx()

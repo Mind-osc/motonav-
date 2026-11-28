@@ -42,6 +42,8 @@ import java.util.TimeZone
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import app.motonav.i18n.tr
+import app.motonav.i18n.trf
 
 /** Η κύρια οθόνη στο Android Auto: χάρτης, ταμπέλα στροφής, χρόνος άφιξης, κουμπιά. */
 class CarNavScreen(carContext: CarContext) : Screen(carContext) {
@@ -135,22 +137,22 @@ class CarNavScreen(carContext: CarContext) : Screen(carContext) {
         val route = session.route
         when {
             session.navigating -> {
-                strip.addAction(action("Τέλος") { session.stop() })
+                strip.addAction(action(tr("Τέλος")) { session.stop() })
                 strip.addAction(iconAction(if (session.muted) R.drawable.ic_car_mute else R.drawable.ic_car_sound) { session.toggleMute() })
             }
             route != null -> {
-                strip.addAction(action("Ξεκίνα") { session.start() })
+                strip.addAction(action(tr("Ξεκίνα")) { session.start() })
                 strip.addAction(iconAction(R.drawable.ic_car_close) { session.clear() })
                 strip.addAction(iconAction(R.drawable.ic_car_place) { openDestinations() })
             }
-            else -> strip.addAction(action("Προορισμοί") { openDestinations() })
+            else -> strip.addAction(action(tr("Προορισμοί")) { openDestinations() })
         }
         val b = NavigationTemplate.Builder().setActionStrip(strip.build())
 
         val st = session.state
         val next = st?.next
         when {
-            session.navigating && session.arrived -> b.setNavigationInfo(MessageInfo.Builder("Έφτασες!").build())
+            session.navigating && session.arrived -> b.setNavigationInfo(MessageInfo.Builder(tr("Έφτασες!")).build())
             session.navigating && st != null && next != null -> {
                 val road = Phrases.road(next)
                 val step = Step.Builder(listOfNotNull(Phrases.action(next).replaceFirstChar { it.uppercase() }, road).joinToString(" · "))
@@ -169,15 +171,15 @@ class CarNavScreen(carContext: CarContext) : Screen(carContext) {
             session.navigating || session.planning -> b.setNavigationInfo(RoutingInfo.Builder().setLoading(true).build())
             route != null -> {
                 val min = (route.durationS * session.trafficFactor / 60).roundToInt()
-                val time = if (min >= 60) "${min / 60} ώ ${min % 60} λ" else "$min λεπτά"
+                val time = if (min >= 60) trf("{0} ώ {1} λ", min / 60, min % 60) else trf("{0} λεπτά", min)
                 b.setNavigationInfo(
-                    MessageInfo.Builder(session.destinationName ?: "Προορισμός")
-                        .setText("$time · ${String.format(java.util.Locale("el", "GR"), "%.1f", route.lengthM / 1000)} km — πάτα «Ξεκίνα»")
+                    MessageInfo.Builder(session.destinationName ?: tr("Προορισμός"))
+                        .setText(trf("{0} · {1} km — πάτα «Ξεκίνα»", time, String.format(java.util.Locale("el", "GR"), "%.1f", route.lengthM / 1000)))
                         .build(),
                 )
             }
-            session.error != null -> b.setNavigationInfo(MessageInfo.Builder("Δεν βγήκε διαδρομή").setText(session.error?.message ?: "").build())
-            else -> b.setNavigationInfo(MessageInfo.Builder("Streetwolf").setText("Πάτα «Προορισμοί» για να διαλέξεις πού πας").build())
+            session.error != null -> b.setNavigationInfo(MessageInfo.Builder(tr("Δεν βγήκε διαδρομή")).setText(session.error?.message ?: "").build())
+            else -> b.setNavigationInfo(MessageInfo.Builder("Streetwolf").setText(tr("Πάτα «Προορισμοί» για να διαλέξεις πού πας")).build())
         }
         return b.build()
     }

@@ -3,6 +3,7 @@ package app.motonav.routing
 import app.motonav.geo.LatLon
 import app.motonav.search.OfflineGazetteer
 import app.motonav.search.Place
+import app.motonav.i18n.tr
 
 /**
  * «Επόμενα σημεία στη διαδρομή» (όπως τα Auto POIs του DMD2): βενζίνη, καφές, φαγητό, νερό κ.λπ.
@@ -10,12 +11,12 @@ import app.motonav.search.Place
  * με το πόσα μέτρα από την αρχή της διαδρομής πέφτουν· στην πλοήγηση δείχνουμε το επόμενο μπροστά σου.
  */
 enum class RoutePoiKind(val emoji: String, val label: String, val kinds: Set<String>, val maxOffM: Double) {
-    FUEL("⛽", "Βενζίνη", setOf("fuel"), 250.0),
-    CAFE("☕", "Καφές", setOf("cafe"), 120.0),
-    FOOD("🍴", "Φαγητό", setOf("restaurant", "fast_food"), 120.0),
-    WATER("💧", "Νερό", setOf("drinking_water"), 80.0),
-    GARAGE("🔧", "Συνεργείο", setOf("motorcycle", "motorcycle_repair", "car_repair", "tyres"), 200.0),
-    SLEEP("🛏", "Ύπνος", setOf("hotel", "guest_house", "hostel", "camp_site"), 300.0),
+    FUEL("⛽", tr("Βενζίνη"), setOf("fuel"), 250.0),
+    CAFE("☕", tr("Καφές"), setOf("cafe"), 120.0),
+    FOOD("🍴", tr("Φαγητό"), setOf("restaurant", "fast_food"), 120.0),
+    WATER("💧", tr("Νερό"), setOf("drinking_water"), 80.0),
+    GARAGE("🔧", tr("Συνεργείο"), setOf("motorcycle", "motorcycle_repair", "car_repair", "tyres"), 200.0),
+    SLEEP("🛏", tr("Ύπνος"), setOf("hotel", "guest_house", "hostel", "camp_site"), 300.0),
 }
 
 data class RoutePoi(val kind: RoutePoiKind, val place: Place, val alongM: Double, val offM: Double)

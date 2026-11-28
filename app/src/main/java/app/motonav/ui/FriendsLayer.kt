@@ -18,6 +18,8 @@ import org.maplibre.geojson.Point
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import app.motonav.i18n.tr
+import app.motonav.i18n.trf
 
 /** Η παρέα στον χάρτη: βελάκι στο χρώμα του καθενός, όνομα από κάτω, και η διαδρομή του αν πλοηγείται. */
 object FriendsLayer {
@@ -33,9 +35,9 @@ object FriendsLayer {
     fun subtitle(m: Member, nowMs: Long): String? {
         val age = (nowMs - m.t) / 1000
         return when {
-            age >= 3600 -> "πριν ${age / 3600} ώ"
-            age >= 60 -> "πριν ${age / 60}′"
-            m.etaMs != null && m.etaMs > nowMs -> "άφιξη " + SimpleDateFormat("HH:mm", Locale.US).format(Date(m.etaMs))
+            age >= 3600 -> trf("πριν {0} ώ", age / 3600)
+            age >= 60 -> trf("πριν {0}′", age / 60)
+            m.etaMs != null && m.etaMs > nowMs -> tr("άφιξη ") + SimpleDateFormat("HH:mm", Locale.US).format(Date(m.etaMs))
             else -> null
         }
     }

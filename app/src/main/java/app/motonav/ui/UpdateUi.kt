@@ -20,6 +20,8 @@ import app.motonav.ui.theme.MotoType
 import app.motonav.ui.theme.Radius
 import app.motonav.ui.theme.Space
 import kotlinx.coroutines.launch
+import app.motonav.i18n.tr
+import app.motonav.i18n.trf
 
 /** «Νέα έκδοση» πάνω στον χάρτη (όχι όσο πλοηγείσαι). */
 @Composable
@@ -37,9 +39,9 @@ fun UpdatePill(modifier: Modifier = Modifier) {
     ) {
         Column(Modifier.padding(horizontal = Space.md, vertical = Space.xs)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
-                Text("Νέα έκδοση (${a.tag})", style = MotoType.label, color = c.base.text)
+                Text(trf("Νέα έκδοση ({0})", a.tag), style = MotoType.label, color = c.base.text)
                 TextChoice(
-                    Updater.downloading ?: if (a.apkUrl != null) "Εγκατάσταση" else "Άνοιγμα",
+                    Updater.downloading ?: if (a.apkUrl != null) tr("Εγκατάσταση") else tr("Άνοιγμα"),
                     selected = true,
                     onClick = { if (Updater.downloading == null) scope.launch { Updater.install(context) } },
                 )

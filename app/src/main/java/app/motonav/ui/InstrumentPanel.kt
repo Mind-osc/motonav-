@@ -34,6 +34,8 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import app.motonav.i18n.tr
+import app.motonav.i18n.trf
 
 /** Μικρό κλισιόμετρο. Πάτημα = μηδενισμός μέγιστων. */
 @Composable
@@ -81,7 +83,7 @@ fun CompassDial(headingDeg: Float?, size: Dp) {
                             cap = StrokeCap.Round,
                         )
                     }
-                    listOf(0 to "Β", 90 to "Α", 180 to "Ν", 270 to "Δ").forEach { (deg, letter) ->
+                    listOf(0 to tr("Β"), 90 to tr("Α"), 180 to tr("Ν"), 270 to tr("Δ")).forEach { (deg, letter) ->
                         val rad = Math.toRadians(deg.toDouble())
                         val pos = Offset(center.x + (sin(rad) * r * 0.62f).toFloat(), center.y - (cos(rad) * r * 0.62f).toFloat())
                         val layout = measurer.measure(letter, letterStyle.copy(color = if (deg == 0) c.base.danger else c.base.text))
@@ -174,7 +176,7 @@ private fun LeanGauge(lean: Float, maxLeft: Float, maxRight: Float, modifier: Mo
     }
 }
 
-private val cardinals = listOf("Β", "ΒΑ", "Α", "ΝΑ", "Ν", "ΝΔ", "Δ", "ΒΔ")
+private val cardinals = listOf(tr("Β"), tr("ΒΑ"), tr("Α"), tr("ΝΑ"), tr("Ν"), tr("ΝΔ"), tr("Δ"), tr("ΒΔ"))
 
 fun cardinal(deg: Float): String = cardinals[(((deg % 360f) + 360f) % 360f / 45f).roundToInt() % 8]
 
@@ -182,7 +184,7 @@ fun leanLabel(lean: Float): String {
     val v = abs(lean).roundToInt()
     return when {
         v == 0 -> "0°"
-        lean < 0 -> "$v° Α"
-        else -> "$v° Δ"
+        lean < 0 -> trf("{0}° Α", v)
+        else -> trf("{0}° Δ", v)
     }
 }

@@ -61,6 +61,8 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.cos
 import kotlin.math.roundToInt
+import app.motonav.i18n.tr
+import app.motonav.i18n.trf
 
 /** S09 Ημερολόγιο διαδρομών: λίστα και λεπτομέρεια. */
 @Composable
@@ -91,7 +93,7 @@ fun TripLogScreen(onShowOnMap: (List<LatLon>) -> Unit, onBack: () -> Unit) {
                 }.getOrNull()
             }
             if (pts != null && pts.size >= 2) onShowOnMap(pts)
-            else openError = "Δεν βρήκα διαδρομή μέσα στο αρχείο (GPX, KML, GeoJSON ή ITN)."
+            else openError = tr("Δεν βρήκα διαδρομή μέσα στο αρχείο (GPX, KML, GeoJSON ή ITN).")
         }
     }
 
@@ -111,15 +113,15 @@ fun TripLogScreen(onShowOnMap: (List<LatLon>) -> Unit, onBack: () -> Unit) {
                     .padding(Space.lg),
                 verticalArrangement = Arrangement.spacedBy(Space.md),
             ) {
-                Header("Ημερολόγιο διαδρομών", onBack)
+                Header(tr("Ημερολόγιο διαδρομών"), onBack)
                 RecordingControls(app.motonav.car.CarBridge.phoneSession)
-                TextChoice("Άνοιγμα διαδρομής (GPX, KML, GeoJSON, ITN)", selected = false, onClick = { openError = null; openGpx.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth())
+                TextChoice(tr("Άνοιγμα διαδρομής (GPX, KML, GeoJSON, ITN)"), selected = false, onClick = { openError = null; openGpx.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth())
                 openError?.let { Text(it, style = MotoType.label, color = c.base.warning) }
                 val list = trips
                 when {
-                    list == null -> Text("Φορτώνω…", style = MotoType.body, color = c.base.textMuted)
+                    list == null -> Text(tr("Φορτώνω…"), style = MotoType.body, color = c.base.textMuted)
                     list.isEmpty() -> Text(
-                        "Δεν υπάρχουν ακόμα διαδρομές. Κάθε πλοήγηση καταγράφεται αυτόματα· ή πάτα «Ξεκίνα καταγραφή» για βόλτα χωρίς πλοήγηση.",
+                        tr("Δεν υπάρχουν ακόμα διαδρομές. Κάθε πλοήγηση καταγράφεται αυτόματα· ή πάτα «Ξεκίνα καταγραφή» για βόλτα χωρίς πλοήγηση."),
                         style = MotoType.body,
                         color = c.base.textMuted,
                     )
@@ -127,13 +129,13 @@ fun TripLogScreen(onShowOnMap: (List<LatLon>) -> Unit, onBack: () -> Unit) {
                         val totalKm = list.sumOf { it.distanceM } / 1000
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
                             Text(
-                                if (selecting) "${picked.size} επιλεγμένες" else "${list.size} διαδρομές · ${totalKm.roundToInt()} km συνολικά",
+                                if (selecting) trf("{0} επιλεγμένες", picked.size) else trf("{0} διαδρομές · {1} km συνολικά", list.size, totalKm.roundToInt()),
                                 style = MotoType.label,
                                 color = c.base.textMuted,
                                 modifier = Modifier.weight(1f),
                             )
                             TextChoice(
-                                if (selecting) "Άκυρο" else "Επιλογή",
+                                if (selecting) tr("Άκυρο") else tr("Επιλογή"),
                                 selected = false,
                                 onClick = { selecting = !selecting; picked = emptySet(); confirmBulk = false },
                             )
@@ -142,13 +144,13 @@ fun TripLogScreen(onShowOnMap: (List<LatLon>) -> Unit, onBack: () -> Unit) {
                             Row(horizontalArrangement = Arrangement.spacedBy(Space.sm), modifier = Modifier.fillMaxWidth()) {
                                 val all = picked.size == list.size
                                 TextChoice(
-                                    if (all) "Καμία" else "Όλες",
+                                    if (all) tr("Καμία") else tr("Όλες"),
                                     selected = all,
                                     onClick = { picked = if (all) emptySet() else list.map { it.id }.toSet(); confirmBulk = false },
                                     modifier = Modifier.weight(1f),
                                 )
                                 TextChoice(
-                                    if (confirmBulk) "Σίγουρα; (${picked.size})" else "Διαγραφή (${picked.size})",
+                                    if (confirmBulk) trf("Σίγουρα; ({0})", picked.size) else trf("Διαγραφή ({0})", picked.size),
                                     selected = confirmBulk,
                                     onClick = {
                                         if (picked.isEmpty()) return@TextChoice
@@ -184,7 +186,7 @@ fun TripLogScreen(onShowOnMap: (List<LatLon>) -> Unit, onBack: () -> Unit) {
 private fun Header(title: String, onBack: () -> Unit) {
     val c = LocalAppColors.current
     Row(verticalAlignment = Alignment.CenterVertically) {
-        RideIconButton(Icons.AutoMirrored.Filled.ArrowBack, "Πίσω", onBack, size = Touch.min)
+        RideIconButton(Icons.AutoMirrored.Filled.ArrowBack, tr("Πίσω"), onBack, size = Touch.min)
         Spacer(Modifier.width(Space.lg))
         Text(title, style = MotoType.street, color = c.base.text)
     }
@@ -268,13 +270,13 @@ private fun TripDetail(
         // Στατιστικά
         Surface(shape = RoundedCornerShape(Radius.lg), color = c.base.surface, border = BorderStroke(1.dp, c.outline), modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(Space.lg), verticalArrangement = Arrangement.spacedBy(Space.md)) {
-                StatRow("Απόσταση", km(t.distanceM), "Χρόνος σε κίνηση", duration(t.movingS))
-                StatRow("Μέση ταχύτητα", "${t.avgMovingKmh.roundToInt()} km/h", "Μέγιστη ταχύτητα", "${t.maxSpeedKmh.roundToInt()} km/h")
-                StatRow("Μέγιστη κλίση αριστερά", "${t.maxLeanLeft.roundToInt()}°", "Μέγιστη κλίση δεξιά", "${t.maxLeanRight.roundToInt()}°")
+                StatRow(tr("Απόσταση"), km(t.distanceM), tr("Χρόνος σε κίνηση"), duration(t.movingS))
+                StatRow(tr("Μέση ταχύτητα"), "${t.avgMovingKmh.roundToInt()} km/h", tr("Μέγιστη ταχύτητα"), "${t.maxSpeedKmh.roundToInt()} km/h")
+                StatRow(tr("Μέγιστη κλίση αριστερά"), "${t.maxLeanLeft.roundToInt()}°", tr("Μέγιστη κλίση δεξιά"), "${t.maxLeanRight.roundToInt()}°")
                 StatRow(
-                    "Υψόμετρο",
+                    tr("Υψόμετρο"),
                     if (t.minAltM != null && t.maxAltM != null) "${t.minAltM.roundToInt()}–${t.maxAltM.roundToInt()} m" else "—",
-                    "Ανάβαση",
+                    tr("Ανάβαση"),
                     "${t.ascentM.roundToInt()} m",
                 )
             }
@@ -295,7 +297,7 @@ private fun TripDetail(
 
         Row(horizontalArrangement = Arrangement.spacedBy(Space.sm), modifier = Modifier.fillMaxWidth()) {
             TextChoice(
-                if (confirmDelete) "Σίγουρα;" else "Διαγραφή",
+                if (confirmDelete) tr("Σίγουρα;") else tr("Διαγραφή"),
                 selected = false,
                 onClick = {
                     if (confirmDelete) {
@@ -308,7 +310,7 @@ private fun TripDetail(
                 modifier = Modifier.weight(1f),
             )
             TextChoice(
-                "Δείξε στον χάρτη",
+                tr("Δείξε στον χάρτη"),
                 selected = true,
                 onClick = { if (track.size >= 2) onShowOnMap(track.map { it.position }) },
                 modifier = Modifier.weight(1.4f),
@@ -316,7 +318,7 @@ private fun TripDetail(
         }
         val ctx = LocalContext.current
         TextChoice(
-            "Κοινοποίηση GPX",
+            tr("Κοινοποίηση GPX"),
             selected = false,
             onClick = {
                 runCatching {
@@ -325,24 +327,24 @@ private fun TripDetail(
                         .setType("application/gpx+xml")
                         .putExtra(android.content.Intent.EXTRA_STREAM, uri)
                         .addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    ctx.startActivity(android.content.Intent.createChooser(send, "Κοινοποίηση διαδρομής"))
+                    ctx.startActivity(android.content.Intent.createChooser(send, tr("Κοινοποίηση διαδρομής")))
                 }
             },
             modifier = Modifier.fillMaxWidth(),
         )
         var savedRoute by remember(t.id) { mutableStateOf(false) }
         TextChoice(
-            if (savedRoute) "Αποθηκεύτηκε · στην αναζήτηση → Αποθηκευμένες διαδρομές" else "Αποθήκευση ως διαδρομή (για να την ξανακάνεις)",
+            if (savedRoute) tr("Αποθηκεύτηκε · στην αναζήτηση → Αποθηκευμένες διαδρομές") else tr("Αποθήκευση ως διαδρομή (για να την ξανακάνεις)"),
             selected = savedRoute,
             onClick = {
                 if (!savedRoute) {
-                    val name = "Βόλτα " + SimpleDateFormat("d/M HH:mm", Locale("el", "GR")).format(Date(t.startMs))
+                    val name = tr("Βόλτα ") + SimpleDateFormat("d/M HH:mm", Locale("el", "GR")).format(Date(t.startMs))
                     savedRoute = app.motonav.trips.SavedRoutes.saveFromGpx(ctx, repo.file(t.id), name, t.distanceM) != null
                 }
             },
             modifier = Modifier.fillMaxWidth(),
         )
-        Text("Αρχείο GPX: Android/data/app.motonav/files/trips/${t.id}.gpx", style = MotoType.label, color = c.base.textMuted)
+        Text(trf("Αρχείο GPX: Android/data/app.motonav/files/trips/{0}.gpx", t.id), style = MotoType.label, color = c.base.textMuted)
     }
 }
 
@@ -418,5 +420,5 @@ private fun km(m: Double) = if (m < 1000) "${m.roundToInt()} m" else String.form
 
 private fun duration(s: Double): String {
     val min = (s / 60).roundToInt()
-    return if (min < 60) "$min λεπτά" else "${min / 60} ώ ${min % 60} λ"
+    return if (min < 60) trf("{0} λεπτά", min) else trf("{0} ώ {1} λ", min / 60, min % 60)
 }

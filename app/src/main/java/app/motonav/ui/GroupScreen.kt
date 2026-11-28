@@ -52,6 +52,8 @@ import app.motonav.ui.theme.Space
 import app.motonav.ui.theme.Touch
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
+import app.motonav.i18n.tr
+import app.motonav.i18n.trf
 
 private val FRIEND_COLORS = listOf(
     0xFFFF8A1F, 0xFFFF2D2D, 0xFFFFD21F, 0xFF2ED573, 0xFF1FD1F9, 0xFF3B82F6, 0xFF8B5CF6, 0xFFFF4FA3, 0xFFFFFFFF,
@@ -90,13 +92,13 @@ fun GroupScreen(onScan: () -> Unit, onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(Space.md),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                RideIconButton(Icons.AutoMirrored.Filled.ArrowBack, "Πίσω", onBack, size = Touch.min)
+                RideIconButton(Icons.AutoMirrored.Filled.ArrowBack, tr("Πίσω"), onBack, size = Touch.min)
                 Spacer(Modifier.width(Space.md))
-                Text("Παρέα", style = MotoType.title, color = c.base.text)
+                Text(tr("Παρέα"), style = MotoType.title, color = c.base.text)
             }
             if (!GroupLink.available) {
                 Text(
-                    "Η παρέα δεν είναι ενεργή σε αυτό το build: λείπει η σύνδεση με το Firebase (google-services.json).",
+                    tr("Η παρέα δεν είναι ενεργή σε αυτό το build: λείπει η σύνδεση με το Firebase (google-services.json)."),
                     style = MotoType.body,
                     color = c.base.warning,
                 )
@@ -104,21 +106,21 @@ fun GroupScreen(onScan: () -> Unit, onBack: () -> Unit) {
             }
             if (!GroupLink.enabled) {
                 Text(
-                    "Βλέπετε ο ένας τον άλλον στον χάρτη και μιλάτε σαν walkie-talkie, με 2–5 φίλους.",
+                    tr("Βλέπετε ο ένας τον άλλον στον χάρτη και μιλάτε σαν walkie-talkie, με 2–5 φίλους."),
                     style = MotoType.body,
                     color = c.base.text,
                 )
                 Text(
-                    "Είναι κλειστή: η εφαρμογή δεν συνδέεται πουθενά για την Παρέα. Αν την ανοίξεις, θέση, όνομα και φωνή " +
-                        "κρυπτογραφούνται στο κινητό σου και τα βλέπουν μόνο όσοι έχουν τον κωδικό της παρέας σας. Την κλείνεις ξανά όποτε θες.",
+                    tr("Είναι κλειστή: η εφαρμογή δεν συνδέεται πουθενά για την Παρέα. Αν την ανοίξεις, θέση, όνομα και φωνή ") +
+                        tr("κρυπτογραφούνται στο κινητό σου και τα βλέπουν μόνο όσοι έχουν τον κωδικό της παρέας σας. Την κλείνεις ξανά όποτε θες."),
                     style = MotoType.label,
                     color = c.base.textMuted,
                 )
-                TextChoice("Άνοιγμα Παρέας", selected = true, onClick = { GroupLink.enable() }, modifier = Modifier.fillMaxWidth())
+                TextChoice(tr("Άνοιγμα Παρέας"), selected = true, onClick = { GroupLink.enable() }, modifier = Modifier.fillMaxWidth())
                 return@Column
             }
             Text(
-                "Βλέπετε ο ένας τον άλλον στον χάρτη και μιλάτε σαν walkie-talkie. Τη θέση σου τη βλέπουν μόνο όσοι είναι στην ίδια παρέα.",
+                tr("Βλέπετε ο ένας τον άλλον στον χάρτη και μιλάτε σαν walkie-talkie. Τη θέση σου τη βλέπουν μόνο όσοι είναι στην ίδια παρέα."),
                 style = MotoType.label,
                 color = c.base.textMuted,
             )
@@ -128,7 +130,7 @@ fun GroupScreen(onScan: () -> Unit, onBack: () -> Unit) {
                 value = nameText,
                 onValueChange = { nameText = it.take(20); GroupLink.setProfile(nameText, GroupLink.color) },
                 singleLine = true,
-                label = { Text("Το όνομά σου") },
+                label = { Text(tr("Το όνομά σου")) },
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                 shape = RoundedCornerShape(Radius.md),
                 colors = fieldColors,
@@ -137,7 +139,7 @@ fun GroupScreen(onScan: () -> Unit, onBack: () -> Unit) {
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
                 FRIEND_COLORS.forEach { col ->
                     val on = GroupLink.color == col
-                    ColorSwatch(Color(col), on, "Χρώμα", onClick = { GroupLink.setProfile(nameText, col) }) {
+                    ColorSwatch(Color(col), on, tr("Χρώμα"), onClick = { GroupLink.setProfile(nameText, col) }) {
                         if (on) Icon(Icons.Filled.Check, contentDescription = null, tint = if (col == 0xFFFFFFFF.toInt() || col == 0xFFFFD21F.toInt()) Color.Black else Color.White)
                     }
                 }
@@ -145,53 +147,53 @@ fun GroupScreen(onScan: () -> Unit, onBack: () -> Unit) {
 
             val code = GroupLink.code
             if (code == null) {
-                TextChoice("Νέα παρέα", selected = true, onClick = { GroupLink.create() }, modifier = Modifier.fillMaxWidth())
-                TextChoice("Σκάναρε QR φίλου", selected = false, onClick = onScan, modifier = Modifier.fillMaxWidth())
+                TextChoice(tr("Νέα παρέα"), selected = true, onClick = { GroupLink.create() }, modifier = Modifier.fillMaxWidth())
+                TextChoice(tr("Σκάναρε QR φίλου"), selected = false, onClick = onScan, modifier = Modifier.fillMaxWidth())
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
                     OutlinedTextField(
                         value = codeText,
                         onValueChange = { codeText = it.take(12); codeError = false },
                         singleLine = true,
-                        label = { Text("Κωδικός (π.χ. ABCD-EFGH)") },
+                        label = { Text(tr("Κωδικός (π.χ. ABCD-EFGH)")) },
                         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
                         isError = codeError,
                         shape = RoundedCornerShape(Radius.md),
                         colors = fieldColors,
                         modifier = Modifier.weight(1f),
                     )
-                    TextChoice("Μπες", selected = false, onClick = { codeError = !GroupLink.join(codeText) })
+                    TextChoice(tr("Μπες"), selected = false, onClick = { codeError = !GroupLink.join(codeText) })
                 }
-                if (codeError) Text("Ο κωδικός θέλει 8 γράμματα/αριθμούς.", style = MotoType.label, color = c.base.warning)
+                if (codeError) Text(tr("Ο κωδικός θέλει 8 γράμματα/αριθμούς."), style = MotoType.label, color = c.base.warning)
             } else {
                 // QR και κωδικός για να μπουν οι άλλοι
                 val qr = remember(code) { qrBitmap(GroupCodes.link(code)).asImageBitmap() }
                 Surface(shape = RoundedCornerShape(Radius.lg), color = Color.White, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-                    Image(qr, contentDescription = "QR της παρέας", modifier = Modifier.size(220.dp).padding(Space.sm))
+                    Image(qr, contentDescription = tr("QR της παρέας"), modifier = Modifier.size(220.dp).padding(Space.sm))
                 }
                 Text(GroupCodes.pretty(code), style = MotoType.title, color = c.base.text, modifier = Modifier.align(Alignment.CenterHorizontally))
                 TextChoice(
-                    "Στείλε τον κωδικό",
+                    tr("Στείλε τον κωδικό"),
                     selected = false,
                     onClick = {
-                        val text = "Μπες στην παρέα μου στο Streetwolf: ${GroupCodes.pretty(code)}\n${GroupCodes.link(code)}"
+                        val text = trf("Μπες στην παρέα μου στο Streetwolf: {0}\n{1}", GroupCodes.pretty(code), GroupCodes.link(code))
                         runCatching {
-                            context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), "Κωδικός παρέας"))
+                            context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), tr("Κωδικός παρέας")))
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
                 )
-                Text("Πώς μιλάς", style = MotoType.title, color = c.base.text)
+                Text(tr("Πώς μιλάς"), style = MotoType.title, color = c.base.text)
                 Row(horizontalArrangement = Arrangement.spacedBy(Space.sm), modifier = Modifier.fillMaxWidth()) {
-                    TextChoice("Με τη φωνή", selected = GroupLink.voxMode, onClick = { GroupLink.setVoice(true, GroupLink.voxSensitivity) }, modifier = Modifier.weight(1f))
-                    TextChoice("Με κουμπί", selected = !GroupLink.voxMode, onClick = { GroupLink.setVoice(false, GroupLink.voxSensitivity) }, modifier = Modifier.weight(1f))
+                    TextChoice(tr("Με τη φωνή"), selected = GroupLink.voxMode, onClick = { GroupLink.setVoice(true, GroupLink.voxSensitivity) }, modifier = Modifier.weight(1f))
+                    TextChoice(tr("Με κουμπί"), selected = !GroupLink.voxMode, onClick = { GroupLink.setVoice(false, GroupLink.voxSensitivity) }, modifier = Modifier.weight(1f))
                 }
                 if (GroupLink.voxMode) {
                     Text(
-                        "Πατάς το κουμπί του μικροφώνου στον χάρτη για να ανοίξει (μωβ) και ξανά για να κλείσει. Ξεκινάει πάντα κλειστό. Μετά μιλάς και στέλνεται μόνο του (1–3 s καθυστέρηση). Θέλει μικρόφωνο κράνους.",
+                        tr("Πατάς το κουμπί του μικροφώνου στον χάρτη για να ανοίξει (μωβ) και ξανά για να κλείσει. Ξεκινάει πάντα κλειστό. Μετά μιλάς και στέλνεται μόνο του (1–3 s καθυστέρηση). Θέλει μικρόφωνο κράνους."),
                         style = MotoType.label,
                         color = c.base.textMuted,
                     )
-                    Text("Ευαισθησία: ${GroupLink.voxSensitivity} (1 = μόνο δυνατά, 5 = και σιγανά)", style = MotoType.label, color = c.base.text)
+                    Text(trf("Ευαισθησία: {0} (1 = μόνο δυνατά, 5 = και σιγανά)", GroupLink.voxSensitivity), style = MotoType.label, color = c.base.text)
                     androidx.compose.material3.Slider(
                         value = GroupLink.voxSensitivity.toFloat(),
                         onValueChange = { GroupLink.setVoice(true, it.toInt()) },
@@ -208,22 +210,22 @@ fun GroupScreen(onScan: () -> Unit, onBack: () -> Unit) {
                     Box(Modifier.fillMaxWidth().height(14.dp).background(c.base.surface3, RoundedCornerShape(7.dp))) {
                         Box(Modifier.fillMaxWidth(lvl.coerceIn(0f, 1f)).height(14.dp).background(if (lvl >= thr) c.accent else c.base.textMuted, RoundedCornerShape(7.dp)))
                     }
-                    Text("Η μπάρα γίνεται χρωματιστή όταν θα έστελνε.", style = MotoType.label, color = c.base.textMuted)
+                    Text(tr("Η μπάρα γίνεται χρωματιστή όταν θα έστελνε."), style = MotoType.label, color = c.base.textMuted)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    Text("Δείχνω τη θέση μου", style = MotoType.body, color = c.base.text, modifier = Modifier.weight(1f))
-                    TextChoice(if (GroupLink.sharing) "Ναι" else "Όχι", selected = GroupLink.sharing, onClick = { GroupLink.changeSharing(!GroupLink.sharing) })
+                    Text(tr("Δείχνω τη θέση μου"), style = MotoType.body, color = c.base.text, modifier = Modifier.weight(1f))
+                    TextChoice(if (GroupLink.sharing) tr("Ναι") else tr("Όχι"), selected = GroupLink.sharing, onClick = { GroupLink.changeSharing(!GroupLink.sharing) })
                 }
 
-                Text("Στην παρέα (${GroupLink.members.size})", style = MotoType.title, color = c.base.text)
+                Text(trf("Στην παρέα ({0})", GroupLink.members.size), style = MotoType.title, color = c.base.text)
                 val now = GroupLink.now()
                 GroupLink.members.forEach { m ->
                     Surface(shape = RoundedCornerShape(Radius.md), color = c.base.surface, border = BorderStroke(1.dp, c.outline), modifier = Modifier.fillMaxWidth()) {
                         Row(Modifier.padding(Space.md), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
                             Box(Modifier.size(14.dp).background(Color(m.color), CircleShape))
-                            Text(m.name + if (m.uid == GroupLink.myUid) " (εσύ)" else "", style = MotoType.body, color = c.base.text, modifier = Modifier.weight(1f))
+                            Text(m.name + if (m.uid == GroupLink.myUid) tr(" (εσύ)") else "", style = MotoType.body, color = c.base.text, modifier = Modifier.weight(1f))
                             Text(
-                                listOfNotNull(m.speedKmh?.let { "${it.toInt()} km/h" }, FriendsLayer.subtitle(m, now) ?: "τώρα").joinToString(" · "),
+                                listOfNotNull(m.speedKmh?.let { "${it.toInt()} km/h" }, FriendsLayer.subtitle(m, now) ?: tr("τώρα")).joinToString(" · "),
                                 style = MotoType.label,
                                 color = c.base.textMuted,
                             )
@@ -231,7 +233,7 @@ fun GroupScreen(onScan: () -> Unit, onBack: () -> Unit) {
                     }
                 }
                 TextChoice(
-                    if (confirmLeave) "Σίγουρα; Πάτα ξανά" else "Έξοδος από την παρέα",
+                    if (confirmLeave) tr("Σίγουρα; Πάτα ξανά") else tr("Έξοδος από την παρέα"),
                     selected = false,
                     onClick = { if (confirmLeave) { GroupLink.leave(); confirmLeave = false } else confirmLeave = true },
                     modifier = Modifier.fillMaxWidth(),
@@ -240,12 +242,12 @@ fun GroupScreen(onScan: () -> Unit, onBack: () -> Unit) {
             GroupLink.error?.let { Text(it, style = MotoType.label, color = c.base.warning) }
             Spacer(Modifier.height(Space.lg))
             TextChoice(
-                "Κλείσιμο Παρέας",
+                tr("Κλείσιμο Παρέας"),
                 selected = false,
                 onClick = { GroupLink.disable(); confirmLeave = false },
                 modifier = Modifier.fillMaxWidth(),
             )
-            Text("Βγαίνεις από την παρέα και η εφαρμογή δεν συνδέεται πια για την Παρέα.", style = MotoType.label, color = c.base.textMuted)
+            Text(tr("Βγαίνεις από την παρέα και η εφαρμογή δεν συνδέεται πια για την Παρέα."), style = MotoType.label, color = c.base.textMuted)
         }
     }
 }

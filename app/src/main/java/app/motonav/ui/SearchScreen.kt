@@ -91,6 +91,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import java.util.Locale
 import kotlin.math.roundToInt
+import app.motonav.i18n.tr
+import app.motonav.i18n.trf
 
 private const val TYPING_LOCK_KMH = 10f
 
@@ -169,11 +171,11 @@ fun SearchScreen(
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "el-GR")
-            .putExtra(RecognizerIntent.EXTRA_PROMPT, "Πες διεύθυνση ή μέρος")
+            .putExtra(RecognizerIntent.EXTRA_PROMPT, tr("Πες διεύθυνση ή μέρος"))
         try {
             voice.launch(intent)
         } catch (_: ActivityNotFoundException) {
-            voiceError = "Δεν βρέθηκε αναγνώριση ομιλίας στο κινητό (Google)."
+            voiceError = tr("Δεν βρέθηκε αναγνώριση ομιλίας στο κινητό (Google).")
         }
     }
 
@@ -226,7 +228,7 @@ fun SearchScreen(
         }
         val here = near
         if (here == null) {
-            error = "Περιμένω σήμα GPS για να ψάξω κοντά σου."
+            error = tr("Περιμένω σήμα GPS για να ψάξω κοντά σου.")
             return@LaunchedEffect
         }
         keyboard?.hide()
@@ -307,12 +309,12 @@ fun SearchScreen(
                     if (!moving) { runCatching { focus.requestFocus() }; keyboard?.show() }
                 } }
                 voiceError?.let { Hint(it) }
-                if (stopMode) Hint("Διάλεξε ενδιάμεση στάση.")
+                if (stopMode) Hint(tr("Διάλεξε ενδιάμεση στάση."))
                 when {
-                    loading -> Hint("Ψάχνω…")
+                    loading -> Hint(tr("Ψάχνω…"))
                     error != null -> Hint(error!!)
-                    moving && idle -> Hint("Όσο κινείσαι: κατηγορία ή πρόσφατο. Για να γράψεις, σταμάτα.")
-                    selected == null && searchedOnce && results.isEmpty() && !idle -> Hint("Δεν βρέθηκε τίποτα.")
+                    moving && idle -> Hint(tr("Όσο κινείσαι: κατηγορία ή πρόσφατο. Για να γράψεις, σταμάτα."))
+                    selected == null && searchedOnce && results.isEmpty() && !idle -> Hint(tr("Δεν βρέθηκε τίποτα."))
                 }
                 // Όσα έχεις ψάξει ή πάει ξανά και ταιριάζουν με ό,τι γράφεις: πρώτα, έως 2, με ρολόι.
                 val past = if (selected == null && category == null && query.trim().length >= 2) {
@@ -337,8 +339,8 @@ fun SearchScreen(
                     LazyColumn(Modifier.fillMaxWidth().heightIn(max = maxList)) {
                         if (!stopMode) item {
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(Space.xs), contentPadding = PaddingValues(vertical = Space.xs)) {
-                                item { Text("Βόλτα", style = MotoType.label, color = c.base.textMuted, modifier = Modifier.padding(end = Space.xs, top = 10.dp)) }
-                                items(listOf(1, 2, 3, 4)) { h -> Chip(if (h == 1) "1 ώρα" else "$h ώρες", onClick = { onLoop(h) }) }
+                                item { Text(tr("Βόλτα"), style = MotoType.label, color = c.base.textMuted, modifier = Modifier.padding(end = Space.xs, top = 10.dp)) }
+                                items(listOf(1, 2, 3, 4)) { h -> Chip(if (h == 1) tr("1 ώρα") else trf("{0} ώρες", h), onClick = { onLoop(h) }) }
                             }
                         }
                         item {
@@ -347,26 +349,26 @@ fun SearchScreen(
                             }
                         }
                         if (!stopMode && savedRoutes.isNotEmpty()) {
-                            item { Section("Αποθηκευμένες διαδρομές") }
+                            item { Section(tr("Αποθηκευμένες διαδρομές")) }
                             items(savedRoutes, key = { "saved|${it.id}" }) { r ->
                                 PlaceRow(
-                                    Place(r.name, String.format(java.util.Locale("el", "GR"), "%.1f km · ακολουθείς την ίδια", r.lengthM / 1000), 0.0, 0.0),
+                                    Place(r.name, String.format(java.util.Locale("el", "GR"), tr("%.1f km · ακολουθείς την ίδια"), r.lengthM / 1000), 0.0, 0.0),
                                     null,
                                     icon = ImageVector.vectorResource(R.drawable.ic_history),
                                 ) { onFollowSaved(r) }
                             }
                         }
                         if (!stopMode && history.isNotEmpty()) {
-                            item { Section("Πρόσφατες διαδρομές") }
+                            item { Section(tr("Πρόσφατες διαδρομές")) }
                             items(history.take(5)) { h ->
                                 val label = h.name ?: String.format(java.util.Locale.US, "%.4f, %.4f", h.dest.lat, h.dest.lon)
                                 val type = when (h.type) {
-                                    app.motonav.routing.RouteType.TWISTY -> "Στροφές"
-                                    app.motonav.routing.RouteType.DIRT -> "Χώμα"
-                                    app.motonav.routing.RouteType.TRAFFIC -> "Κίνηση"
-                                    else -> "Γρήγορη"
+                                    app.motonav.routing.RouteType.TWISTY -> tr("Στροφές")
+                                    app.motonav.routing.RouteType.DIRT -> tr("Χώμα")
+                                    app.motonav.routing.RouteType.TRAFFIC -> tr("Κίνηση")
+                                    else -> tr("Γρήγορη")
                                 }
-                                val via = if (h.stops.isNotEmpty()) " · ${h.stops.size} στάσεις" else ""
+                                val via = if (h.stops.isNotEmpty()) trf(" · {0} στάσεις", h.stops.size) else ""
                                 PlaceRow(
                                     Place(label, "$type$via", h.dest.lat, h.dest.lon),
                                     near,
@@ -385,7 +387,7 @@ fun SearchScreen(
                             }
                         }
                         if (recents.isNotEmpty()) {
-                            item { Section("Πρόσφατα") }
+                            item { Section(tr("Πρόσφατα")) }
                             // Πρόσφατο: ένα πάτημα και βγαίνει κατευθείαν η διαδρομή (χωρίς «Πάμε»).
                             items(recents) { place -> PlaceRow(place, near) { onPick(place) } }
                         }
@@ -411,12 +413,12 @@ fun SearchScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Πίσω στον χάρτη", tint = c.base.textMuted)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = tr("Πίσω στον χάρτη"), tint = c.base.textMuted)
                     }
                     Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                         if (query.isEmpty()) {
                             Text(
-                                if (moving) "Σταμάτα για να γράψεις" else if (stopMode) "Στάση: διεύθυνση ή μέρος" else "Πού πάμε;",
+                                if (moving) tr("Σταμάτα για να γράψεις") else if (stopMode) tr("Στάση: διεύθυνση ή μέρος") else tr("Πού πάμε;"),
                                 style = MotoType.body,
                                 color = c.base.textMuted,
                             )
@@ -442,23 +444,23 @@ fun SearchScreen(
                     }
                     if (query.isNotEmpty()) {
                         IconButton(onClick = { query = ""; results = emptyList(); selected = null }) {
-                            Icon(Icons.Filled.Clear, contentDescription = "Καθαρισμός", tint = c.base.textMuted)
+                            Icon(Icons.Filled.Clear, contentDescription = tr("Καθαρισμός"), tint = c.base.textMuted)
                         }
                     }
                     IconButton(onClick = startVoice) {
-                        Icon(ImageVector.vectorResource(R.drawable.ic_mic), contentDescription = "Φωνητική αναζήτηση", tint = c.accent)
+                        Icon(ImageVector.vectorResource(R.drawable.ic_mic), contentDescription = tr("Φωνητική αναζήτηση"), tint = c.accent)
                     }
                 }
                 if (selected == null) {
                     Row(horizontalArrangement = Arrangement.spacedBy(Space.sm), modifier = Modifier.fillMaxWidth()) {
-                        listOf(Triple("Σπίτι", home, Icons.Filled.Home), Triple("Δουλειά", work, Icons.Filled.Place)).forEach { (label, place, icon) ->
+                        listOf(Triple(tr("Σπίτι"), home, Icons.Filled.Home), Triple(tr("Δουλειά"), work, Icons.Filled.Place)).forEach { (label, place, icon) ->
                             Chip(
                                 text = label,
                                 icon = icon,
                                 dim = place == null,
                                 onClick = {
                                     if (place != null) onPick(place.copy(name = label))
-                                    else voiceError = "Για να ορίσεις «$label»: ψάξε τη διεύθυνση, πάτα την και μετά «$label»."
+                                    else voiceError = trf("Για να ορίσεις «{0}»: ψάξε τη διεύθυνση, πάτα την και μετά «{1}».", label, label)
                                 },
                                 modifier = Modifier.weight(1f),
                             )
@@ -495,11 +497,11 @@ private fun SelectedCard(
         }
         val isFav = favorites.any { kotlin.math.abs(it.lat - place.lat) < 2e-4 && kotlin.math.abs(it.lon - place.lon) < 2e-4 }
         Row(horizontalArrangement = Arrangement.spacedBy(Space.xs), verticalAlignment = Alignment.CenterVertically) {
-            Chip("Σπίτι", selected = home?.latLon == place.latLon, onClick = { onSetHome(place) })
-            Chip("Δουλειά", selected = work?.latLon == place.latLon, onClick = { onSetWork(place) })
+            Chip(tr("Σπίτι"), selected = home?.latLon == place.latLon, onClick = { onSetHome(place) })
+            Chip(tr("Δουλειά"), selected = work?.latLon == place.latLon, onClick = { onSetWork(place) })
             Chip(if (isFav) "★" else "☆", selected = isFav, onClick = { onToggleFavorite(place) })
             Spacer(Modifier.weight(1f))
-            Chip("Διόρθωση", onClick = onEdit)
+            Chip(tr("Διόρθωση"), onClick = onEdit)
         }
         Surface(
             shape = RoundedCornerShape(26.dp),
@@ -508,7 +510,7 @@ private fun SelectedCard(
             modifier = Modifier.fillMaxWidth().height(50.dp),
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Text(if (stopMode) "Βάλε στάση" else "Πάμε", style = MotoType.title.copy(fontSize = 18.sp), color = c.onAccent)
+                Text(if (stopMode) tr("Βάλε στάση") else tr("Πάμε"), style = MotoType.title.copy(fontSize = 18.sp), color = c.onAccent)
             }
         }
     }
@@ -603,7 +605,7 @@ private fun PlaceRow(place: Place, near: LatLon?, onRemove: (() -> Unit)? = null
         }
         if (onRemove != null) {
             IconButton(onClick = onRemove) {
-                Icon(Icons.Filled.Clear, contentDescription = "Βγάλε από τα αγαπημένα", tint = c.base.textMuted)
+                Icon(Icons.Filled.Clear, contentDescription = tr("Βγάλε από τα αγαπημένα"), tint = c.base.textMuted)
             }
         }
     }

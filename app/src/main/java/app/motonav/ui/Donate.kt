@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import app.motonav.i18n.tr
 
 /**
  * «Κέρασέ με έναν καφέ»: ανοίγει τη σελίδα δωρεάς (PayPal.me / Buy Me a Coffee / Revolut κ.λπ.).
@@ -20,7 +21,7 @@ fun DonateButton(modifier: Modifier = Modifier.fillMaxWidth()) {
     if (Donate.URL.isBlank()) return
     val context = LocalContext.current
     TextChoice(
-        "☕  Κέρασέ με έναν καφέ",
+        tr("☕  Κέρασέ με έναν καφέ"),
         selected = false,
         onClick = {
             runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(Donate.URL)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }

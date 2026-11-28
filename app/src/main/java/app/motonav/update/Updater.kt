@@ -17,6 +17,8 @@ import java.io.File
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
+import app.motonav.i18n.tr
+import app.motonav.i18n.trf
 
 /**
  * Νέα έκδοση; Ρωτάει τα Releases του δημόσιου repo στο GitHub.
@@ -89,7 +91,7 @@ object Updater {
             newer
         }.getOrElse {
             // Να φαίνεται ότι απέτυχε (π.χ. χωρίς internet ή λάθος κλειδί), όχι «έχεις την τελευταία».
-            error = "Δεν έγινε ο έλεγχος: ${it.message}"
+            error = trf("Δεν έγινε ο έλεγχος: {0}", it.message)
             false
         }
     }
@@ -112,11 +114,11 @@ object Updater {
                     Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + context.packageName)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                 )
             }
-            error = "Δώσε την άδεια «Εγκατάσταση άγνωστων εφαρμογών» στο Streetwolf και πάτα ξανά."
+            error = tr("Δώσε την άδεια «Εγκατάσταση άγνωστων εφαρμογών» στο Streetwolf και πάτα ξανά.")
             return
         }
         error = null
-        downloading = "Κατεβαίνει…"
+        downloading = tr("Κατεβαίνει…")
         val file = withContext(Dispatchers.IO) {
             runCatching {
                 val dir = File(context.cacheDir, "update").apply { mkdirs(); listFiles()?.forEach { it.delete() } }
@@ -139,7 +141,7 @@ object Updater {
                     }
                     val code = c.responseCode
                     if (code in 300..399 && hops < 5) {
-                        val loc = c.getHeaderField("Location") ?: throw IOException("redirect χωρίς Location")
+                        val loc = c.getHeaderField("Location") ?: throw IOException(tr("redirect χωρίς Location"))
                         c.disconnect()
                         u = URL(u, loc)
                         hops++
@@ -158,7 +160,7 @@ object Updater {
                             if (n < 0) break
                             out.write(buf, 0, n)
                             done += n
-                            if (total > 0) downloading = "Κατεβαίνει… ${done * 100 / total}%"
+                            if (total > 0) downloading = trf("Κατεβαίνει… {0}%", done * 100 / total)
                         }
                     }
                 }
@@ -175,7 +177,7 @@ object Updater {
                         .setDataAndType(uri, "application/vnd.android.package-archive")
                         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK),
                 )
-            }.onFailure { error = "Δεν άνοιξε η εγκατάσταση: ${it.message}" }
-        }.onFailure { error = "Δεν κατέβηκε: ${it.message}" }
+            }.onFailure { error = trf("Δεν άνοιξε η εγκατάσταση: {0}", it.message) }
+        }.onFailure { error = trf("Δεν κατέβηκε: {0}", it.message) }
     }
 }

@@ -82,6 +82,7 @@ import app.motonav.ui.theme.Space
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import app.motonav.i18n.tr
 
 /** Κατάσταση του pill μουσικής πάνω στο κέντρο του χάρτη. */
 object MediaPillState {
@@ -196,13 +197,13 @@ fun MediaPill(docked: Boolean = false) {
                             style = MotoType.label.copy(fontSize = 13.sp, lineHeight = 15.sp),
                             color = c.base.text, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         )
-                        val sub = now?.artist?.takeIf { it.isNotBlank() && now.pkg == pkg } ?: if (now == null) "Πάτα ▶" else ""
+                        val sub = now?.artist?.takeIf { it.isNotBlank() && now.pkg == pkg } ?: if (now == null) tr("Πάτα ▶") else ""
                         if (sub.isNotBlank()) Text(
                             sub, fontSize = 11.sp, lineHeight = 13.sp, color = c.base.textMuted,
                             maxLines = 1, overflow = TextOverflow.Ellipsis,
                         )
                     }
-                    PillButton(ImageVector.vectorResource(R.drawable.ic_skip_prev), "Προηγούμενο") {
+                    PillButton(ImageVector.vectorResource(R.drawable.ic_skip_prev), tr("Προηγούμενο")) {
                         st.touch++; MediaHub.previous(context, pkg)
                     }
                     Surface(
@@ -221,11 +222,11 @@ fun MediaPill(docked: Boolean = false) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 ImageVector.vectorResource(if (playing) R.drawable.ic_pause else R.drawable.ic_play),
-                                if (playing) "Παύση" else "Αναπαραγωγή", Modifier.size(24.dp),
+                                if (playing) tr("Παύση") else tr("Αναπαραγωγή"), Modifier.size(24.dp),
                             )
                         }
                     }
-                    PillButton(ImageVector.vectorResource(R.drawable.ic_skip_next), "Επόμενο") {
+                    PillButton(ImageVector.vectorResource(R.drawable.ic_skip_next), tr("Επόμενο")) {
                         st.touch++; MediaHub.next(context, pkg)
                     }
                     // ✕ μόνο όταν δεν παίζει, για να το κλείσεις τελείως.
@@ -326,17 +327,17 @@ fun AppsPanel(landscape: Boolean, onClose: () -> Unit) {
                         Box(contentAlignment = Alignment.Center) { Text("‹", fontSize = 34.sp, color = c.base.text, fontWeight = FontWeight.Bold) }
                     }
                     Text(
-                        if (picking) "Πρόσθεσε εφαρμογή" else "Εφαρμογές",
+                        if (picking) tr("Πρόσθεσε εφαρμογή") else tr("Εφαρμογές"),
                         style = MotoType.title.copy(fontWeight = FontWeight.Bold), color = c.base.text,
                         modifier = Modifier.weight(1f),
                     )
-                    if (!picking && MyApps.list.isNotEmpty()) TextChoice(if (editing) "Τέλος" else "Αλλαγή", selected = editing, onClick = { editing = !editing })
+                    if (!picking && MyApps.list.isNotEmpty()) TextChoice(if (editing) tr("Τέλος") else tr("Αλλαγή"), selected = editing, onClick = { editing = !editing })
                 }
                 HorizontalDivider(color = c.outline.copy(alpha = 0.6f))
                 if (picking) {
                     val all by produceState<List<MyApps.App>?>(null) { value = withContext(Dispatchers.IO) { MyApps.installed(context) } }
                     Column(Modifier.verticalScroll(rememberScrollState()).padding(vertical = Space.xs)) {
-                        if (all == null) Text("Φόρτωση…", Modifier.padding(Space.lg), color = c.base.textMuted)
+                        if (all == null) Text(tr("Φόρτωση…"), Modifier.padding(Space.lg), color = c.base.textMuted)
                         all?.forEach { app ->
                             val added = app.pkg in MyApps.list
                             Row(
@@ -357,8 +358,8 @@ fun AppsPanel(landscape: Boolean, onClose: () -> Unit) {
                         if (mediaPkgs.isNotEmpty() && !access) {
                             Surface(shape = RoundedCornerShape(Radius.md), color = c.base.surface2, border = BorderStroke(1.dp, c.outline)) {
                                 Column(Modifier.padding(Space.md), verticalArrangement = Arrangement.spacedBy(Space.sm)) {
-                                    Text("Για το pill μουσικής (▶ ⏭ πάνω στον χάρτη) δώσε στο Streetwolf «Πρόσβαση στις ειδοποιήσεις». Μία φορά.", style = MotoType.label, color = c.base.text)
-                                    TextChoice("Άνοιγμα ρύθμισης", selected = true, onClick = {
+                                    Text(tr("Για το pill μουσικής (▶ ⏭ πάνω στον χάρτη) δώσε στο Streetwolf «Πρόσβαση στις ειδοποιήσεις». Μία φορά."), style = MotoType.label, color = c.base.text)
+                                    TextChoice(tr("Άνοιγμα ρύθμισης"), selected = true, onClick = {
                                         try { context.startActivity(MediaHub.accessIntent()) } catch (_: Exception) { }
                                     })
                                 }
@@ -392,7 +393,7 @@ fun AppsPanel(landscape: Boolean, onClose: () -> Unit) {
                             }
                         }
                         if (MyApps.list.isEmpty()) Text(
-                            "Πάτα + και διάλεξε εφαρμογές (π.χ. Spotify). Οι εφαρμογές μουσικής ανοίγουν pill πάνω στον χάρτη με ▶ ⏭.",
+                            tr("Πάτα + και διάλεξε εφαρμογές (π.χ. Spotify). Οι εφαρμογές μουσικής ανοίγουν pill πάνω στον χάρτη με ▶ ⏭."),
                             style = MotoType.label, color = c.base.textMuted, textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth(),
                         )
@@ -447,6 +448,6 @@ private fun AddTile(onClick: () -> Unit) {
             contentAlignment = Alignment.Center,
         ) { Text("+", fontSize = 30.sp, color = c.accent, fontWeight = FontWeight.Bold) }
         Spacer(Modifier.height(Space.xs))
-        Text("Προσθήκη", fontSize = 12.sp, color = c.base.textMuted, maxLines = 1)
+        Text(tr("Προσθήκη"), fontSize = 12.sp, color = c.base.textMuted, maxLines = 1)
     }
 }

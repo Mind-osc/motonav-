@@ -10,6 +10,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
+import app.motonav.i18n.tr
 
 /** AUTO: ανοιχτό τη μέρα, σκούρο τη νύχτα και στα τούνελ. */
 enum class ThemeMode { DARK, AMOLED, LIGHT, AUTO }
@@ -56,7 +57,7 @@ data class AppColors(
     val outline: Color = if (base.isDark) Color(0xFF4A505A) else Color(0xFFC4C9D1),
 )
 
-val LocalAppColors = staticCompositionLocalOf<AppColors> { error("MotoTheme λείπει") }
+val LocalAppColors = staticCompositionLocalOf<AppColors> { error(tr("MotoTheme λείπει")) }
 
 object Contrast {
     private val black = Color(0xFF0B0B10)

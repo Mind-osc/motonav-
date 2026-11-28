@@ -52,6 +52,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import app.motonav.i18n.tr
+import app.motonav.i18n.trf
 
 @Composable
 private fun LaunchedEffectLoad() {
@@ -89,20 +91,20 @@ fun BookmarksScreen(onGo: (Place) -> Unit, onBack: () -> Unit, onFollowRoute: (a
                 runCatching {
                     val text = context.contentResolver.openInputStream(uri)!!.use { it.readBytes().decodeToString() }
                     val name = BookmarkFiles.title(text)
-                        ?: (uri.lastPathSegment?.substringAfterLast('/')?.substringBeforeLast('.')?.take(30) ?: "Εισαγωγή")
+                        ?: (uri.lastPathSegment?.substringAfterLast('/')?.substringBeforeLast('.')?.take(30) ?: tr("Εισαγωγή"))
                     name to BookmarkFiles.parse(text)
                 }
             }
             r.onSuccess { (name, places) ->
                 if (places.isEmpty()) {
-                    message = "Δεν βρήκα σημεία στο αρχείο (θέλει GPX με wpt ή KML με Placemark)."
+                    message = tr("Δεν βρήκα σημεία στο αρχείο (θέλει GPX με wpt ή KML με Placemark).")
                 } else {
                     val col = BOOKMARK_COLORS[lists.size % BOOKMARK_COLORS.size]
                     repo.importFavorites(name, col, places)
-                    message = "Μπήκαν ${places.size} σημεία στη λίστα «$name»."
+                    message = trf("Μπήκαν {0} σημεία στη λίστα «{1}».", places.size, name)
                     open = name
                 }
-            }.onFailure { message = "Δεν άνοιξε το αρχείο: ${it.message}" }
+            }.onFailure { message = trf("Δεν άνοιξε το αρχείο: {0}", it.message) }
         }
     }
 
@@ -118,8 +120,8 @@ fun BookmarksScreen(onGo: (Place) -> Unit, onBack: () -> Unit, onFollowRoute: (a
                 .putExtra(android.content.Intent.EXTRA_STREAM, uri)
                 .putExtra(android.content.Intent.EXTRA_SUBJECT, name)
                 .addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            context.startActivity(android.content.Intent.createChooser(send, "Κοινοποίηση λίστας"))
-        }.onFailure { message = "Δεν έγινε η κοινοποίηση: ${it.message}" }
+            context.startActivity(android.content.Intent.createChooser(send, tr("Κοινοποίηση λίστας")))
+        }.onFailure { message = trf("Δεν έγινε η κοινοποίηση: {0}", it.message) }
     }
 
     androidx.activity.compose.BackHandler(enabled = open != null) { open = null; renaming = null; confirmDelete = null }
@@ -129,18 +131,18 @@ fun BookmarksScreen(onGo: (Place) -> Unit, onBack: () -> Unit, onFollowRoute: (a
             verticalArrangement = Arrangement.spacedBy(Space.md),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                RideIconButton(Icons.AutoMirrored.Filled.ArrowBack, "Πίσω", { if (open != null) open = null else onBack() }, size = Touch.min)
+                RideIconButton(Icons.AutoMirrored.Filled.ArrowBack, tr("Πίσω"), { if (open != null) open = null else onBack() }, size = Touch.min)
                 Spacer(Modifier.width(Space.lg))
-                Text(open ?: "Σελιδοδείκτες", style = MotoType.street, color = c.base.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(open ?: tr("Σελιδοδείκτες"), style = MotoType.street, color = c.base.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             message?.let { Text(it, style = MotoType.label, color = c.base.textMuted) }
 
             val current = open
             if (current == null) {
-                TextChoice("Εισαγωγή από GPX / KML / GeoJSON", selected = false, onClick = { message = null; importFile.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth())
+                TextChoice(tr("Εισαγωγή από GPX / KML / GeoJSON"), selected = false, onClick = { message = null; importFile.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth())
                 if (lists.isEmpty()) {
                     Text(
-                        "Δεν έχεις ακόμα σελιδοδείκτες. Σε έναν προορισμό πάτα ★ → «Σε λίστα…» για να τον βάλεις σε λίστα, π.χ. «Βόλτες Πήλιο».",
+                        tr("Δεν έχεις ακόμα σελιδοδείκτες. Σε έναν προορισμό πάτα ★ → «Σε λίστα…» για να τον βάλεις σε λίστα, π.χ. «Βόλτες Πήλιο»."),
                         style = MotoType.body,
                         color = c.base.textMuted,
                     )
@@ -149,7 +151,7 @@ fun BookmarksScreen(onGo: (Place) -> Unit, onBack: () -> Unit, onFollowRoute: (a
                 val routes = app.motonav.trips.SavedRoutes.list
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(Space.sm)) {
                     if (routes.isNotEmpty()) {
-                        item { Text("Αποθηκευμένες διαδρομές", style = MotoType.label, color = c.base.textMuted) }
+                        item { Text(tr("Αποθηκευμένες διαδρομές"), style = MotoType.label, color = c.base.textMuted) }
                         items(routes, key = { "route|${it.id}" }) { r ->
                             var renameTo by remember(r.id) { mutableStateOf<String?>(null) }
                             Column(verticalArrangement = Arrangement.spacedBy(Space.xs)) {
@@ -163,7 +165,7 @@ fun BookmarksScreen(onGo: (Place) -> Unit, onBack: () -> Unit, onFollowRoute: (a
                                     ) {
                                         Column(Modifier.padding(horizontal = Space.md, vertical = Space.sm)) {
                                             Text(r.name, style = MotoType.body, color = c.base.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                            Text(String.format(java.util.Locale("el", "GR"), "%.1f km · πάτα για «Ακολούθησε»", r.lengthM / 1000), style = MotoType.label, color = c.base.textMuted)
+                                            Text(String.format(java.util.Locale("el", "GR"), tr("%.1f km · πάτα για «Ακολούθησε»"), r.lengthM / 1000), style = MotoType.label, color = c.base.textMuted)
                                         }
                                     }
                                     TextChoice("✎", selected = renameTo != null, onClick = { renameTo = if (renameTo == null) r.name else null })
@@ -183,7 +185,7 @@ fun BookmarksScreen(onGo: (Place) -> Unit, onBack: () -> Unit, onFollowRoute: (a
                                 }
                             }
                         }
-                        item { Text("Λίστες μερών", style = MotoType.label, color = c.base.textMuted) }
+                        item { Text(tr("Λίστες μερών"), style = MotoType.label, color = c.base.textMuted) }
                     }
                     items(lists.keys.toList(), key = { it }) { name ->
                         val ps = lists.getValue(name)
@@ -210,16 +212,16 @@ fun BookmarksScreen(onGo: (Place) -> Unit, onBack: () -> Unit, onFollowRoute: (a
                 // Χρώμα λίστας
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
                     BOOKMARK_COLORS.forEach { k ->
-                        ColorSwatch(Color(k), k == col, "Χρώμα λίστας", onClick = { scope.launch { repo.setListColor(current, k) } }) {
+                        ColorSwatch(Color(k), k == col, tr("Χρώμα λίστας"), onClick = { scope.launch { repo.setListColor(current, k) } }) {
                             if (k == col) Text("✓", style = MotoType.label, color = Color.White)
                         }
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(Space.sm), modifier = Modifier.fillMaxWidth()) {
-                    TextChoice("Κοινοποίηση (GPX)", selected = false, onClick = { share(current, ps) }, modifier = Modifier.weight(1f))
-                    TextChoice("Μετονομασία", selected = renaming != null, onClick = { renaming = if (renaming == null) current else null }, modifier = Modifier.weight(1f))
+                    TextChoice(tr("Κοινοποίηση (GPX)"), selected = false, onClick = { share(current, ps) }, modifier = Modifier.weight(1f))
+                    TextChoice(tr("Μετονομασία"), selected = renaming != null, onClick = { renaming = if (renaming == null) current else null }, modifier = Modifier.weight(1f))
                     TextChoice(
-                        if (confirmDelete == current) "Σίγουρα;" else "Διαγραφή",
+                        if (confirmDelete == current) tr("Σίγουρα;") else tr("Διαγραφή"),
                         selected = confirmDelete == current,
                         onClick = {
                             if (confirmDelete == current) {

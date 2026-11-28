@@ -185,6 +185,8 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.roundToInt
+import app.motonav.i18n.tr
+import app.motonav.i18n.trf
 
 // Προσωρινά online χάρτες OpenFreeMap (OpenStreetMap, δωρεάν, χωρίς κλειδί).
 // Οι διαδρομές είναι ήδη offline (BRouter). Ο offline χάρτης έρχεται μετά.
@@ -404,7 +406,7 @@ fun MapScreen(
     val favorites by repo.favorites.collectAsStateWithLifecycle(initialValue = emptyList())
     val favLists = remember(favorites) { favorites.groupBy { it.listName }.map { (n, ps) -> n to (ps.firstOrNull { it.color != 0 }?.color ?: 0) } }
     var showSearch by rememberSaveable { mutableStateOf(false) }
-    val (instruments, resetMax) = rememberInstruments(gps.value.location, active = foreground || session.navigating || session.recordingFree)
+    val (instruments, resetMax, resetG) = rememberInstruments(gps.value.location, active = foreground || session.navigating || session.recordingFree)
 
     // ---- Κάμερες
     val cameraStore = remember { CameraStore(context) }
@@ -468,6 +470,9 @@ fun MapScreen(
     // Γρήγορες ενέργειες (μετρητής ταξιδιού, πλακίδια, διακόπτες) και αναφορά χάρτη στο OSM
     var quickOpen by remember { mutableStateOf(false) }
     var appsOpen by remember { mutableStateOf(false) }
+    // Ύψη πάνω/κάτω στη δεξιά πλευρά: ανάμεσά τους μπαίνει η λωρίδα επιτάχυνσης.
+    var rightTopPx by remember { mutableStateOf(0) }
+    var rightBottomPx by remember { mutableStateOf(0) }
     // Αποτελέσματα κατηγορίας της αναζήτησης (π.χ. Καφές): αριθμημένοι κύκλοι στον χάρτη
     var categoryPins by remember { mutableStateOf<List<app.motonav.search.Place>>(emptyList()) }
     // Μετά από πάτημα στον χάρτη: η κατηγορία μένει στον χάρτη χωρίς το φύλλο (πάτημα σε σημείο = προορισμός)
@@ -1076,7 +1081,7 @@ fun MapScreen(
             // Πρώτα από τη λίστα μέσα στην εφαρμογή (δουλεύει και χωρίς internet), μετά από OpenStreetMap/TomTom.
             val offlineFuel = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
                 app.motonav.search.OfflineGazetteer.fuelNear(r.points, FuelOnRoute.MAX_OFF_M).map { (n, p) ->
-                    app.motonav.fuel.FuelStation("off-${p.lat},${p.lon}", n.ifBlank { "Βενζινάδικο" }, p.lat, p.lon)
+                    app.motonav.fuel.FuelStation("off-${p.lat},${p.lon}", n.ifBlank { tr("Βενζινάδικο") }, p.lat, p.lon)
                 }
             }
             fuelRaw = (fuelRaw + offlineFuel.filter { o -> fuelRaw.none { Geo.distance(it.position, o.position) < 80 } }).takeLast(3_000)
@@ -1098,7 +1103,7 @@ fun MapScreen(
                             }
                             val tt = async(kotlinx.coroutines.Dispatchers.IO) {
                                 val t0 = SystemClock.elapsedRealtime()
-                                (if (key.isBlank()) Result.failure(java.io.IOException("χωρίς κλειδί"))
+                                (if (key.isBlank()) Result.failure(java.io.IOException(tr("χωρίς κλειδί")))
                                 else runCatching { FuelOnRoute.tomtomAlong(r, key) })
                                     .also { res -> app.motonav.fuel.FuelDiag.tomtom(res.getOrNull()?.size, res.exceptionOrNull(), SystemClock.elapsedRealtime() - t0, key.isNotBlank()) }
                             }
@@ -1266,7 +1271,7 @@ fun MapScreen(
         val saveDestination: (String) -> Unit = { kind ->
             session.destination?.let { d ->
                 val place = Place(
-                    session.destinationName ?: "Σημείο στον χάρτη",
+                    session.destinationName ?: tr("Σημείο στον χάρτη"),
                     String.format(Locale.US, "%.4f, %.4f", d.lat, d.lon),
                     d.lat, d.lon, "saved",
                 )
@@ -1293,9 +1298,9 @@ fun MapScreen(
                 m.name,
                 m.speedKmh?.let { "${it.toInt()} km/h" },
                 FriendsLayer.subtitle(m, GroupLink.now()),
-                m.destName?.let { "πάει: $it" },
+                m.destName?.let { trf("πάει: {0}", it) },
             )
-            parts.joinToString(" · ") + if (!session.navigating) "\nΠάτα εδώ να πας εκεί" else ""
+            parts.joinToString(" · ") + if (!session.navigating) tr("\nΠάτα εδώ να πας εκεί") else ""
         }
         val onFriendPill = {
             friend?.let { if (!session.navigating) session.pick(it.position, it.name) }
@@ -1363,9 +1368,9 @@ fun MapScreen(
             }
             if (hazardToDelete != null && hazardAlert?.first?.id != hazardToDelete) {
                 val k = hazards.firstOrNull { it.id == hazardToDelete }?.kind
-                StatusPill("${k?.emoji ?: ""} ${k?.label ?: "Αναφορά"}: πάτα εδώ για να σβηστεί.", onClick = deleteHazard)
+                StatusPill("${k?.emoji ?: ""} ${k?.label ?: tr("Αναφορά")}: πάτα εδώ για να σβηστεί.", onClick = deleteHazard)
             }
-            if (reportedAt > 0 && SystemClock.elapsedRealtime() - reportedAt < 4_000) StatusPill("Σημειώθηκε. Θα σε ειδοποιήσω όταν ξαναπεράσεις.")
+            if (reportedAt > 0 && SystemClock.elapsedRealtime() - reportedAt < 4_000) StatusPill(tr("Σημειώθηκε. Θα σε ειδοποιήσω όταν ξαναπεράσεις."))
             if (session.navigating && session.stops.isNotEmpty()) NextStopPill(session, stopsOpen) { stopsOpen = !stopsOpen }
             if (session.navigating && display.showFuel) {
                 if (fuelOpen) {
@@ -1391,27 +1396,27 @@ fun MapScreen(
             // Καθυστέρηση από κίνηση στον χρόνο που μένει (0 χωρίς κλειδί TomTom → πράσινο).
             val tripDelayS = session.state?.let { it.remainingS * (session.trafficFactor - 1.0) }?.coerceAtLeast(0.0) ?: 0.0
             val navControls: @Composable () -> Unit = {
-                RideIconButton(Icons.Filled.Close, "Τέλος πλοήγησης", session::stop, kind = ButtonKind.STOP, size = sizes.button)
+                RideIconButton(Icons.Filled.Close, tr("Τέλος πλοήγησης"), session::stop, kind = ButtonKind.STOP, size = sizes.button)
                 RideIconButton(
                     ImageVector.vectorResource(if (session.muted) R.drawable.ic_voice_off else R.drawable.ic_voice),
-                    if (session.muted) "Άνοιγμα φωνής" else "Σίγαση φωνής",
+                    if (session.muted) tr("Άνοιγμα φωνής") else tr("Σίγαση φωνής"),
                     session::toggleMute,
                     kind = if (session.muted) ButtonKind.SECONDARY else ButtonKind.PRIMARY,
                     size = sizes.button,
                 )
             }
             val quickButton: @Composable (androidx.compose.ui.unit.Dp) -> Unit = { sz ->
-                RideIconButton(ImageVector.vectorResource(R.drawable.ic_bolt), "Γρήγορες ενέργειες", { quickOpen = true }, size = sz)
+                RideIconButton(ImageVector.vectorResource(R.drawable.ic_bolt), tr("Γρήγορες ενέργειες"), { quickOpen = true }, size = sz)
             }
             val appsButton: @Composable (androidx.compose.ui.unit.Dp) -> Unit = { sz ->
-                RideIconButton(ImageVector.vectorResource(R.drawable.ic_apps), "Εφαρμογές", { appsOpen = true }, size = sz)
+                RideIconButton(ImageVector.vectorResource(R.drawable.ic_apps), tr("Εφαρμογές"), { appsOpen = true }, size = sz)
             }
             val browseButtons: @Composable () -> Unit = {
-                RideIconButton(Icons.Filled.Search, "Αναζήτηση", { showSearch = true }, size = sizes.button)
-                RideIconButton(Icons.Filled.Settings, "Ρυθμίσεις", onOpenSettings, size = sizes.button)
+                RideIconButton(Icons.Filled.Search, tr("Αναζήτηση"), { showSearch = true }, size = sizes.button)
+                RideIconButton(Icons.Filled.Settings, tr("Ρυθμίσεις"), onOpenSettings, size = sizes.button)
             }
             val recenterButton: @Composable () -> Unit = {
-                RideIconButton(Icons.Filled.LocationOn, "Κέντραρε σε μένα", recenter, kind = ButtonKind.PRIMARY, size = sizes.button)
+                RideIconButton(Icons.Filled.LocationOn, tr("Κέντραρε σε μένα"), recenter, kind = ButtonKind.PRIMARY, size = sizes.button)
             }
             // Πυξίδα και υψόμετρο αριστερά από την ταχύτητα, κλισιόμετρο πάνω από την ταχύτητα.
             // Ταχύτητα + πυξίδα + υψόμετρο + κλίση σε ένα όργανο. Πάτημα = κέντραρε, παρατεταμένο = βορράς πάνω.
@@ -1484,7 +1489,7 @@ fun MapScreen(
                             NextPoisBar(nextPois, progressNow, { p -> session.addStopNow(p.place.latLon, p.place.name) })
                             RideIconButton(
                                 ImageVector.vectorResource(if (session.muted) R.drawable.ic_voice_off else R.drawable.ic_voice),
-                                if (session.muted) "Άνοιγμα φωνής" else "Σίγαση φωνής",
+                                if (session.muted) tr("Άνοιγμα φωνής") else tr("Σίγαση φωνής"),
                                 session::toggleMute,
                                 kind = if (session.muted) ButtonKind.SECONDARY else ButtonKind.PRIMARY,
                                 size = sizes.smallButton,
@@ -1494,13 +1499,13 @@ fun MapScreen(
                     }
                     // Πάνω δεξιά: κουμπιά και καιρός.
                     Column(
-                        Modifier.align(Alignment.TopEnd),
+                        Modifier.align(Alignment.TopEnd).onSizeChanged { rightTopPx = it.height },
                         horizontalAlignment = Alignment.End,
                         verticalArrangement = Arrangement.spacedBy(Space.sm),
                     ) {
                         Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
                             if (groupActive) TalkButton(sizes.smallButton, { recording = it })
-                            RideIconButton(Icons.Filled.Warning, "Αναφορά κινδύνου ή κάμερας", { reportOpen = true }, size = sizes.smallButton)
+                            RideIconButton(Icons.Filled.Warning, tr("Αναφορά κινδύνου ή κάμερας"), { reportOpen = true }, size = sizes.smallButton)
                             quickButton(sizes.smallButton)
                             appsButton(sizes.smallButton)
                             if (!session.navigating) browseButtons()
@@ -1512,8 +1517,8 @@ fun MapScreen(
                     }
                     // Κάτω δεξιά: όργανα και ταχύτητα.
                     // Κάτω δεξιά: ✕ πάνω από την ταχύτητα.
-                    Column(Modifier.align(Alignment.BottomEnd), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(Space.sm)) {
-                        if (session.navigating) RideIconButton(Icons.Filled.Close, "Τέλος πλοήγησης", session::stop, kind = ButtonKind.STOP, size = sizes.smallButton)
+                    Column(Modifier.align(Alignment.BottomEnd).onSizeChanged { rightBottomPx = it.height }, horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(Space.sm)) {
+                        if (session.navigating) RideIconButton(Icons.Filled.Close, tr("Τέλος πλοήγησης"), session::stop, kind = ButtonKind.STOP, size = sizes.smallButton)
                         gauges()
                     }
                 }
@@ -1522,7 +1527,8 @@ fun MapScreen(
                     Column(
                         modifier = Modifier
                             .align(Alignment.TopCenter)
-                            .fillMaxWidth(),
+                            .fillMaxWidth()
+                            .onSizeChanged { rightTopPx = it.height },
                         verticalArrangement = Arrangement.spacedBy(Space.sm),
                     ) {
                         TopContent(session, gps.value, hasLocation, requestLocation, cameraAlert, cameraMarkedAt, shownTrack != null, onClearTrack, cameraToDelete != null, deleteCamera, { id -> cameraToDelete = id }, followTrack, turnOnGps, friendPill, onFriendPill, recording || voxTalking, display.roadColors, spotsLoading && !session.navigating)
@@ -1540,7 +1546,7 @@ fun MapScreen(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .fillMaxWidth()
-                            .onSizeChanged { bottomPanelPx = if (preview) it.height else 0 },
+                            .onSizeChanged { bottomPanelPx = if (preview) it.height else 0; rightBottomPx = it.height },
                         verticalArrangement = Arrangement.spacedBy(Space.sm),
                     ) {
                         if (!session.navigating && session.destination != null) {
@@ -1558,7 +1564,7 @@ fun MapScreen(
                                     // Πυξίδα, από κάτω υψόμετρο, από κάτω η κάμερα.
                                     if (groupActive) TalkButton(sizes.smallButton, { recording = it })
                                     Row(horizontalArrangement = Arrangement.spacedBy(Space.sm), verticalAlignment = Alignment.CenterVertically) {
-                                        RideIconButton(Icons.Filled.Warning, "Αναφορά κινδύνου ή κάμερας", { reportOpen = true }, size = sizes.smallButton)
+                                        RideIconButton(Icons.Filled.Warning, tr("Αναφορά κινδύνου ή κάμερας"), { reportOpen = true }, size = sizes.smallButton)
                                         quickButton(sizes.smallButton)
                                         appsButton(sizes.smallButton)
                                     }
@@ -1567,7 +1573,7 @@ fun MapScreen(
                                     Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
                                         RideIconButton(
                                             ImageVector.vectorResource(if (session.muted) R.drawable.ic_voice_off else R.drawable.ic_voice),
-                                            if (session.muted) "Άνοιγμα φωνής" else "Σίγαση φωνής",
+                                            if (session.muted) tr("Άνοιγμα φωνής") else tr("Σίγαση φωνής"),
                                             session::toggleMute,
                                             kind = if (session.muted) ButtonKind.SECONDARY else ButtonKind.PRIMARY,
                                             size = sizes.smallButton,
@@ -1580,13 +1586,13 @@ fun MapScreen(
                                 if (!session.navigating) {
                                     // Πυξίδα, από κάτω υψόμετρο, από κάτω η κάμερα.
                                     if (groupActive) TalkButton(sizes.smallButton, { recording = it })
-                                    RideIconButton(Icons.Filled.Warning, "Αναφορά κινδύνου ή κάμερας", { reportOpen = true }, size = sizes.smallButton)
+                                    RideIconButton(Icons.Filled.Warning, tr("Αναφορά κινδύνου ή κάμερας"), { reportOpen = true }, size = sizes.smallButton)
                                     quickButton(sizes.smallButton)
                                     appsButton(sizes.smallButton)
-                                    RideIconButton(Icons.Filled.Search, "Αναζήτηση", { showSearch = true }, size = sizes.smallButton)
-                                    RideIconButton(Icons.Filled.Settings, "Ρυθμίσεις", onOpenSettings, size = sizes.smallButton)
+                                    RideIconButton(Icons.Filled.Search, tr("Αναζήτηση"), { showSearch = true }, size = sizes.smallButton)
+                                    RideIconButton(Icons.Filled.Settings, tr("Ρυθμίσεις"), onOpenSettings, size = sizes.smallButton)
                                 }
-                                if (session.navigating) RideIconButton(Icons.Filled.Close, "Τέλος πλοήγησης", session::stop, kind = ButtonKind.STOP, size = sizes.smallButton)
+                                if (session.navigating) RideIconButton(Icons.Filled.Close, tr("Τέλος πλοήγησης"), session::stop, kind = ButtonKind.STOP, size = sizes.smallButton)
                                 gauges()
                             }
                         }
@@ -1617,7 +1623,7 @@ fun MapScreen(
                             border = BorderStroke(1.dp, LocalAppColors.current.outline),
                         ) {
                             Row(Modifier.padding(start = Space.md, end = Space.xs), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
-                                Text("$label · ${places.size} κοντά σου · πάτα ένα", style = MotoType.label, color = LocalAppColors.current.base.text)
+                                Text(trf("{0} · {1} κοντά σου · πάτα ένα", label, places.size), style = MotoType.label, color = LocalAppColors.current.base.text)
                                 TextChoice("✕", selected = false, onClick = { browse = null })
                             }
                         }
@@ -1630,14 +1636,31 @@ fun MapScreen(
                             border = BorderStroke(1.dp, LocalAppColors.current.outline),
                         ) {
                             Row(Modifier.padding(horizontal = Space.md, vertical = Space.xs), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
-                                Text("Σβήσιμο περιοχής αποφυγής;", style = MotoType.label, color = LocalAppColors.current.base.text)
-                                TextChoice("Ναι", selected = true, onClick = { app.motonav.routing.NoGoAreas.remove(ng); noGoToDelete = null })
-                                TextChoice("Όχι", selected = false, onClick = { noGoToDelete = null })
+                                Text(tr("Σβήσιμο περιοχής αποφυγής;"), style = MotoType.label, color = LocalAppColors.current.base.text)
+                                TextChoice(tr("Ναι"), selected = true, onClick = { app.motonav.routing.NoGoAreas.remove(ng); noGoToDelete = null })
+                                TextChoice(tr("Όχι"), selected = false, onClick = { noGoToDelete = null })
                             }
                         }
                     }
                     if (!session.navigating) SaveRoutePrompt(session, Modifier.widthIn(max = 420.dp).padding(horizontal = Space.md))
                     if (!session.navigating) UpdatePill()
+                }
+            }
+            // Λωρίδα επιτάχυνσης στη δεξιά άκρη, ανάμεσα στα κουμπιά πάνω και στην ταχύτητα κάτω.
+            if (display.showGMeter && !(!session.navigating && session.destination != null)) {
+                val dens = LocalDensity.current
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility.union(WindowInsets.navigationBars))
+                        .padding(Space.xs)
+                        .padding(
+                            top = with(dens) { rightTopPx.toDp() } + Space.md,
+                            bottom = with(dens) { rightBottomPx.toDp() } + Space.md,
+                        ),
+                    contentAlignment = Alignment.CenterEnd,
+                ) {
+                    GBar(instruments, resetG, if (landscape) sizes.speedBox * 1.15f else sizes.smallButton, Modifier.heightIn(min = 120.dp), portrait = !landscape)
                 }
             }
             // Pill μουσικής (Spotify κ.λπ.) πάνω πάνω στο κέντρο.
@@ -1672,11 +1695,11 @@ fun MapScreen(
             onSaveHere = {
                 val l = gps.value.location ?: gps.value.lastKnown
                 if (l == null) {
-                    android.widget.Toast.makeText(context, "Χρειάζεται στίγμα GPS.", android.widget.Toast.LENGTH_SHORT).show()
+                    android.widget.Toast.makeText(context, tr("Χρειάζεται στίγμα GPS."), android.widget.Toast.LENGTH_SHORT).show()
                 } else {
-                    val name = "Θέση " + java.text.SimpleDateFormat("d/M HH:mm", java.util.Locale("el", "GR")).format(java.util.Date())
+                    val name = tr("Θέση ") + java.text.SimpleDateFormat("d/M HH:mm", java.util.Locale("el", "GR")).format(java.util.Date())
                     scope.launch { repo.saveFavorite(app.motonav.search.Place(name, "", l.latitude, l.longitude, "saved")) }
-                    android.widget.Toast.makeText(context, "Αποθηκεύτηκε στα Αγαπημένα: $name", android.widget.Toast.LENGTH_SHORT).show()
+                    android.widget.Toast.makeText(context, trf("Αποθηκεύτηκε στα Αγαπημένα: {0}", name), android.widget.Toast.LENGTH_SHORT).show()
                 }
             },
             onClose = { quickOpen = false },
@@ -1754,42 +1777,43 @@ private fun TopContent(
     roadColors: Boolean = true,
     spotsLoading: Boolean = false,
 ) {
-    if (spotsLoading) StatusPill("Φορτώνω θέες, νερά, μαγαζιά μηχανών… (μισό λεπτό την πρώτη φορά)")
-    if (recording) StatusPill(if (GroupLink.voxMode) "● Σε ακούνε…" else "● Μιλάς… άφησε το κουμπί για αποστολή")
-    GroupLink.speaking?.let { StatusPill("🔊 $it μιλάει") }
+    if (spotsLoading) StatusPill(tr("Φορτώνω θέες, νερά, μαγαζιά μηχανών… (μισό λεπτό την πρώτη φορά)"))
+    if (recording) StatusPill(if (GroupLink.voxMode) tr("● Σε ακούνε…") else tr("● Μιλάς… άφησε το κουμπί για αποστολή"))
+    GroupLink.speaking?.let { StatusPill(trf("🔊 {0} μιλάει", it)) }
     friendPill?.let { StatusPill(it, onClick = onFriendPill) }
     val st = session.state
-    if (session.addingStop) StatusPill("Διάλεξε στάση: πάτα παρατεταμένα στον χάρτη ή ψάξε. Πάτα εδώ για άκυρο.", onClick = { session.addingStop = false })
+    if (session.addingStop) StatusPill(tr("Διάλεξε στάση: πάτα παρατεταμένα στον χάρτη ή ψάξε. Πάτα εδώ για άκυρο."), onClick = { session.addingStop = false })
     if (trackShown) {
-        StatusPill("Διαδρομή από αρχείο (γαλάζια). Πάτα εδώ για να κλείσει.", onClick = onClearTrack)
-        if (!session.navigating) StatusPill("Ακολούθησε αυτή τη διαδρομή", onClick = onFollowTrack)
+        StatusPill(tr("Διαδρομή από αρχείο (γαλάζια). Πάτα εδώ για να κλείσει."), onClick = onClearTrack)
+        if (!session.navigating) StatusPill(tr("Ακολούθησε αυτή τη διαδρομή"), onClick = onFollowTrack)
     }
     if (session.navigating && st != null) {
         ManeuverPanel(st, session.rerouting, if (roadColors) signColorFor(session.route, st) else null)
         if (!session.rerouting) session.route?.lanesAt(st.progressM)?.let { LaneBar(it) }
     }
     if (cameraAlert != null) {
-        Box(Modifier.fillMaxWidth().padding(vertical = Space.xs), contentAlignment = Alignment.Center) {
+        // Τέρμα αριστερά, στη στοίχιση των άλλων καρτών.
+        Box(Modifier.fillMaxWidth().padding(vertical = Space.xs), contentAlignment = Alignment.CenterStart) {
             val cam = cameraAlert.first
             CameraBar(
                 cameraAlert.second, cam.maxspeed, gps.speedKmh,
-                if (cam.source == "mine") "Δική σου κάμερα" else cam.title,
+                if (cam.source == "mine") tr("Δική σου κάμερα") else cam.title,
                 onClick = if (cam.source == "mine") ({ onAskDelete(cam.id) }) else null,
             )
         }
     }
-    if (confirmDelete) StatusPill("Δική σου κάμερα. Πάτα εδώ για να σβηστεί.", onClick = onDeleteCamera)
+    if (confirmDelete) StatusPill(tr("Δική σου κάμερα. Πάτα εδώ για να σβηστεί."), onClick = onDeleteCamera)
     if (cameraMarkedAt > 0 && SystemClock.elapsedRealtime() - cameraMarkedAt < 4_000) {
-        StatusPill("Η κάμερα σημειώθηκε εδώ.")
+        StatusPill(tr("Η κάμερα σημειώθηκε εδώ."))
     }
     when {
-        !hasLocation -> StatusPill("Χρειάζομαι την τοποθεσία σου. Πάτα εδώ.", onClick = requestLocation)
-        !gps.enabled -> StatusPill("Το GPS είναι κλειστό. Πάτα εδώ να ανοίξει.", onClick = turnOnGps)
-        gps.location == null -> StatusPill("Ψάχνω σήμα GPS…")
-        session.arrived -> StatusPill("Έφτασες! Η διαδρομή αποθηκεύτηκε.")
+        !hasLocation -> StatusPill(tr("Χρειάζομαι την τοποθεσία σου. Πάτα εδώ."), onClick = requestLocation)
+        !gps.enabled -> StatusPill(tr("Το GPS είναι κλειστό. Πάτα εδώ να ανοίξει."), onClick = turnOnGps)
+        gps.location == null -> StatusPill(tr("Ψάχνω σήμα GPS…"))
+        session.arrived -> StatusPill(tr("Έφτασες! Η διαδρομή αποθηκεύτηκε."))
     }
     if (session.navigating && session.greekVoiceMissing) {
-        StatusPill("Λείπει η ελληνική φωνή: Ρυθμίσεις → Κείμενο σε ομιλία.")
+        StatusPill(tr("Λείπει η ελληνική φωνή: Ρυθμίσεις → Κείμενο σε ομιλία."))
     }
 }
 
@@ -1834,7 +1858,7 @@ private fun PipOverlay(s: NavState?, rerouting: Boolean) {
         Surface(shape = RoundedCornerShape(Radius.sm), color = c.base.surface, border = BorderStroke(1.dp, c.outline)) {
             Row(Modifier.padding(horizontal = 6.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (rerouting) {
-                    Text("Νέα διαδρομή…", style = MotoType.label, color = c.base.text)
+                    Text(tr("Νέα διαδρομή…"), style = MotoType.label, color = c.base.text)
                 } else {
                     ManeuverIcon(m.turn, c.accent, Modifier.size(26.dp))
                     Spacer(Modifier.width(6.dp))
@@ -1911,7 +1935,7 @@ private fun ManeuverPanel(s: NavState, rerouting: Boolean, signColor: Color? = n
         ) {
             val m = s.next
             if (rerouting || m == null) {
-                Text("Νέα διαδρομή…", style = MotoType.title, color = c.base.text)
+                Text(tr("Νέα διαδρομή…"), style = MotoType.title, color = c.base.text)
             } else {
                 // Το βελάκι πιάνει όλο το ύψος της καρτέλας: μετράμε πόσο ψηλά είναι τα κείμενα δίπλα του.
                 val density = androidx.compose.ui.platform.LocalDensity.current
@@ -1948,7 +1972,7 @@ private fun ManeuverPanel(s: NavState, rerouting: Boolean, signColor: Color? = n
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    "Έπειτα μετά από ${formatShortDistance(af.atMeters - nx.atMeters)}",
+                    trf("Έπειτα μετά από {0}", formatShortDistance(af.atMeters - nx.atMeters)),
                     style = MotoType.title.copy(fontSize = 17.sp, lineHeight = 20.sp, fontWeight = FontWeight.Bold),
                     color = c.base.text,
                     maxLines = 1,
@@ -1999,7 +2023,7 @@ private fun TripBar(s: NavState, modifier: Modifier = Modifier, compact: Boolean
                 val time = if (compact) formatDurationShort(s.remainingS) else formatDuration(s.remainingS)
                 // Χωρίς λέξεις: μεγαλύτερα νούμερα. Η άφιξη έχει μικρή σημαία μπροστά.
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(ImageVector.vectorResource(R.drawable.ic_flag), contentDescription = "Άφιξη", tint = c.base.textMuted, modifier = Modifier.size(if (narrow) 14.dp else 16.dp))
+                    Icon(ImageVector.vectorResource(R.drawable.ic_flag), contentDescription = tr("Άφιξη"), tint = c.base.textMuted, modifier = Modifier.size(if (narrow) 14.dp else 16.dp))
                     Spacer(Modifier.width(3.dp))
                     Stat(eta, "", compact, narrow = narrow)
                 }
@@ -2137,12 +2161,12 @@ private fun DestinationCard(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
                 Box(Modifier.weight(1f)) {
                     when {
-                        session.loopPlanning -> Text("Ψάχνω κυκλική βόλτα… (έως 1–2 λεπτά)", style = MotoType.body, color = c.base.textMuted)
+                        session.loopPlanning -> Text(tr("Ψάχνω κυκλική βόλτα… (έως 1–2 λεπτά)"), style = MotoType.body, color = c.base.textMuted)
                         session.planning -> Text(
                             when (session.routeType) {
-                                RouteType.TWISTY -> "Ψάχνω δρόμο με στροφές…"
-                                RouteType.DIRT -> "Ψάχνω χωματόδρομους…"
-                                else -> "Υπολογίζω διαδρομή…"
+                                RouteType.TWISTY -> tr("Ψάχνω δρόμο με στροφές…")
+                                RouteType.DIRT -> tr("Ψάχνω χωματόδρομους…")
+                                else -> tr("Υπολογίζω διαδρομή…")
                             },
                             style = MotoType.body,
                             color = c.base.textMuted,
@@ -2166,18 +2190,18 @@ private fun DestinationCard(
                             )
                         }
                         err != null -> ErrorText(err)
-                        crow != null -> Text("${formatKm(crow)} σε ευθεία", style = MotoType.body, color = c.base.textMuted)
+                        crow != null -> Text(trf("{0} σε ευθεία", formatKm(crow)), style = MotoType.body, color = c.base.textMuted)
                     }
                 }
                 // Γεμάτο αστέρι = ήδη αποθηκευμένο· περίγραμμα = όχι ακόμα.
                 RideIconButton(
                     if (savedAs != null) Icons.Filled.Star else Icons.Outlined.OutlinedStar,
-                    if (savedAs != null) "Αποθηκευμένο" else "Αποθήκευση",
+                    if (savedAs != null) tr("Αποθηκευμένο") else tr("Αποθήκευση"),
                     { saveOpen = !saveOpen },
                     kind = if (saveOpen) ButtonKind.PRIMARY else ButtonKind.SECONDARY,
                     size = 56.dp,
                 )
-                if (!session.followingTrack) RideIconButton(Icons.Filled.Add, "Στάση", onAddStop, size = 56.dp)
+                if (!session.followingTrack) RideIconButton(Icons.Filled.Add, tr("Στάση"), onAddStop, size = 56.dp)
             }
             if (!collapsed) {
             // Από κάτω: ο προορισμός με λευκά, και κάτω του οι συντεταγμένες (πάτημα = αντιγραφή), κίνηση, στροφές.
@@ -2200,11 +2224,11 @@ private fun DestinationCard(
                         },
                 )
                 if (session.alternativesNone) {
-                    Text("⇄ καμία λογική", style = MotoType.label, color = c.base.textMuted)
+                    Text(tr("⇄ καμία λογική"), style = MotoType.label, color = c.base.textMuted)
                 }
                 if (session.canAskAlternatives || session.alternativesLoading) {
                     Text(
-                        if (session.alternativesLoading) "⇄ …" else "⇄ Εναλλακτικές",
+                        if (session.alternativesLoading) "⇄ …" else tr("⇄ Εναλλακτικές"),
                         style = MotoType.label,
                         color = c.accent,
                         modifier = Modifier
@@ -2216,7 +2240,7 @@ private fun DestinationCard(
                 // Έτοιμη διαδρομή (αποθηκευμένη/GPX): ανάποδα, από το τέλος προς την αρχή.
                 if (session.followingTrack && !session.navigating) {
                     Text(
-                        "⇅ Ανάποδα",
+                        tr("⇅ Ανάποδα"),
                         style = MotoType.label,
                         color = c.accent,
                         modifier = Modifier
@@ -2246,10 +2270,10 @@ private fun DestinationCard(
                 if (route != null) {
                     val delay = if (session.trafficKnown) session.trafficDelayS else route.trafficDelayS
                     if (delay >= 60) {
-                        Text("+${(delay / 60).roundToInt()}′ κίνηση", style = MotoType.label, color = TimeColors.of(delay, route.durationS))
+                        Text(trf("+{0}′ κίνηση", (delay / 60).roundToInt()), style = MotoType.label, color = TimeColors.of(delay, route.durationS))
                     } else if (session.trafficKey.isNotBlank() && !session.trafficKnown && route.source != "TomTom") {
                         // Ο χρόνος είναι ακόμα χωρίς κίνηση (έρχεται σε λίγα δευτερόλεπτα από το TomTom).
-                        Text("χωρίς κίνηση", style = MotoType.label, color = c.base.textMuted)
+                        Text(tr("χωρίς κίνηση"), style = MotoType.label, color = c.base.textMuted)
                     }
                     Text("●".repeat(route.twistinessStars) + "○".repeat(5 - route.twistinessStars), style = MotoType.label, color = c.accent)
                 }
@@ -2272,7 +2296,7 @@ private fun DestinationCard(
             }
             if (nogoOpen) {
                 Text(
-                    "Περιοχή αποφυγής: οι διαδρομές δεν θα περνάνε από αυτό το σημείο (π.χ. κέντρο, έργα). Σβήνεται με πάτημα πάνω της.",
+                    tr("Περιοχή αποφυγής: οι διαδρομές δεν θα περνάνε από αυτό το σημείο (π.χ. κέντρο, έργα). Σβήνεται με πάτημα πάνω της."),
                     style = MotoType.label,
                     color = c.base.textMuted,
                 )
@@ -2287,24 +2311,24 @@ private fun DestinationCard(
             }
             if (reportOpen) {
                 Text(
-                    "Λάθος ή κάτι λείπει στον χάρτη εδώ; Γράψ' το και πάει ως σημείωση στο OpenStreetMap (ανώνυμα). Το διορθώνουν εθελοντές.",
+                    tr("Λάθος ή κάτι λείπει στον χάρτη εδώ; Γράψ' το και πάει ως σημείωση στο OpenStreetMap (ανώνυμα). Το διορθώνουν εθελοντές."),
                     style = MotoType.label,
                     color = c.base.textMuted,
                 )
                 androidx.compose.material3.OutlinedTextField(
                     value = reportText,
                     onValueChange = { reportText = it.take(500) },
-                    placeholder = { Text("π.χ. Ο δρόμος είναι κλειστός / λείπει βενζινάδικο") },
+                    placeholder = { Text(tr("π.χ. Ο δρόμος είναι κλειστός / λείπει βενζινάδικο")) },
                     shape = RoundedCornerShape(Radius.md),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(Space.sm), verticalAlignment = Alignment.CenterVertically) {
-                    TextChoice("Αποστολή", selected = true, onClick = {
+                    TextChoice(tr("Αποστολή"), selected = true, onClick = {
                         if (reportText.isBlank() || reportState == "…") return@TextChoice
                         reportState = "…"
                         cardScope.launch {
                             val ok = app.motonav.search.OsmNotes.create(dest, reportText.trim())
-                            reportState = if (ok) "Στάλθηκε. Ευχαριστούμε!" else "Δεν στάλθηκε (χωρίς internet;)"
+                            reportState = if (ok) tr("Στάλθηκε. Ευχαριστούμε!") else tr("Δεν στάλθηκε (χωρίς internet;)")
                             if (ok) reportText = ""
                         }
                     })
@@ -2317,10 +2341,10 @@ private fun DestinationCard(
                 if (!fuel.isNullOrEmpty()) {
                     val gap = FuelOnRoute.longestGap(fuel, route.lengthM)
                     val text = when {
-                        fuel.isEmpty() && fuelLoading -> "⛽ ψάχνω βενζινάδικα στη διαδρομή…"
-                        fuel.isEmpty() && fuelFailed -> "⛽ δεν φόρτωσαν τα βενζινάδικα (server OpenStreetMap)"
-                        fuel.isEmpty() -> "⛽ κανένα βενζινάδικο στη διαδρομή"
-                        else -> "⛽ ${fuel.size} στη διαδρομή · πρώτο σε ${fuelKm(fuel.first().alongM)} · μεγαλύτερο κενό ${fuelKm(gap)}"
+                        fuel.isEmpty() && fuelLoading -> tr("⛽ ψάχνω βενζινάδικα στη διαδρομή…")
+                        fuel.isEmpty() && fuelFailed -> tr("⛽ δεν φόρτωσαν τα βενζινάδικα (server OpenStreetMap)")
+                        fuel.isEmpty() -> tr("⛽ κανένα βενζινάδικο στη διαδρομή")
+                        else -> trf("⛽ {0} στη διαδρομή · πρώτο σε {1} · μεγαλύτερο κενό {2}", fuel.size, fuelKm(fuel.first().alongM), fuelKm(gap))
                     }
                     // Πάτημα: εμφάνιση/απόκρυψη των βενζινάδικων στον χάρτη.
                     Text(
@@ -2335,10 +2359,10 @@ private fun DestinationCard(
             }
             if (saveOpen) {
                 Row(horizontalArrangement = Arrangement.spacedBy(Space.sm), modifier = Modifier.fillMaxWidth()) {
-                    listOf("home" to "Σπίτι", "work" to "Δουλειά").forEach { (kind, label) ->
+                    listOf("home" to tr("Σπίτι"), "work" to tr("Δουλειά")).forEach { (kind, label) ->
                         TextChoice(label, selected = savedAs == kind, onClick = { onSave(kind); savedAs = kind; saveOpen = false }, modifier = Modifier.weight(1f))
                     }
-                    TextChoice("Σε λίστα…", selected = pickList || savedAs?.startsWith("fav") == true, onClick = { pickList = !pickList }, modifier = Modifier.weight(1.2f))
+                    TextChoice(tr("Σε λίστα…"), selected = pickList || savedAs?.startsWith("fav") == true, onClick = { pickList = !pickList }, modifier = Modifier.weight(1.2f))
                 }
                 if (pickList) {
                     // Λίστες σελιδοδεικτών: πάτημα = αποθήκευση εκεί· «＋ Νέα» = καινούργια λίστα.
@@ -2352,7 +2376,7 @@ private fun DestinationCard(
                                 onSave("fav:$name|$col"); savedAs = "fav"; pickList = false; saveOpen = false
                             })
                         }
-                        TextChoice("＋ Νέα", selected = newList != null, onClick = { newList = if (newList == null) "" else null })
+                        TextChoice(tr("＋ Νέα"), selected = newList != null, onClick = { newList = if (newList == null) "" else null })
                     }
                     newList?.let { nl ->
                         Row(horizontalArrangement = Arrangement.spacedBy(Space.sm), verticalAlignment = Alignment.CenterVertically) {
@@ -2360,7 +2384,7 @@ private fun DestinationCard(
                                 value = nl,
                                 onValueChange = { newList = it.take(30) },
                                 singleLine = true,
-                                placeholder = { Text("Όνομα λίστας") },
+                                placeholder = { Text(tr("Όνομα λίστας")) },
                                 shape = RoundedCornerShape(Radius.md),
                                 modifier = Modifier.weight(1f),
                             )
@@ -2379,7 +2403,7 @@ private fun DestinationCard(
             session.stops.forEachIndexed { i, stop ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
                     Text(
-                        "${i + 1}. ${stop.name ?: "Στάση στον χάρτη"}",
+                        "${i + 1}. ${stop.name ?: tr("Στάση στον χάρτη")}",
                         style = MotoType.label,
                         color = c.base.textMuted,
                         maxLines = 1,
@@ -2393,21 +2417,21 @@ private fun DestinationCard(
 
             // Τύπος διαδρομής: μικρά κουμπιά με εικονίδιο, και δεξιά οι αποφυγές.
             if (session.followingTrack) {
-                Text("Ακολουθείς έτοιμη διαδρομή. Αν είσαι μακριά, σε πάει πρώτα στο πιο κοντινό σημείο της· αν βγεις, σε ξαναφέρνει πάνω της.", style = MotoType.label, color = c.base.textMuted)
+                Text(tr("Ακολουθείς έτοιμη διαδρομή. Αν είσαι μακριά, σε πάει πρώτα στο πιο κοντινό σημείο της· αν βγεις, σε ξαναφέρνει πάνω της."), style = MotoType.label, color = c.base.textMuted)
             } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(Space.xs), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    RouteTypeButton(R.drawable.ic_route_fast, "Γρήγορη", session.routeType == RouteType.FASTEST) { session.chooseRouteType(RouteType.FASTEST) }
-                    RouteTypeButton(R.drawable.ic_route_twisty, "Στροφές", session.routeType == RouteType.TWISTY) { session.chooseRouteType(RouteType.TWISTY) }
-                    if (!app.motonav.routing.Vehicle.car) RouteTypeButton(R.drawable.ic_route_dirt, "Χώμα", session.routeType == RouteType.DIRT) { session.chooseRouteType(RouteType.DIRT) }
+                    RouteTypeButton(R.drawable.ic_route_fast, tr("Γρήγορη"), session.routeType == RouteType.FASTEST) { session.chooseRouteType(RouteType.FASTEST) }
+                    RouteTypeButton(R.drawable.ic_route_twisty, tr("Στροφές"), session.routeType == RouteType.TWISTY) { session.chooseRouteType(RouteType.TWISTY) }
+                    if (!app.motonav.routing.Vehicle.car) RouteTypeButton(R.drawable.ic_route_dirt, tr("Χώμα"), session.routeType == RouteType.DIRT) { session.chooseRouteType(RouteType.DIRT) }
                     if (session.trafficKey.isNotBlank()) {
-                        RouteTypeButton(R.drawable.ic_route_traffic, "Κίνηση", session.routeType == RouteType.TRAFFIC) { session.chooseRouteType(RouteType.TRAFFIC) }
+                        RouteTypeButton(R.drawable.ic_route_traffic, tr("Κίνηση"), session.routeType == RouteType.TRAFFIC) { session.chooseRouteType(RouteType.TRAFFIC) }
                     }
                     Spacer(Modifier.weight(1f))
                     // Αποφυγή: πατημένο = χωρίς. Οι Στροφές/Χώμα αποφεύγουν ήδη αυτοκινητόδρομους.
                     if (session.routeType != RouteType.TWISTY && session.routeType != RouteType.DIRT) {
-                        AvoidButton(R.drawable.ic_motorway, "Χωρίς αυτοκινητόδρομους", session.avoidMotorways) { session.toggleAvoidMotorways() }
+                        AvoidButton(R.drawable.ic_motorway, tr("Χωρίς αυτοκινητόδρομους"), session.avoidMotorways) { session.toggleAvoidMotorways() }
                     }
-                    AvoidButton(R.drawable.ic_toll, "Χωρίς διόδια", session.avoidTolls) { session.toggleAvoidTolls() }
+                    AvoidButton(R.drawable.ic_toll, tr("Χωρίς διόδια"), session.avoidTolls) { session.toggleAvoidTolls() }
                 }
             }
 
@@ -2415,11 +2439,11 @@ private fun DestinationCard(
             // Μεγάλο «Ξεκίνα» (ή η ενέργεια που χρειάζεται για να βγει διαδρομή) και ✕ δεξιά.
             Row(horizontalArrangement = Arrangement.spacedBy(Space.sm), verticalAlignment = Alignment.CenterVertically) {
                 val primary: Pair<String, () -> Unit>? = when {
-                    route != null -> "Ξεκίνα" to session::start
-                    err?.kind == RoutingException.Kind.NOT_INSTALLED -> "Εγκατάσταση BRouter" to { openBRouterInStore(context) }
+                    route != null -> tr("Ξεκίνα") to session::start
+                    err?.kind == RoutingException.Kind.NOT_INSTALLED -> tr("Εγκατάσταση BRouter") to { openBRouterInStore(context) }
                     err?.kind == RoutingException.Kind.NO_DATA || err?.kind == RoutingException.Kind.NO_PROFILE ->
-                        "Άνοιγμα BRouter" to { openBRouter(context) }
-                    err != null && !session.planning -> "Ξανά" to session::plan
+                        tr("Άνοιγμα BRouter") to { openBRouter(context) }
+                    err != null && !session.planning -> tr("Ξανά") to session::plan
                     else -> null
                 }
                 if (primary != null) {
@@ -2448,7 +2472,7 @@ private fun DestinationCard(
                 } else {
                     Spacer(Modifier.weight(1f))
                 }
-                RideIconButton(Icons.Filled.Close, "Άκυρο", session::clear, size = 48.dp)
+                RideIconButton(Icons.Filled.Close, tr("Άκυρο"), session::clear, size = 48.dp)
             }
         }
     }
@@ -2465,7 +2489,7 @@ private fun RouteTypeButton(icon: Int, description: String, selected: Boolean, o
         onClick = onClick,
         modifier = Modifier
             .size(48.dp)
-            .semantics { contentDescription = description + if (selected) ": επιλεγμένη" else "" },
+            .semantics { contentDescription = description + if (selected) tr(": επιλεγμένη") else "" },
     ) {
         Box(contentAlignment = Alignment.Center) {
             Icon(ImageVector.vectorResource(icon), contentDescription = null, tint = if (selected) c.onAccent else c.base.text, modifier = Modifier.size(24.dp))
@@ -2504,7 +2528,7 @@ private fun TalkButton(size: androidx.compose.ui.unit.Dp, onRecording: (Boolean)
             },
             modifier = Modifier
                 .size(size)
-                .semantics { contentDescription = if (on) "Κλείσε το μικρόφωνο της παρέας" else "Άνοιξε το μικρόφωνο της παρέας" },
+                .semantics { contentDescription = if (on) tr("Κλείσε το μικρόφωνο της παρέας") else tr("Άνοιξε το μικρόφωνο της παρέας") },
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(ImageVector.vectorResource(R.drawable.ic_mic), contentDescription = null, modifier = Modifier.size(28.dp))
@@ -2524,7 +2548,7 @@ private fun TalkButton(size: androidx.compose.ui.unit.Dp, onRecording: (Boolean)
         border = BorderStroke(2.dp, if (active) Tokens.stopBorder else c.accent),
         modifier = Modifier
             .size(size)
-            .semantics { contentDescription = "Κράτα πατημένο για να μιλήσεις στην παρέα" }
+            .semantics { contentDescription = tr("Κράτα πατημένο για να μιλήσεις στην παρέα") }
             .pointerInput(Unit) {
                 detectTapGestures(onPress = {
                     val ok = androidx.core.content.ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
@@ -2562,7 +2586,7 @@ private fun AvoidButton(icon: Int, description: String, avoided: Boolean, onTogg
         onClick = onToggle,
         modifier = Modifier
             .size(48.dp)
-            .semantics { contentDescription = description + if (avoided) ": ναι" else ": όχι" },
+            .semantics { contentDescription = description + if (avoided) tr(": ναι") else tr(": όχι") },
     ) {
         val fg = if (avoided) c.onAccent else c.base.text
         Box(contentAlignment = Alignment.Center) {
@@ -2630,14 +2654,14 @@ private fun ErrorText(e: RoutingException) {
     val c = LocalAppColors.current
     val text = when (e.kind) {
         RoutingException.Kind.NOT_INSTALLED ->
-            "Για διαδρομές χωρίς internet χρειάζεται η δωρεάν εφαρμογή BRouter."
+            tr("Για διαδρομές χωρίς internet χρειάζεται η δωρεάν εφαρμογή BRouter.")
         RoutingException.Kind.NO_DATA ->
-            "Λείπουν δεδομένα διαδρομών εδώ. BRouter → Download Manager → τετράγωνα Ελλάδας.\n(${e.message})"
+            trf("Λείπουν δεδομένα διαδρομών εδώ. BRouter → Download Manager → τετράγωνα Ελλάδας.\n({0})", e.message)
         RoutingException.Kind.NO_PROFILE ->
-            "Το BRouter δεν έχει προφίλ αυτοκινήτου (car-fast, car-eco).\n(${e.message})"
+            trf("Το BRouter δεν έχει προφίλ αυτοκινήτου (car-fast, car-eco).\n({0})", e.message)
         RoutingException.Kind.NO_FIX -> e.message ?: ""
         RoutingException.Kind.TRAFFIC -> e.message ?: ""
-        RoutingException.Kind.OTHER -> "Δεν βγήκε διαδρομή: ${e.message}"
+        RoutingException.Kind.OTHER -> trf("Δεν βγήκε διαδρομή: {0}", e.message)
     }
     Text(text, style = MotoType.body, color = c.base.text)
 }
@@ -2724,12 +2748,12 @@ private fun weatherPhraseEn(p: WeatherPoint): String = when {
 }
 
 private fun weatherPhrase(p: WeatherPoint): String = when {
-    p.sky == Sky.STORM -> "καταιγίδα"
-    p.sky == Sky.SNOW -> "χιόνι"
-    p.rainProb >= 50 -> "βροχή"
-    p.windKmh >= 45 -> "δυνατός αέρας"
-    p.tempC <= 2 -> "παγωνιά"
-    else -> "κακός καιρός"
+    p.sky == Sky.STORM -> tr("καταιγίδα")
+    p.sky == Sky.SNOW -> tr("χιόνι")
+    p.rainProb >= 50 -> tr("βροχή")
+    p.windKmh >= 45 -> tr("δυνατός αέρας")
+    p.tempC <= 2 -> tr("παγωνιά")
+    else -> tr("κακός καιρός")
 }
 
 private fun formatShortDistance(m: Double): String = when {
@@ -2745,15 +2769,15 @@ private fun formatKm(m: Double): String = when {
 
 private fun formatDurationShort(s: Double): String {
     val min = (s / 60.0).roundToInt().coerceAtLeast(1)
-    return if (min < 60) "$min′" else "${min / 60}ώ ${min % 60}′"
+    return if (min < 60) "$min′" else trf("{0}ώ {1}′", min / 60, min % 60)
 }
 
 private fun formatDuration(s: Double): String {
     val min = (s / 60.0).roundToInt()
     return when {
-        min <= 1 -> "1 λεπτό"
-        min < 60 -> "$min λεπτά"
-        else -> "${min / 60} ώ ${min % 60} λ"
+        min <= 1 -> tr("1 λεπτό")
+        min < 60 -> trf("{0} λεπτά", min)
+        else -> trf("{0} ώ {1} λ", min / 60, min % 60)
     }
 }
 
@@ -2922,7 +2946,7 @@ private fun NorthToggle(size: androidx.compose.ui.unit.Dp, onToggle: () -> Unit,
         Modifier
             .size(size)
             .clip(androidx.compose.foundation.shape.CircleShape)
-            .clickable(onClickLabel = if (CameraPrefs.northUp) "Η κατεύθυνσή μου πάνω" else "Βορράς πάνω", onClick = onToggle),
+            .clickable(onClickLabel = if (CameraPrefs.northUp) tr("Η κατεύθυνσή μου πάνω") else tr("Βορράς πάνω"), onClick = onToggle),
         contentAlignment = Alignment.Center,
     ) {
         content()
@@ -3120,7 +3144,7 @@ private fun rememberGps(permitted: Boolean, active: Boolean = true): MutableStat
 }
 
 @Composable
-private fun rememberInstruments(location: Location?, active: Boolean = true): Pair<Instruments, () -> Unit> {
+private fun rememberInstruments(location: Location?, active: Boolean = true): Triple<Instruments, () -> Unit, () -> Unit> {
     val context = LocalContext.current
     var value by remember { mutableStateOf(Instruments()) }
     val engine = remember { InstrumentEngine(context.applicationContext) { value = it } }
@@ -3130,7 +3154,7 @@ private fun rememberInstruments(location: Location?, active: Boolean = true): Pa
         onDispose { engine.stop() }
     }
     LaunchedEffect(location) { location?.let(engine::onLocation) }
-    return value to engine::resetMax
+    return Triple(value, engine::resetMax, engine::resetG)
 }
 
 /** true όταν το Android λέει ότι το κινητό ζεσταίνεται (thermal status ≥ MODERATE). Android 10+. */
@@ -3212,7 +3236,7 @@ private fun SpotPhotoBox(spot: app.motonav.spots.Spot) {
                         .clickable { full = true },
                 )
                 Text(
-                    (if (s.second.nearby) "Φωτογραφία κοντά στο σημείο · " else "") + s.second.credit,
+                    (if (s.second.nearby) tr("Φωτογραφία κοντά στο σημείο · ") else "") + s.second.credit,
                     style = MotoType.label.copy(fontSize = 11.sp),
                     color = c.base.textMuted,
                     maxLines = 1,
@@ -3241,7 +3265,7 @@ private fun SpotPhotoBox(spot: app.motonav.spots.Spot) {
                 }
             }
         }
-        searching -> Text("Ψάχνω φωτογραφία…", style = MotoType.label, color = c.base.textMuted)
-        else -> Text("Δεν βρέθηκε φωτογραφία για αυτό το σημείο.", style = MotoType.label, color = c.base.textMuted)
+        searching -> Text(tr("Ψάχνω φωτογραφία…"), style = MotoType.label, color = c.base.textMuted)
+        else -> Text(tr("Δεν βρέθηκε φωτογραφία για αυτό το σημείο."), style = MotoType.label, color = c.base.textMuted)
     }
 }
